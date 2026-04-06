@@ -343,28 +343,71 @@
   .pricing-card { padding: 32px 28px; text-align: left; }
   .pricing-card.popular { border-left: 3px solid var(--accent); }
 
-  /* Responsive */
+  /* ─── Mobile hamburger menu ─── */
+  .mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; color: white; z-index: 201; }
+  .mobile-menu-btn svg { display: block; }
+  .mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(10,22,40,0.97); backdrop-filter: blur(16px); z-index: 200; flex-direction: column; align-items: center; justify-content: center; gap: 32px; }
+  .mobile-overlay.open { display: flex; }
+  .mobile-overlay a { color: rgba(255,255,255,0.7); font-size: 20px; font-weight: 500; text-decoration: none; cursor: pointer; transition: color 200ms; }
+  .mobile-overlay a:hover { color: white; }
+  .mobile-overlay .btn-primary { margin-top: 16px; font-size: 18px; padding: 16px 40px; }
+  .mobile-close-btn { position: absolute; top: 20px; right: 24px; background: none; border: none; color: white; cursor: pointer; padding: 8px; }
+
+  /* ─── Responsive ─── */
   @media (max-width: 768px) {
-    .features-grid { grid-template-columns: 1fr; }
-    .testimonial-grid { grid-template-columns: 1fr; }
-    .stat-grid { grid-template-columns: repeat(2, 1fr); }
-    .hero-buttons { flex-direction: column; }
+    .mobile-menu-btn { display: block; }
     .nav-links { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .features-grid .feature-card:first-child { grid-column: auto; grid-template-columns: 1fr; }
+    .testimonial-grid { grid-template-columns: 1fr; }
+    .testimonial-grid .testimonial-card:first-child { grid-row: auto; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero { min-height: auto; padding: 120px 0 64px; }
+    .hero h1 { font-size: clamp(32px, 8vw, 52px); margin-bottom: 20px; }
+    .hero p { font-size: 16px; margin-bottom: 32px; }
+    .hero-badge { margin-bottom: 24px; }
+    .hero-buttons { flex-direction: column; }
+    .hero-buttons .btn-cta { width: 100%; justify-content: center; }
+    .hero-buttons button { width: 100%; justify-content: center; }
+    .hero-proof { gap: 12px; flex-direction: column; margin-top: 40px; padding-top: 24px; }
+    .section { padding: 64px 0 72px; }
+    .section-title { font-size: clamp(24px, 6vw, 32px); }
+    .section-subtitle { font-size: 15px; }
+    .trust-logos { gap: 24px; }
+    .trust-logo { font-size: 12px; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
     .footer-brand { grid-column: 1 / -1; }
-    .footer-bottom { flex-direction: column; text-align: center; }
+    .footer-bottom { flex-direction: column; text-align: center; gap: 12px; }
+    .pricing-grid { grid-template-columns: 1fr; max-width: 100%; }
+    .pricing-card { padding: 24px 20px; }
+    .counter-number { font-size: 36px; }
+    .container { padding: 0 20px; }
+    .campaign-grid { grid-template-columns: 1fr; }
+    .campaign-card { min-height: auto; padding: 24px 20px; }
+    .campaign-stat { font-size: 28px; }
+    .faq-list { margin: 24px auto 0; }
   }
   @media (max-width: 640px) {
     .issue-grid { grid-template-columns: 1fr; }
     .form-row { grid-template-columns: 1fr; }
-    .signup-card { padding: 28px 20px; }
+    .signup-card { padding: 24px 16px; }
     .share-buttons { flex-direction: column; }
-    .section { padding: 64px 0; }
     .stat-grid { grid-template-columns: 1fr 1fr; }
-    .pricing-grid { grid-template-columns: 1fr; }
+    .stat-card { padding: 16px 14px; }
+    .stat-number { font-size: 28px; }
+    .feature-card { padding: 20px 16px; }
+    .testimonial-card { padding: 20px 16px; }
+    .agent-card { padding: 16px; }
   }
   @media (max-width: 480px) {
     .footer-grid { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 28px; }
+    .hero-proof { gap: 10px; }
+    .hero-proof-item { font-size: 12px; }
+    .container { padding: 0 16px; }
+    .btn-cta { font-size: 15px; padding: 14px 24px; }
+    .btn-primary { font-size: 15px; padding: 12px 24px; }
   }
 
   .font-serif { font-family: 'Crimson Pro', Georgia, serif; }
@@ -780,6 +823,7 @@ function FAQItem({ question, answer }) {
 function App() {
   const [page, setPage] = useState("landing");
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [signupData, setSignupData] = useState({ firstName: "", lastName: "", email: "", phone: "", borough: "Manhattan", issueType: "" });
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [caseDetails, setCaseDetails] = useState("");
@@ -920,9 +964,24 @@ function App() {
                 <a className="nav-link" onClick={() => scrollToSection("pricing")}>Pricing</a>
                 <button className="btn-primary" style={{padding: "8px 20px", fontSize: "14px"}} onClick={() => setPage("signup")}>Get Started Free</button>
               </div>
+              <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              </button>
             </div>
           </div>
         </nav>
+
+        {/* ─── Mobile Menu Overlay ─── */}
+        <div className={`mobile-overlay ${mobileMenuOpen ? "open" : ""}`}>
+          <button className="mobile-close-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <a onClick={() => { scrollToSection("how-it-works"); setMobileMenuOpen(false); }}>How It Works</a>
+          <a onClick={() => { scrollToSection("features"); setMobileMenuOpen(false); }}>Features</a>
+          <a onClick={() => { scrollToSection("testimonials"); setMobileMenuOpen(false); }}>Reviews</a>
+          <a onClick={() => { scrollToSection("pricing"); setMobileMenuOpen(false); }}>Pricing</a>
+          <button className="btn-primary" onClick={() => { setPage("signup"); setMobileMenuOpen(false); }}>Get Started Free</button>
+        </div>
 
         {/* ─── Hero (Dark) ─── */}
         <section className="hero">

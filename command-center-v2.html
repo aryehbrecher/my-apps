@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aryeh's Command Center</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --navy: #1B365D; --gold: #C5A55A; --navy-light: #264a80; --gold-light: #d4ba7a; --gold-dark: #a88a3a;
+            --glass-bg: rgba(255,255,255,0.03); --glass-border: rgba(255,255,255,0.08); --glass-hover: rgba(255,255,255,0.06);
+            --glow-gold: rgba(197,165,90,0.4); --glow-blue: rgba(59,130,246,0.3);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { background: #06080f; color: #e2e8f0; min-height: 100vh; overflow-x: hidden; }
+        .ambient-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .ambient-bg::before { content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(197,165,90,0.08) 0%, transparent 70%);
+            top: -200px; right: -100px; animation: shift 20s ease-in-out infinite; }
+        .ambient-bg::after { content: ''; position: absolute; width: 500px; height: 500px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+            bottom: -150px; left: -100px; animation: float2 25s ease-in-out infinite; }
+        @keyframes shift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-80px,60px)} }
+        @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,-80px)} }
+        .particles { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; pointer-events: none; }
+        .particle { position: absolute; width: 2px; height: 2px; background: rgba(197,165,90,0.4); border-radius: 50%; animation: float linear infinite; }
+        @keyframes float { 0% { opacity: 0; transform: translateY(100vh) translateX(0); } 10% { opacity: 1; } 90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-100vh) translateX(100px); } }
+        .glass { background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(20px); border-radius: 12px; }
+        .glass-hover { transition: all 0.3s ease; }
+        .glass-hover:hover { background: var(--glass-hover); border-color: var(--gold-dark); box-shadow: 0 0 20px var(--glow-gold); }
+        .shine-card { position: relative; overflow: hidden; }
+        .shine-card::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shine 3s ease-in-out infinite; }
+        @keyframes shine { 0% { left: -100%; } 100% { left: 100%; } }
+        .gold-glow { box-shadow: 0 0 20px var(--glow-gold); }
+        .gold-gradient { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .btn-glass { background: var(--glass-bg); border: 1px solid var(--glass-border); color: #f0f0f0;
+            padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.875rem; font-weight: 500; }
+        .btn-glass:hover { background: var(--glass-hover); border-color: var(--gold); box-shadow: 0 0 15px var(--glow-gold); }
+        .btn-gold { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); border: none;
+            color: var(--navy); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;
+            font-size: 0.875rem; font-weight: 600; }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 10px 25px var(--glow-gold); }
+        .input-glass { background: var(--glass-bg); border: 1px solid var(--glass-border); color: #f0f0f0;
+            padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.875rem; transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .input-glass:focus { outline: none; border-color: var(--gold); background: var(--glass-hover);
+            box-shadow: 0 0 15px var(--glow-gold), 0 0 30px rgba(197,165,90,0.08); }
+        .input-glass::placeholder { color: rgba(240,240,240,0.5); }
+        .progress-ring-circle { stroke: var(--gold); fill: transparent; stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .pulse-dot { animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem;
+            font-weight: 600; background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--gold); }
+        .status-badge.active { background: rgba(197,165,90,0.2); border-color: var(--gold); }
+        .stagger { animation: staggerIn 0.6s ease-out; }
+        @keyframes staggerIn { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+        .custom-check { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid var(--gold);
+            border-radius: 4px; background: var(--glass-bg); cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .custom-check:checked { background: var(--gold); border-color: var(--gold); }
+        .custom-check:checked::after { content: '✓'; position: absolute; top: -2px; left: 3px; color: var(--navy); font-weight: bold; font-size: 14px; }
+        .tab-btn { padding: 0.5rem 1rem; border: none; background: transparent; color: rgba(240,240,240,0.6);
+            cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s ease; font-weight: 500; }
+        .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .tab-btn:hover { color: var(--gold-light); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(5px); }
+        .modal-glass { background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(20px);
+            border-radius: 16px; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .hero-number { font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .kbd-hint { display: inline-block; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; color: var(--gold); margin-left: 0.5rem; }
+        .focus-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95);
+            z-index: 1000; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .time-gradient { background: linear-gradient(135deg, var(--navy-light) 0%, var(--navy) 100%); }
+        .divider { height: 1px; background: var(--glass-border); margin: 1rem 0; }
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem; cursor: grab; }
+        .app-grid.dragging { cursor: grabbing; }
+        .draggable-card { cursor: move; transition: all 0.2s ease; border: 2px solid transparent; }
+        .draggable-card.drag-over { border-color: var(--gold); transform: scale(1.02); background: var(--glass-hover); }
+        .spotlight-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7);
+            z-index: 150; display: flex; align-items: flex-start; justify-content: center; padding-top: 20vh; backdrop-filter: blur(5px); }
+        .spotlight-container { width: 90%; max-width: 600px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .spotlight-input { width: 100%; padding: 1rem 1.5rem; background: transparent; border: none;
+            border-bottom: 1px solid var(--glass-border); color: #f0f0f0; font-size: 1rem; outline: none; }
+        .spotlight-input::placeholder { color: rgba(240,240,240,0.5); }
+        .spotlight-results { max-height: 400px; overflow-y: auto; }
+        .spotlight-item { padding: 1rem 1.5rem; border-bottom: 1px solid var(--glass-border); cursor: pointer;
+            transition: all 0.2s ease; display: flex; align-items: center; gap: 1rem; }
+        .spotlight-item:hover, .spotlight-item.selected { background: var(--glass-hover); color: var(--gold); }
+        .spotlight-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+        .spotlight-text { flex: 1; }
+        .spotlight-title { font-weight: 600; color: #f0f0f0; }
+        .spotlight-desc { font-size: 0.85rem; color: rgba(240,240,240,0.6); margin-top: 0.25rem; }
+        .sticky-reminder { position: fixed; padding: 1rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            cursor: move; user-select: none; z-index: 50; max-width: 250px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
+        .sticky-reminder.dragging { box-shadow: 0 20px 40px rgba(197,165,90,0.3); opacity: 0.95; }
+        .sticky-reminder-close { position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none;
+            color: #f0f0f0; cursor: pointer; font-size: 1.2rem; opacity: 0.6; transition: opacity 0.2s; }
+        .sticky-reminder-close:hover { opacity: 1; }
+        .sticky-reminder-text { word-wrap: break-word; word-break: break-word; padding-right: 1.5rem; }
+        .quick-actions-bar { position: fixed; bottom: 0; left: 50%; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 12px 12px 0 0; backdrop-filter: blur(20px); padding: 0.75rem 1rem; display: flex; gap: 0.5rem;
+            z-index: 40; max-width: 400px; transition: all 0.3s ease; }
+        .quick-action-btn { padding: 0.5rem 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 8px; color: var(--gold); cursor: pointer; transition: all 0.3s ease; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+        .quick-action-btn:hover { background: var(--glass-hover); border-color: var(--gold); box-shadow: 0 0 15px var(--glow-gold); }
+        .notification-badge { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+        .notification-dot { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%); border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 700; }
+        .notification-panel { position: absolute; top: 100%; right: 0; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px); border-radius: 12px; margin-top: 0.5rem; max-width: 350px; max-height: 400px; overflow-y: auto; z-index: 90; }
+        .notification-item { padding: 1rem; border-bottom: 1px solid var(--glass-border); font-size: 0.875rem;
+            display: flex; gap: 0.75rem; align-items: flex-start; }
+        .notification-item:last-child { border-bottom: none; }
+        .notification-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .habit-streak { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+        .habit-fire { animation: bounce 1s ease-in-out infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        .income-sparkline { width: 100%; height: 40px; display: block; }
+        .pomodoro-ring { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; }
+        .pomodoro-time { font-size: 2rem; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+        .pomodoro-status { font-size: 0.875rem; color: rgba(240,240,240,0.7); margin-top: 0.5rem; }
+        .health-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; }
+        .health-indicator.healthy { background: #4ade80; box-shadow: 0 0 10px rgba(74,222,128,0.5); }
+        .health-indicator.neglected { background: #f87171; box-shadow: 0 0 10px rgba(248,113,113,0.5); }
+        .calculator-display { background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 1rem;
+            border-radius: 8px; font-size: 1.5rem; text-align: right; color: var(--gold); word-break: break-all;
+            word-wrap: break-word; margin-bottom: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .calculator-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+        .calculator-btn { padding: 0.75rem; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            color: #f0f0f0; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-weight: 500; }
+        .calculator-btn:hover { background: var(--glass-hover); border-color: var(--gold); }
+        .calculator-btn.operator { color: var(--gold); }
+        .layout-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; z-index: 2; }
+        @media (max-width: 1024px) { .layout-grid { grid-template-columns: 1fr; } }
+
+        /* === CUSTOM SCROLLBAR === */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--gold-grad-start), var(--gold-grad-end)); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-light); }
+        * { scrollbar-width: thin; scrollbar-color: var(--gold) rgba(255,255,255,0.02); }
+
+        /* === ENHANCED INPUT FOCUS WITH GLOW === */
+        .input-glass:focus { outline: none; border-color: var(--gold); background: var(--glass-hover);
+            box-shadow: 0 0 15px var(--glow-gold), 0 0 30px rgba(197,165,90,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+
+        /* === CHECKBOX BOUNCE ON CHECK === */
+        .custom-check { transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .custom-check:checked { animation: checkBounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        @keyframes checkBounce { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
+
+        /* === FOCUS STATES FOR ACCESSIBILITY === */
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--gold); outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(197,165,90,0.15); }
+
+        /* === LINK UNDERLINE ANIMATION === */
+        a { position: relative; text-decoration: none; }
+        a::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 0; height: 1px;
+            background: linear-gradient(90deg, var(--gold-grad-start), var(--gold-grad-end));
+            transition: width 0.3s ease; }
+        a:hover::after { width: 100%; }
+
+        /* === SKELETON SHIMMER LOADING === */
+        .skeleton-shimmer { position: relative; overflow: hidden; background: rgba(255,255,255,0.03); border-radius: 8px; }
+        .skeleton-shimmer::after { content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), rgba(255,255,255,0.06), rgba(255,255,255,0.04), transparent);
+            animation: shimmer 2s ease-in-out infinite; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        /* === SCROLL REVEAL ANIMATIONS === */
+        .scroll-reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .scroll-reveal.revealed { opacity: 1; transform: translateY(0); }
+
+        /* === CHOREOGRAPHED PAGE LOAD === */
+        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeSlideRight { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes cascadeIn { from { opacity: 0; transform: translateY(15px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        .load-header { animation: fadeSlideUp 0.6s ease-out 0.1s both; }
+        .load-stats { animation: fadeSlideUp 0.6s ease-out 0.25s both; }
+        .load-stat-pill:nth-child(1) { animation: cascadeIn 0.5s ease-out 0.3s both; }
+        .load-stat-pill:nth-child(2) { animation: cascadeIn 0.5s ease-out 0.4s both; }
+        .load-stat-pill:nth-child(3) { animation: cascadeIn 0.5s ease-out 0.5s both; }
+        .load-stat-pill:nth-child(4) { animation: cascadeIn 0.5s ease-out 0.6s both; }
+        .load-sidebar { animation: fadeSlideRight 0.7s ease-out 0.4s both; }
+        .load-main { animation: fadeSlideUp 0.7s ease-out 0.5s both; }
+
+        /* === TYPOGRAPHY POLISH === */
+        .section-header { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; color: var(--text-primary); }
+        .section-header-gradient { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em;
+            background: linear-gradient(135deg, var(--gold-grad-start), var(--gold-grad-end));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-greeting { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; color: var(--text-primary); }
+        .body-text { font-size: 0.9rem; font-weight: 400; color: var(--text-secondary); line-height: 1.6; }
+        .caption-text { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+
+        /* === STAT PILL ANIMATED BORDER === */
+        .stat-pill-glow { position: relative; }
+        .stat-pill-glow::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px;
+            background: conic-gradient(from var(--border-angle), transparent 30%, rgba(197,165,90,0.3) 50%, transparent 70%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            animation: rotateBorder 6s linear infinite; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+        .stat-pill-glow:hover::before { opacity: 1; }
+
+        /* === STICKY HEADER BLUR INTENSIFICATION === */
+        .sticky-header-blur { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            transition: backdrop-filter 0.3s, background 0.3s; }
+        .sticky-header-blur.scrolled { backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            background: rgba(6,8,15,0.85) !important; border-bottom: 1px solid rgba(197,165,90,0.1) !important; }
+
+        /* === MODAL GLASS ENHANCEMENT === */
+        .modal-glass { background: rgba(12,15,25,0.9); border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border-radius: 16px; max-width: 500px; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5), 0 0 40px rgba(197,165,90,0.05); }
+
+        /* === TAB BUTTON ENHANCEMENT === */
+        .tab-btn { transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .tab-btn:hover { color: var(--gold-light); text-shadow: 0 0 20px rgba(197,165,90,0.3); }
+        .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); text-shadow: 0 0 15px rgba(197,165,90,0.2); }
+
+        /* === PROGRESS BAR GLOW === */
+        .bg-gradient-to-r { box-shadow: 0 0 8px rgba(197,165,90,0.3); }
+
+        /* === SPARKLINE GLOW === */
+        .income-sparkline polyline { filter: drop-shadow(0 0 3px rgba(197,165,90,0.5)); }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+        const STORAGE_KEYS = { THEME: 'cc-theme', CHECKLIST: 'cc-checklist', NOTES: 'cc-notes', GOALS: 'cc-goals', BOOKMARKS: 'cc-bookmarks',
+            SETTINGS: 'cc-settings', ACTIVITY: 'cc-activity', STATS: 'cc-stats', APP_TIMESTAMPS: 'cc-app-timestamps', MARKET_DATA: 'cc-market-data',
+            HABITS: 'cc-habits', INCOME: 'cc-income', REMINDERS: 'cc-reminders', POMODORO: 'cc-pomodoro', LAYOUT: 'cc-layout', NOTIFICATIONS: 'cc-notifications', RATE_LOCKS: 'cc-rate-locks', };
+
+        // === CROSS-DEVICE SYNC ENGINE ===
+        const SyncEngine = {
+            BLOB_API: 'https://jsonblob.com/api/jsonBlob',
+            SYNC_KEY: 'cc-sync-id', SYNC_TS_KEY: 'cc-sync-timestamp', _dirty: false, _syncing: false, _lastSync: 0,
+            getSyncId() { return localStorage.getItem(this.SYNC_KEY); },
+            setSyncId(id) { localStorage.setItem(this.SYNC_KEY, id); },
+            clearSync() { localStorage.removeItem(this.SYNC_KEY); localStorage.removeItem(this.SYNC_TS_KEY); },
+            getAllData() {
+                const data = {}; Object.values(STORAGE_KEYS).forEach(key => { try { const v = localStorage.getItem(key); if (v) data[key] = JSON.parse(v); } catch(e) {} });
+                data._syncTimestamp = Date.now(); return data;
+            },
+            applyData(data) {
+                if (!data) return false; let applied = false;
+                Object.values(STORAGE_KEYS).forEach(key => { if (data[key] !== undefined) { try { localStorage.setItem(key, JSON.stringify(data[key])); applied = true; } catch(e) {} } });
+                if (data._syncTimestamp) localStorage.setItem(this.SYNC_TS_KEY, String(data._syncTimestamp)); return applied;
+            },
+            async createSync() {
+                try { const res = await fetch(this.BLOB_API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(this.getAllData()) });
+                    if (!res.ok) throw new Error('Create failed'); const loc = res.headers.get('Location') || ''; const id = loc.split('/').pop();
+                    if (id) { this.setSyncId(id); return id; } return null;
+                } catch(e) { console.error('Sync create:', e); return null; }
+            },
+            async pushData() {
+                const id = this.getSyncId(); if (!id || this._syncing) return false; this._syncing = true;
+                try { const res = await fetch(`${this.BLOB_API}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.getAllData()) });
+                    this._dirty = false; this._lastSync = Date.now(); return res.ok;
+                } catch(e) { return false; } finally { this._syncing = false; }
+            },
+            async pullData() {
+                const id = this.getSyncId(); if (!id || this._syncing) return null; this._syncing = true;
+                try { const res = await fetch(`${this.BLOB_API}/${id}`, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) return null; const data = await res.json(); this._lastSync = Date.now(); return data;
+                } catch(e) { return null; } finally { this._syncing = false; }
+            },
+            markDirty() { this._dirty = true; },
+            startAutoSync(onPull, interval = 30000) {
+                if (this._interval) clearInterval(this._interval);
+                this._interval = setInterval(async () => {
+                    if (this._dirty) { await this.pushData(); }
+                    else { const data = await this.pullData(); if (data && data._syncTimestamp > (parseInt(localStorage.getItem(this.SYNC_TS_KEY)) || 0)) { this.applyData(data); if (onPull) onPull(); } }
+                }, interval);
+            },
+            stopAutoSync() { if (this._interval) clearInterval(this._interval); }
+        };
+
+        const QUOTES = [
+            { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
+            { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
+            { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+            { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein" },
+            { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+            { text: "Revenue is vanity, profit is sanity, but cash is king.", author: "Business Proverb" },
+            { text: "The speed of the boss is the speed of the team.", author: "Lee Iacocca" },
+            { text: "Your network is your net worth.", author: "Porter Gale" },
+            { text: "Close more loans, build more relationships, create more value.", author: "Aryeh's Motto" },
+            { text: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+            { text: "Be so good they can't ignore you.", author: "Steve Martin" },
+            { text: "Opportunities don't happen. You create them.", author: "Chris Grosser" },
+        ];
+        const DEFAULT_APPS = [
+            { id:'loanflow', name:'LoanFlow', desc:'Pipeline Dashboard', file:'loan-pipeline.html', icon:'📊', color:'#2563eb', key:'1' },
+            { id:'referralhub', name:'ReferralHub', desc:'Realtor CRM', file:'realtor-crm.html', icon:'🤝', color:'#7c3aed', key:'2' },
+            { id:'loancompare', name:'LoanCompare', desc:'Mortgage Calculator', file:'loan-compare.html', icon:'🧮', color:'#0891b2', key:'3' },
+            { id:'contentengine', name:'ContentEngine', desc:'Marketing Generator', file:'content-engine.html', icon:'✍️', color:'#db2777', key:'4' },
+            { id:'emailflow', name:'EmailFlow', desc:'Email AI', file:'email-rewriter.html', icon:'📧', color:'#ea580c', key:'5' },
+            { id:'edgescanner', name:'EdgeScanner', desc:'Trading Scanner', file:'edge-scanner.html', icon:'📈', color:'#16a34a', key:'6' },
+            { id:'optionstracker', name:'Options Tracker', desc:'Options P&L', file:'options-tracker.html', icon:'🎯', color:'#9333ea', key:'7' },
+            { id:'fintracker', name:'FinTracker', desc:'Financial Tracker', file:'financial-tracker.html', icon:'💰', color:'#ca8a04', key:'8' },
+            { id:'aiacademy', name:'AI Academy', desc:'AI Training', file:'ai-academy.html', icon:'🧠', color:'#6366f1', key:'9' },
+            { id:'dealanalyzer', name:'DealAnalyzer', desc:'Deal Analysis', file:'deal-analyzer.html', icon:'🏠', color:'#0d9488', key:'0' },
+            { id:'youtubestudio', name:'YouTube Studio', desc:'Content Studio', file:'youtube-studio.html', icon:'🎬', color:'#dc2626', key:'-' },
+        ];
+        const DEFAULT_CHECKLIST = [
+            { id:1, text:'Send rate update to realtors', done:false },
+            { id:2, text:'Check pipeline for stalled loans', done:false },
+            { id:3, text:'Follow up with overdue realtor contacts', done:false },
+            { id:4, text:'Post on LinkedIn', done:false },
+            { id:5, text:'Review new leads', done:false },
+            { id:6, text:'Update CRM notes', done:false },
+        ];
+        const DEFAULT_BOOKMARKS = [
+            { id:1, title:'MortgageNewsDaily', url:'https://www.mortgagenewsdaily.com' },
+            { id:2, title:'Fannie Mae', url:'https://www.fanniemae.com' },
+            { id:3, title:'Freddie Mac', url:'https://www.freddiemac.com' },
+            { id:4, title:'FHA Resource Center', url:'https://www.hud.gov/program_offices/housing/fhahistory' },
+            { id:5, title:'LinkedIn', url:'https://www.linkedin.com' },
+            { id:6, title:'FM Home Loans', url:'https://www.fmhomeloans.com' },
+            { id:7, title:'Encompass LOS', url:'https://www.ice.com/mortgage-technology/encompass' },
+            { id:8, title:'NMLS', url:'https://www.nmlsconsumeraccess.org' },
+        ];
+        const DEFAULT_GOALS = [
+            { id:1, title:'Fund 8 loans', period:'monthly', progress:5, target:8 },
+            { id:2, title:'Revenue $80K', period:'monthly', progress:52000, target:80000, isCurrency:true },
+            { id:3, title:'Add 4 new realtors', period:'monthly', progress:3, target:4 },
+            { id:4, title:'Fund 24 loans', period:'quarterly', progress:14, target:24 },
+            { id:5, title:'Revenue $240K', period:'quarterly', progress:148000, target:240000, isCurrency:true },
+            { id:6, title:'Add 12 realtors', period:'quarterly', progress:8, target:12 },
+            { id:7, title:'Fund 96 loans', period:'annual', progress:42, target:96 },
+            { id:8, title:'Revenue $960K', period:'annual', progress:420000, target:960000, isCurrency:true },
+            { id:9, title:'Add 48 realtors', period:'annual', progress:24, target:48 },
+        ];
+        const DEFAULT_ACTIVITY = [
+            { id:1, action:'Funded Kramer loan — $485K conventional', time:new Date(Date.now()-3*86400000).toISOString(), icon:'🎉' },
+            { id:2, action:'Added 2 new realtors to CRM', time:new Date(Date.now()-2*86400000).toISOString(), icon:'🤝' },
+            { id:3, action:'Generated 5 LinkedIn posts for the week', time:new Date(Date.now()-1*86400000).toISOString(), icon:'✍️' },
+            { id:4, action:'Sent rate comparison to Thompson family', time:new Date(Date.now()-4*3600000).toISOString(), icon:'📧' },
+            { id:5, action:'Analyzed duplex deal on Maple Ave', time:new Date(Date.now()-2*3600000).toISOString(), icon:'🏠' },
+            { id:6, action:'Completed AI prompting module 3', time:new Date(Date.now()-1*3600000).toISOString(), icon:'🧠' },
+        ];
+        const DEFAULT_STATS = { pipeline: { value: 12, label: 'Pipeline' }, followups: { value: 5, label: 'Follow-ups' },
+            lastFunded: { value: '3d ago', label: 'Last Funded' }, deepWorkToday: { value: '0h 0m', label: 'Deep Work' }, };
+        const DEFAULT_HABITS = [{ id: 1, name: 'Sent rate update', streak: 0, lastCompleted: null },
+            { id: 2, name: 'Called 3 realtors', streak: 0, lastCompleted: null }, { id: 3, name: 'Posted on LinkedIn', streak: 0, lastCompleted: null },
+            { id: 4, name: 'Reviewed pipeline', streak: 0, lastCompleted: null }, { id: 5, name: 'Exercised', streak: 0, lastCompleted: null },];
+        const DEFAULT_INCOME = { entries: [] };
+        const DEFAULT_MARKET = {
+            rates: { mortgage30: 6.875, mortgage15: 6.125, jumbo: 7.125, fha: 6.500 },
+            indices: { sp500: '+0.42%', nasdaq: '+0.68%', dow: '+0.31%' },
+            mood: 'cautious', lastUpdated: new Date().toLocaleDateString(),
+        };
+        const DEFAULT_SETTINGS = { name:'Aryeh', title:'Loan Officer', company:'FM Home Loans', darkMode: true, notifications: true, soundEnabled: true };
+        const load = (key, defaultValue) => { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : defaultValue; } catch { return defaultValue; } };
+        const save = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); SyncEngine.markDirty(); } catch (e) { console.error(`Failed to save ${key}:`, e); } };
+        const getGreeting = () => { const hour = new Date().getHours(); if (hour < 12) return 'Good morning'; if (hour < 18) return 'Good afternoon'; return 'Good evening'; };
+        const timeAgo = (date) => { const seconds = Math.floor((new Date() - new Date(date)) / 1000); if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60); if (minutes < 60) return `${minutes}m ago`; const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`; const days = Math.floor(hours / 24); return `${days}d ago`; };
+        const todayKey = () => new Date().toISOString().split('T')[0];
+        const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+        const getQuoteOfDay = () => { const hash = new Date().toDateString().split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0); const q = QUOTES[Math.abs(hash) % QUOTES.length]; return q.text + ' — ' + q.author; };
+        const initParticles = (containerRef) => { if (!containerRef?.current) return; containerRef.current.innerHTML = ''; for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div'); particle.className = 'particle'; particle.style.left = Math.random() * 100 + '%';
+            particle.style.animation = `float ${15 + Math.random() * 10}s linear infinite`; particle.style.animationDelay = Math.random() * 5 + 's';
+            particle.style.opacity = Math.random() * 0.5 + 0.2; containerRef.current.appendChild(particle); } };
+        const CloseIcon = () => (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>);
+        const SettingsIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6"></path><path d="M4.22 4.22l4.24 4.24m6.08 0l4.24-4.24"></path>
+            <path d="M1 12h6m6 0h6"></path><path d="M4.22 19.78l4.24-4.24m6.08 0l4.24 4.24"></path></svg>);
+        const BellIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>);
+        const ProgressRing = ({ radius = 50, circumference, percent }) => { const strokeDashoffset = circumference - (percent / 100) * circumference;
+            return (<svg height={radius * 2} width={radius * 2} style={{ transform: 'scaleX(-1)' }}><circle stroke="rgba(255,255,255,0.1)" fill="transparent" strokeWidth="4" r={radius} cx={radius} cy={radius} />
+            <circle className="progress-ring-circle" stroke="var(--gold)" fill="transparent" strokeWidth="4" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" r={radius} cx={radius} cy={radius} /></svg>); };
+        const AnimatedCounter = ({ value, duration = 1 }) => { const [displayValue, setDisplayValue] = useState(0); useEffect(() => {
+            let start = 0; const increment = value / (duration * 60); const timer = setInterval(() => {
+                start += increment; if (start >= value) { setDisplayValue(value); clearInterval(timer); } else { setDisplayValue(Math.floor(start)); } }, 1000 / 60);
+            return () => clearInterval(timer); }, [value, duration]); return <span>{displayValue}</span>; };
+        const TypeWriter = ({ text, speed = 50 }) => { const [displayedText, setDisplayedText] = useState(''); useEffect(() => {
+            let index = 0; const timer = setInterval(() => { if (index <= text.length) { setDisplayedText(text.substring(0, index)); index++; } else { clearInterval(timer); } }, speed);
+            return () => clearInterval(timer); }, [text, speed]); return <span>{displayedText}</span>; };
+        const StatPill = ({ label, value }) => (<div className="glass glass-hover stat-pill-glow px-4 py-3 rounded-lg flex flex-col items-center" style={{background:'rgba(255,255,255,0.03)'}}>
+            <div className="caption-text" style={{fontSize:'0.7rem'}}>{label}</div><div className="text-lg font-bold gold-gradient">{value}</div></div>);
+        const SettingField = ({ label, value, onChange, type = 'text' }) => (<div className="py-3 border-b border-gray-700 last:border-b-0">
+            <label className="block text-sm font-medium mb-2 text-gray-300">{label}</label>{type === 'toggle' ? (
+            <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} className="custom-check" />
+            <span className="text-sm text-gray-400">{value ? 'Enabled' : 'Disabled'}</span></label>) : (
+            <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="input-glass w-full" />)}</div>);
+        const SpotlightSearch = ({ isOpen, onClose, apps, bookmarks, notes, goals }) => { const [query, setQuery] = useState('');
+            const [selectedIndex, setSelectedIndex] = useState(0); const inputRef = useRef(null);
+            const fuzzyMatch = (search, text) => text.toLowerCase().includes(search.toLowerCase()); const results = [];
+            if (query) { apps.forEach((app) => { if (fuzzyMatch(query, app.name) || fuzzyMatch(query, app.desc)) {
+                results.push({ type: 'app', icon: app.icon, title: app.name, desc: app.desc, data: app }); } });
+            bookmarks.forEach((bm) => { if (fuzzyMatch(query, bm.title) || fuzzyMatch(query, bm.url)) {
+                results.push({ type: 'bookmark', icon: '🔖', title: bm.title, desc: bm.url, data: bm }); } });
+            notes.forEach((note) => { if (fuzzyMatch(query, note.text)) {
+                results.push({ type: 'note', icon: '📝', title: note.text.substring(0, 30), desc: 'Quick Note', data: note }); } });
+            goals.forEach((goal) => { if (fuzzyMatch(query, goal.title)) {
+                results.push({ type: 'goal', icon: '🎯', title: goal.title, desc: goal.period, data: goal }); } }); }
+            useEffect(() => { if (isOpen) { inputRef.current?.focus(); setQuery(''); setSelectedIndex(0); } }, [isOpen]);
+            const handleKeyDown = (e) => { if (e.key === 'Escape') { onClose(); } else if (e.key === 'ArrowDown') {
+                e.preventDefault(); setSelectedIndex((prev) => (prev + 1) % Math.max(results.length, 1)); } else if (e.key === 'ArrowUp') {
+                e.preventDefault(); setSelectedIndex((prev) => (prev - 1 + Math.max(results.length, 1)) % Math.max(results.length, 1)); } else if (e.key === 'Enter') {
+                e.preventDefault(); if (results[selectedIndex]) { const result = results[selectedIndex];
+                if (result.type === 'app') { window.location.href = result.data.file; } else if (result.type === 'bookmark') { window.open(result.data.url, '_blank'); }
+                onClose(); } } };
+            if (!isOpen) return null; return (<div className="spotlight-modal" onClick={onClose}><div className="spotlight-container" onClick={(e) => e.stopPropagation()}>
+            <input ref={inputRef} type="text" placeholder="Search apps, bookmarks, notes, goals..." className="spotlight-input"
+                value={query} onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }} onKeyDown={handleKeyDown} />
+            <div className="spotlight-results">{results.length > 0 ? (results.map((result, idx) => (
+                <div key={`${result.type}-${idx}`} className={`spotlight-item ${selectedIndex === idx ? 'selected' : ''}`}
+                    onClick={() => { if (result.type === 'app') { window.location.href = result.data.file; } else if (result.type === 'bookmark') {
+                        window.open(result.data.url, '_blank'); } onClose(); }}><div className="spotlight-icon">{result.icon}</div>
+                    <div className="spotlight-text"><div className="spotlight-title">{result.title}</div><div className="spotlight-desc">{result.desc}</div></div></div>)))
+            : query ? (<div className="spotlight-item text-gray-400">No results found</div>) : (<div className="spotlight-item text-gray-500 text-sm">Type to search...</div>)}</div></div></div>); };
+        const PomodoroTimer = ({ stats, onUpdate }) => { const [timeLeft, setTimeLeft] = useState(25 * 60); const [isRunning, setIsRunning] = useState(false);
+            const [isWorkSession, setIsWorkSession] = useState(true); const [sessionsCompleted, setSessionsCompleted] = useState(0); const audioContextRef = useRef(null);
+            const playBeep = () => { if (!audioContextRef.current) { audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)(); }
+            const ctx = audioContextRef.current; const osc = ctx.createOscillator(); const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 800;
+            gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5); };
+            useEffect(() => { let interval; if (isRunning && timeLeft > 0) { interval = setInterval(() => { setTimeLeft((prev) => prev - 1); }, 1000); }
+            else if (timeLeft === 0 && isRunning) { playBeep(); if (isWorkSession) { setSessionsCompleted((prev) => prev + 1);
+                const hours = Math.floor((sessionsCompleted + 1) * 25 / 60); const mins = ((sessionsCompleted + 1) * 25) % 60;
+                onUpdate({ ...stats, deepWorkToday: { value: `${hours}h ${mins}m`, label: 'Deep Work Today' } }); }
+            setIsWorkSession(!isWorkSession); setTimeLeft(isWorkSession ? 5 * 60 : 25 * 60); setIsRunning(false); }
+            return () => clearInterval(interval); }, [isRunning, timeLeft, isWorkSession, sessionsCompleted, stats, onUpdate]);
+            const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+            return (<div className="glass glass-hover p-6 rounded-lg"><h3 className="text-lg font-bold mb-4 text-gray-200">Pomodoro Timer</h3>
+            <div className="flex flex-col items-center justify-center"><svg className="pomodoro-ring" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--gold)" strokeWidth="4"
+                strokeDasharray={`${(timeLeft / (isWorkSession ? 25 * 60 : 5 * 60)) * 314} 314`} strokeLinecap="round"
+                style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dasharray 1s linear' }} />
+            <text x="60" y="70" textAnchor="middle" fontSize="28" fontWeight="bold" fill="var(--gold)" fontFamily="monospace">
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</text></svg></div>
+            <div className="pomodoro-status text-center mt-4">{isWorkSession ? '🎯 Work Session' : '☕ Break Time'} • {sessionsCompleted} completed</div>
+            <div className="flex gap-2 mt-4 justify-center"><button onClick={() => setIsRunning(!isRunning)} className="btn-gold text-sm">
+                {isRunning ? 'Pause' : 'Start'}</button><button onClick={() => { setIsRunning(false); setTimeLeft(isWorkSession ? 25 * 60 : 5 * 60); }} className="btn-glass text-sm">Reset</button></div></div>); };
+        const QuickCalculator = ({ isOpen, onClose }) => { const [display, setDisplay] = useState('0'); const [prevValue, setPrevValue] = useState(null);
+            const [operation, setOperation] = useState(null); const [mortgageMode, setMortgageMode] = useState(false);
+            const [mortgageInputs, setMortgageInputs] = useState({ rate: '', amount: '', term: '' }); const [mortgageResult, setMortgageResult] = useState(null);
+            const performCalculation = (prev, current, op) => { switch (op) { case '+': return prev + current; case '-': return prev - current;
+                case '*': return prev * current; case '/': return current !== 0 ? prev / current : 0; default: return current; } };
+            const handleNumber = (num) => { if (mortgageMode) return; setDisplay(display === '0' ? String(num) : display + String(num)); };
+            const handleOperation = (op) => { if (mortgageMode) return; const currentValue = parseFloat(display);
+            if (prevValue === null) { setPrevValue(currentValue); } else if (operation) { const result = performCalculation(prevValue, currentValue, operation);
+                setDisplay(String(result)); setPrevValue(result); } setDisplay('0'); setOperation(op); };
+            const handleEquals = () => { if (mortgageMode) return; if (operation && prevValue !== null) {
+                const result = performCalculation(prevValue, parseFloat(display), operation); setDisplay(String(result)); setPrevValue(null); setOperation(null); } };
+            const calculateMortgage = () => { const rate = parseFloat(mortgageInputs.rate); const amount = parseFloat(mortgageInputs.amount);
+                const term = parseFloat(mortgageInputs.term); if (!rate || !amount || !term) return;
+                const monthlyRate = rate / 100 / 12; const numPayments = term * 12;
+                const monthlyPayment = (amount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments))) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+                setMortgageResult(monthlyPayment); };
+            if (!isOpen) return null; return (<div className="modal-overlay" onClick={onClose}><div className="modal-glass p-6 w-96" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">Calculator</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-200"><CloseIcon /></button></div>
+            <div className="flex gap-2 mb-4"><button onClick={() => { setMortgageMode(false); setDisplay('0'); }} className={`flex-1 py-2 rounded ${!mortgageMode ? 'btn-gold' : 'btn-glass'}`}>Basic</button>
+            <button onClick={() => setMortgageMode(true)} className={`flex-1 py-2 rounded ${mortgageMode ? 'btn-gold' : 'btn-glass'}`}>Mortgage</button></div>
+            {!mortgageMode ? (<><div className="calculator-display">{display}</div><div className="calculator-grid">
+            {[7, 8, 9, '/'].map((item) => (<button key={item} onClick={() => (typeof item === 'number' ? handleNumber(item) : handleOperation(item))}
+                className={`calculator-btn ${typeof item === 'string' ? 'operator' : ''}`}>{item}</button>))}
+            {[4, 5, 6, '*'].map((item) => (<button key={item} onClick={() => (typeof item === 'number' ? handleNumber(item) : handleOperation(item))}
+                className={`calculator-btn ${typeof item === 'string' ? 'operator' : ''}`}>{item}</button>))}
+            {[1, 2, 3, '-'].map((item) => (<button key={item} onClick={() => (typeof item === 'number' ? handleNumber(item) : handleOperation(item))}
+                className={`calculator-btn ${typeof item === 'string' ? 'operator' : ''}`}>{item}</button>))}
+            <button onClick={() => setDisplay('0')} className="calculator-btn col-span-2">C</button>
+            <button onClick={() => handleNumber(0)} className="calculator-btn">0</button>
+            <button onClick={() => handleEquals()} className="calculator-btn operator">=</button></div></>) : (
+            <div className="space-y-3"><input type="number" placeholder="Interest Rate (%)" value={mortgageInputs.rate}
+                onChange={(e) => setMortgageInputs({ ...mortgageInputs, rate: e.target.value })} className="input-glass w-full" />
+            <input type="number" placeholder="Loan Amount ($)" value={mortgageInputs.amount}
+                onChange={(e) => setMortgageInputs({ ...mortgageInputs, amount: e.target.value })} className="input-glass w-full" />
+            <input type="number" placeholder="Loan Term (years)" value={mortgageInputs.term}
+                onChange={(e) => setMortgageInputs({ ...mortgageInputs, term: e.target.value })} className="input-glass w-full" />
+            <button onClick={calculateMortgage} className="btn-gold w-full">Calculate</button>
+            {mortgageResult && (<div className="glass p-3 rounded text-center"><div className="text-sm text-gray-400">Monthly Payment (P&I)</div>
+            <div className="text-2xl font-bold gold-gradient">${mortgageResult.toFixed(2)}</div></div>)}</div>)}</div></div>); };
+        const StickyReminders = ({ reminders, onUpdate }) => { const [draggingId, setDraggingId] = useState(null); const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            const colors = ['bg-yellow-400', 'bg-pink-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300'];
+            const handleMouseDown = (id, e) => { const rect = e.currentTarget.getBoundingClientRect();
+            setDraggingId(id); setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top }); };
+            const handleMouseMove = useCallback((e) => { if (draggingId === null) return; const reminder = reminders.find((r) => r.id === draggingId);
+            if (!reminder) return; const newReminder = { ...reminder, left: e.clientX - dragOffset.x, top: e.clientY - dragOffset.y };
+            onUpdate(reminders.map((r) => (r.id === draggingId ? newReminder : r))); }, [draggingId, reminders, dragOffset, onUpdate]);
+            const handleMouseUp = () => { setDraggingId(null); }; useEffect(() => { if (draggingId !== null) {
+            window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp);
+            return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); }; } }, [draggingId, handleMouseMove]);
+            return (<>{reminders.map((reminder, idx) => (<div key={reminder.id} className={`sticky-reminder ${colors[idx % colors.length]} text-gray-900 ${draggingId === reminder.id ? 'dragging' : ''}`}
+            style={{ left: `${reminder.left}px`, top: `${reminder.top}px` }} onMouseDown={(e) => handleMouseDown(reminder.id, e)}>
+            <button onClick={() => onUpdate(reminders.filter((r) => r.id !== reminder.id))} className="sticky-reminder-close">×</button>
+            <div className="sticky-reminder-text">{reminder.text}</div></div>))}</> ); };
+        const DailyHabitTracker = ({ habits, onUpdate }) => { const today = todayKey(); const toggleHabit = (id) => {
+            const updated = habits.map((h) => { if (h.id !== id) return h; const completed = h.lastCompleted === today;
+            const newStreak = completed ? h.streak : h.streak + 1;
+            return { ...h, lastCompleted: completed ? null : today, streak: completed ? 0 : newStreak }; }); onUpdate(updated); };
+            return (<div className="glass glass-hover p-6 rounded-lg"><h3 className="text-lg font-bold mb-4 text-gray-200">Daily Habits</h3>
+            <div className="space-y-3">{habits.map((habit) => { const isCompleted = habit.lastCompleted === today; const showFire = habit.streak >= 7;
+            return (<label key={habit.id} className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-white hover:bg-opacity-5 transition">
+            <input type="checkbox" checked={isCompleted} onChange={() => toggleHabit(habit.id)} className="custom-check" />
+            <span className={`flex-1 text-sm ${isCompleted ? 'line-through text-gray-500' : 'text-gray-200'}`}>{habit.name}</span>
+            {habit.streak > 0 && (<div className="habit-streak text-xs">{showFire && <span className="habit-fire text-lg">🔥</span>}<span>{habit.streak}</span></div>)}</label>); })}</div></div>); };
+        const IncomeTracker = ({ income, onUpdate }) => { const [newIncome, setNewIncome] = useState('');
+            const addIncome = () => { if (!newIncome) return; const today = todayKey();
+            const updated = { ...income, entries: [...income.entries, { id: Date.now(), date: today, amount: parseFloat(newIncome) }] };
+            onUpdate(updated); setNewIncome(''); };
+            const currentMonth = new Date().toISOString().split('T')[0].substring(0, 7);
+            const thisMonthEntries = income.entries.filter((e) => e.date.startsWith(currentMonth));
+            const thisMonthTotal = thisMonthEntries.reduce((sum, e) => sum + e.amount, 0);
+            const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0].substring(0, 7);
+            const lastMonthEntries = income.entries.filter((e) => e.date.startsWith(lastMonth));
+            const lastMonthTotal = lastMonthEntries.reduce((sum, e) => sum + e.amount, 0);
+            const ytdEntries = income.entries.filter((e) => e.date.startsWith(new Date().getFullYear().toString()));
+            const ytdTotal = ytdEntries.reduce((sum, e) => sum + e.amount, 0);
+            const monthlyAvg = ytdEntries.length > 0 ? ytdTotal / Math.ceil(ytdEntries.length / 1) : 0;
+            const recentEntries = income.entries.slice(-12); const maxAmount = Math.max(...recentEntries.map((e) => e.amount), 1);
+            const points = recentEntries.map((e, idx) => `${(idx / Math.max(recentEntries.length - 1, 1)) * 100},${100 - (e.amount / maxAmount) * 80}`).join(' ');
+            return (<div className="glass glass-hover p-6 rounded-lg"><h3 className="text-lg font-bold mb-4 text-gray-200">Income Tracker</h3>
+            <div className="grid grid-cols-2 gap-3 mb-4"><StatPill label="This Month" value={formatCurrency(thisMonthTotal)} />
+            <StatPill label="Last Month" value={formatCurrency(lastMonthTotal)} /><StatPill label="YTD Total" value={formatCurrency(ytdTotal)} />
+            <StatPill label="Monthly Avg" value={formatCurrency(monthlyAvg)} /></div>
+            {recentEntries.length > 0 && (<svg viewBox="0 0 100 100" className="income-sparkline mb-4">
+            <polyline points={points} fill="none" stroke="var(--gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" /></svg>)}
+            <div className="flex gap-2"><input type="number" placeholder="Add commission..." value={newIncome} onChange={(e) => setNewIncome(e.target.value)}
+            className="input-glass flex-1" onKeyPress={(e) => e.key === 'Enter' && addIncome()} />
+            <button onClick={addIncome} className="btn-gold">Add</button></div></div>); };
+        const AppHealthMonitor = ({ apps, appTimestamps }) => { return (<div className="glass glass-hover p-6 rounded-lg"><h3 className="text-lg font-bold mb-4 text-gray-200">App Health</h3>
+            <div className="space-y-2">{apps.map((app) => { const lastOpened = appTimestamps[app.id];
+            const daysAgo = lastOpened ? Math.floor((new Date() - new Date(lastOpened)) / (1000 * 60 * 60 * 24)) : 999; const isNeglected = daysAgo >= 7;
+            return (<div key={app.id} className="flex items-center justify-between text-sm p-2 rounded hover:bg-white hover:bg-opacity-5">
+            <div className="flex items-center gap-2"><span className={`health-indicator ${isNeglected ? 'neglected' : 'healthy'}`}></span><span>{app.name}</span></div>
+            <span className="text-xs text-gray-500">{lastOpened ? timeAgo(lastOpened) : 'Never opened'}</span></div>); })}</div></div>); };
+        const NotificationCenter = ({ notifications, isOpen, onToggle }) => { return (<div className="relative"><button onClick={onToggle} className="notification-badge btn-glass">
+            <BellIcon />{notifications.length > 0 && <div className="notification-dot">{notifications.length > 9 ? '9+' : notifications.length}</div>}</button>
+            {isOpen && (<div className="notification-panel">{notifications.length > 0 ? (notifications.map((notif, idx) => (<div key={idx} className="notification-item">
+            <div className="notification-icon">{notif.icon}</div><div className="flex-1"><div className="font-medium text-sm">{notif.title}</div>
+            <div className="text-xs text-gray-500">{notif.message}</div></div></div>))) : (<div className="notification-item text-gray-500 text-center">No notifications</div>)}</div>)}</div>); };
+        const RateLockCountdown = ({ locks, onUpdate }) => {
+            const [showAdd, setShowAdd] = useState(false);
+            const [newLock, setNewLock] = useState({ borrower: '', rate: '', expDate: '' });
+            const addLock = () => { if (!newLock.borrower || !newLock.expDate) return;
+                onUpdate([...locks, { id: Date.now(), borrower: newLock.borrower, rate: newLock.rate, expDate: newLock.expDate }]);
+                setNewLock({ borrower: '', rate: '', expDate: '' }); setShowAdd(false); };
+            const removeLock = (id) => onUpdate(locks.filter(l => l.id !== id));
+            const getTimeLeft = (expDate) => { const now = new Date(); const exp = new Date(expDate + 'T23:59:59');
+                const diff = exp - now; if (diff <= 0) return { text: 'EXPIRED', days: -1, urgent: 'expired' };
+                const days = Math.floor(diff / 86400000); const hours = Math.floor((diff % 86400000) / 3600000);
+                if (days === 0) return { text: `${hours}h left`, days: 0, urgent: 'critical' };
+                if (days <= 3) return { text: `${days}d ${hours}h`, days, urgent: 'critical' };
+                if (days <= 7) return { text: `${days}d left`, days, urgent: 'warning' };
+                return { text: `${days}d left`, days, urgent: 'safe' }; };
+            const urgencyColor = (u) => u === 'expired' ? '#ef4444' : u === 'critical' ? '#f97316' : u === 'warning' ? '#eab308' : '#22c55e';
+            const urgencyGlow = (u) => u === 'expired' ? 'rgba(239,68,68,0.3)' : u === 'critical' ? 'rgba(249,115,22,0.3)' : u === 'warning' ? 'rgba(234,179,8,0.2)' : 'rgba(34,197,94,0.2)';
+            const sortedLocks = [...locks].sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+            return (<div className="glass glass-hover p-6 rounded-lg">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-gray-200">🔒 Rate Locks</h3>
+                    <button onClick={() => setShowAdd(!showAdd)} className="btn-glass text-sm">{showAdd ? 'Cancel' : '+ Lock'}</button></div>
+                {showAdd && (<div className="space-y-2 mb-4 p-3 rounded" style={{background:'rgba(255,255,255,0.03)'}}>
+                    <input type="text" placeholder="Borrower name" value={newLock.borrower}
+                        onChange={(e) => setNewLock({...newLock, borrower: e.target.value})} className="input-glass w-full text-sm" />
+                    <div className="flex gap-2">
+                        <input type="text" placeholder="Rate %" value={newLock.rate}
+                            onChange={(e) => setNewLock({...newLock, rate: e.target.value})} className="input-glass flex-1 text-sm" />
+                        <input type="date" value={newLock.expDate}
+                            onChange={(e) => setNewLock({...newLock, expDate: e.target.value})} className="input-glass flex-1 text-sm" /></div>
+                    <button onClick={addLock} className="btn-gold w-full text-sm">Add Rate Lock</button></div>)}
+                {sortedLocks.length > 0 ? (<div className="space-y-2">{sortedLocks.map(lock => { const tl = getTimeLeft(lock.expDate);
+                    return (<div key={lock.id} className="flex items-center gap-3 p-3 rounded transition" style={{background: urgencyGlow(tl.urgent), border: `1px solid ${urgencyColor(tl.urgent)}30`}}>
+                        <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-gray-200 truncate">{lock.borrower}</div>
+                            <div className="text-xs text-gray-400">{lock.rate ? `${lock.rate}%` : 'No rate'} · Exp {new Date(lock.expDate + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'})}</div></div>
+                        <div className="text-right flex-shrink-0"><div className="text-sm font-bold" style={{color: urgencyColor(tl.urgent)}}>{tl.text}</div>
+                            {tl.urgent === 'critical' && <div className="text-xs pulse-dot" style={{color: urgencyColor(tl.urgent)}}>⚠️ Act now</div>}
+                            {tl.urgent === 'expired' && <div className="text-xs" style={{color:'#ef4444'}}>🚨 Expired</div>}</div>
+                        <button onClick={() => removeLock(lock.id)} className="text-gray-600 hover:text-gray-300 text-sm flex-shrink-0">×</button></div>); })}</div>)
+                : (<div className="text-center text-gray-600 text-sm py-4">No active rate locks</div>)}</div>); };
+        const QuickActionsToolbar = ({ onNewNote, onStartTimer, onAddIncome, onLogHabit }) => { const [isVisible, setIsVisible] = useState(false);
+            return (<div className="quick-actions-bar" onMouseEnter={() => setIsVisible(true)} onMouseLeave={() => setIsVisible(false)}
+            style={{ transform: isVisible ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(100%)' }}>
+            <button onClick={onNewNote} className="quick-action-btn">📝 Note</button><button onClick={onStartTimer} className="quick-action-btn">⏱️ Timer</button>
+            <button onClick={onAddIncome} className="quick-action-btn">💰 Income</button><button onClick={onLogHabit} className="quick-action-btn">✅ Habit</button></div>); };
+        // === SYNC UI COMPONENTS ===
+        const SyncStatusBadge = ({ syncId, onOpenSync }) => {
+            const [status, setStatus] = useState(syncId ? 'synced' : 'off');
+            useEffect(() => { if (!syncId) { setStatus('off'); return; }
+                const check = setInterval(() => { setStatus(SyncEngine._syncing ? 'syncing' : SyncEngine._dirty ? 'pending' : 'synced'); }, 2000);
+                return () => clearInterval(check);
+            }, [syncId]);
+            const colors = { off: '#6b7280', syncing: '#3b82f6', pending: '#eab308', synced: '#22c55e' };
+            const labels = { off: 'No Sync', syncing: 'Syncing...', pending: 'Pending', synced: 'Synced' };
+            return (<button onClick={onOpenSync} className="btn-glass text-xs flex items-center gap-2" title="Cross-device sync">
+                <span style={{width:8,height:8,borderRadius:'50%',background:colors[status],boxShadow:`0 0 8px ${colors[status]}60`,display:'inline-block'}}></span>
+                {labels[status]}</button>);
+        };
+        const SyncModal = ({ isOpen, onClose, onSyncChanged }) => {
+            const [syncId, setSyncId] = useState(SyncEngine.getSyncId() || '');
+            const [joinCode, setJoinCode] = useState('');
+            const [msg, setMsg] = useState('');
+            const [loading, setLoading] = useState(false);
+            if (!isOpen) return null;
+            const handleCreate = async () => { setLoading(true); setMsg('Creating sync...'); const id = await SyncEngine.createSync();
+                if (id) { setSyncId(id); setMsg('Sync created! Share this code with your other devices.'); if (onSyncChanged) onSyncChanged(id); }
+                else setMsg('Failed to create sync. Try again.'); setLoading(false); };
+            const handleJoin = async () => { if (!joinCode.trim()) return; setLoading(true); setMsg('Connecting...');
+                SyncEngine.setSyncId(joinCode.trim()); const data = await SyncEngine.pullData();
+                if (data) { SyncEngine.applyData(data); setSyncId(joinCode.trim()); setMsg('Connected! Data synced from cloud. Reloading...');
+                    if (onSyncChanged) onSyncChanged(joinCode.trim()); setTimeout(() => window.location.reload(), 1500); }
+                else { SyncEngine.clearSync(); setMsg('Invalid sync code. Check and try again.'); } setLoading(false); };
+            const handleDisconnect = () => { SyncEngine.clearSync(); SyncEngine.stopAutoSync(); setSyncId(''); setMsg('Sync disconnected.'); if (onSyncChanged) onSyncChanged(null); };
+            const handleCopy = () => { navigator.clipboard.writeText(syncId).then(() => setMsg('Code copied!')); };
+            return (<div className="modal-overlay" onClick={onClose}><div className="modal-glass p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-bold gold-gradient">Cross-Device Sync</h2>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-200 text-xl">×</button></div>
+                {syncId ? (<div><div className="text-sm text-gray-400 mb-2">Your sync code:</div>
+                    <div className="flex gap-2 mb-4"><input type="text" readOnly value={syncId} className="input-glass flex-1 text-sm font-mono" />
+                    <button onClick={handleCopy} className="btn-gold text-sm">Copy</button></div>
+                    <p className="text-xs text-gray-500 mb-4">Enter this code on any device to sync your data. Auto-syncs every 30 seconds.</p>
+                    <button onClick={handleDisconnect} className="btn-glass w-full text-red-400 border-red-400 text-sm">Disconnect Sync</button></div>)
+                : (<div><p className="text-sm text-gray-400 mb-4">Sync your Command Center data across all your devices — phone, tablet, any browser.</p>
+                    <button onClick={handleCreate} disabled={loading} className="btn-gold w-full mb-4">{loading ? 'Creating...' : 'Create New Sync'}</button>
+                    <div className="divider"></div><p className="text-sm text-gray-400 mb-2">Or join existing sync:</p>
+                    <div className="flex gap-2"><input type="text" value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="Paste sync code..." className="input-glass flex-1 text-sm font-mono" />
+                    <button onClick={handleJoin} disabled={loading} className="btn-gold text-sm">{loading ? '...' : 'Join'}</button></div></div>)}
+                {msg && <div className="mt-4 text-sm text-center" style={{color:'var(--gold)'}}>{msg}</div>}
+            </div></div>);
+        };
+        const App = () => { const [time, setTime] = useState(new Date()); const [showSettings, setShowSettings] = useState(false);
+            const [showSync, setShowSync] = useState(false);
+            const [syncId, setSyncId] = useState(SyncEngine.getSyncId());
+            const [settings, setSettings] = useState(() => load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS));
+            const [checklist, setChecklist] = useState(() => load(STORAGE_KEYS.CHECKLIST, DEFAULT_CHECKLIST));
+            const [notes, setNotes] = useState(() => load(STORAGE_KEYS.NOTES, { ideas: [], todos: [] }));
+            const [goals, setGoals] = useState(() => load(STORAGE_KEYS.GOALS, DEFAULT_GOALS)); const [goalPeriod, setGoalPeriod] = useState('monthly');
+            const [bookmarks, setBookmarks] = useState(() => load(STORAGE_KEYS.BOOKMARKS, DEFAULT_BOOKMARKS));
+            const [activity, setActivity] = useState(() => load(STORAGE_KEYS.ACTIVITY, DEFAULT_ACTIVITY));
+            const [stats, setStats] = useState(() => load(STORAGE_KEYS.STATS, DEFAULT_STATS));
+            const [appTimestamps, setAppTimestamps] = useState(() => load(STORAGE_KEYS.APP_TIMESTAMPS, {}));
+            const [market, setMarket] = useState(() => load(STORAGE_KEYS.MARKET_DATA, DEFAULT_MARKET)); const [newCheckItem, setNewCheckItem] = useState('');
+            const [newBookmark, setNewBookmark] = useState({ title: '', url: '' }); const [showBookmarkAdd, setShowBookmarkAdd] = useState(false);
+            const [editingGoals, setEditingGoals] = useState(false); const [noteTab, setNoteTab] = useState('ideas'); const [showMarketEdit, setShowMarketEdit] = useState(false);
+            const [focusMode, setFocusMode] = useState(false); const [searchOpen, setSearchOpen] = useState(false);
+            const [habits, setHabits] = useState(() => load(STORAGE_KEYS.HABITS, DEFAULT_HABITS));
+            const [income, setIncome] = useState(() => load(STORAGE_KEYS.INCOME, DEFAULT_INCOME));
+            const [reminders, setReminders] = useState(() => load(STORAGE_KEYS.REMINDERS, []));
+            const [rateLocks, setRateLocks] = useState(() => load(STORAGE_KEYS.RATE_LOCKS, []));
+            const [showCalculator, setShowCalculator] = useState(false); const [showNotifications, setShowNotifications] = useState(false);
+            const [layout, setLayout] = useState(() => load(STORAGE_KEYS.LAYOUT, ['launcher', 'goals', 'market', 'checklist', 'notes', 'activity', 'bookmarks']));
+            const particlesRef = useRef(null);
+            const notifications = []; const today = todayKey(); const missedHabits = habits.filter((h) => h.lastCompleted !== today);
+            if (missedHabits.length > 0) { notifications.push({ icon: '📋', title: 'Habits Not Completed', message: `${missedHabits.length} daily habits pending` }); }
+            const behindGoals = goals.filter((g) => g.period === goalPeriod && g.progress < g.target * 0.7);
+            if (behindGoals.length > 0) { notifications.push({ icon: '🎯', title: 'Goals Behind', message: `${behindGoals.length} goal(s) need attention` }); }
+            const neglectedApps = DEFAULT_APPS.filter((app) => { const lastOpened = appTimestamps[app.id]; if (!lastOpened) return false;
+            const daysAgo = Math.floor((new Date() - new Date(lastOpened)) / (1000 * 60 * 60 * 24)); return daysAgo >= 7; });
+            if (neglectedApps.length > 0) { notifications.push({ icon: '🔔', title: 'Apps Neglected', message: `${neglectedApps.length} app(s) not opened in 7+ days` }); }
+            const urgentLocks = rateLocks.filter(l => { const diff = new Date(l.expDate + 'T23:59:59') - new Date(); return diff > 0 && diff < 3 * 86400000; });
+            if (urgentLocks.length > 0) { notifications.push({ icon: '🔒', title: 'Rate Locks Expiring', message: `${urgentLocks.length} lock(s) expire within 3 days!` }); }
+            const expiredLocks = rateLocks.filter(l => new Date(l.expDate + 'T23:59:59') < new Date());
+            if (expiredLocks.length > 0) { notifications.push({ icon: '🚨', title: 'Expired Rate Locks', message: `${expiredLocks.length} lock(s) have expired` }); }
+            useEffect(() => { save(STORAGE_KEYS.CHECKLIST, checklist); save(STORAGE_KEYS.NOTES, notes); save(STORAGE_KEYS.GOALS, goals);
+            save(STORAGE_KEYS.BOOKMARKS, bookmarks); save(STORAGE_KEYS.ACTIVITY, activity); save(STORAGE_KEYS.STATS, stats);
+            save(STORAGE_KEYS.SETTINGS, settings); save(STORAGE_KEYS.APP_TIMESTAMPS, appTimestamps); save(STORAGE_KEYS.MARKET_DATA, market);
+            save(STORAGE_KEYS.HABITS, habits); save(STORAGE_KEYS.INCOME, income); save(STORAGE_KEYS.REMINDERS, reminders); save(STORAGE_KEYS.LAYOUT, layout); save(STORAGE_KEYS.RATE_LOCKS, rateLocks); },
+            [checklist, notes, goals, bookmarks, activity, stats, settings, appTimestamps, market, habits, income, reminders, layout, rateLocks]);
+            useEffect(() => { const timer = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(timer); }, []);
+            useEffect(() => { initParticles(particlesRef); }, []);
+            /* Cross-device sync */
+            useEffect(() => { if (syncId) { SyncEngine.startAutoSync(() => window.location.reload(), 30000); }
+                return () => SyncEngine.stopAutoSync(); }, [syncId]);
+            /* Scroll reveal observer */
+            useEffect(() => { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => {
+                if (entry.isIntersecting) { entry.target.classList.add('revealed'); } }); }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+                document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+                return () => observer.disconnect(); }, []);
+            /* Sticky header blur on scroll */
+            useEffect(() => { const handleScroll = () => { const header = document.querySelector('.sticky-header-blur');
+                if (header) { if (window.scrollY > 20) { header.classList.add('scrolled'); } else { header.classList.remove('scrolled'); } } };
+                window.addEventListener('scroll', handleScroll, { passive: true }); return () => window.removeEventListener('scroll', handleScroll); }, []);
+            useEffect(() => { const handleKeyDown = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.key === '/') { e.preventDefault(); setSearchOpen(true); }
+            else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setFocusMode(!focusMode); }
+            else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); setShowCalculator(c => !c); }
+            else if (e.key === 'Escape') { setSearchOpen(false); setShowCalculator(false); setShowNotifications(false); setFocusMode(false); }
+            else { const app = DEFAULT_APPS.find(a => a.key === e.key);
+            if (app) { setAppTimestamps(prev => ({...prev, [app.id]: new Date().toISOString() }));
+            window.open(app.file, '_blank'); } } }; window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown); }, [appTimestamps, focusMode]);
+            const handleChecklistAdd = () => { if (newCheckItem) { setChecklist([...checklist, { id: Date.now(), text: newCheckItem, done: false }]);
+            setNewCheckItem(''); const newActivity = { id: Date.now(), action: 'Added checklist item', time: new Date().toISOString(), icon: '✅' };
+            setActivity([newActivity, ...activity.slice(0, 19)]); } };
+            const handleChecklistToggle = (id) => { setChecklist(checklist.map((item) => (item.id === id ? { ...item, done: !item.done } : item))); };
+            const handleChecklistDelete = (id) => { setChecklist(checklist.filter((item) => item.id !== id)); };
+            const circumference = 2 * Math.PI * 50; const checklistProgress = checklist.length > 0 ? (checklist.filter((i) => i.done).length / checklist.length) * 100 : 0;
+            const firstIncomplete = checklist.find(c => !c.done);
+            if (focusMode) { return (<div className="focus-overlay"><div className="text-center" style={{maxWidth:500}}>
+            <div className="text-6xl font-bold text-gray-300 mb-4" style={{fontFamily:'monospace'}}>{time.toLocaleTimeString()}</div>
+            <div className="text-xs text-gray-600 uppercase tracking-widest mb-6">Today's Priority</div>
+            {firstIncomplete ? (<div className="text-3xl font-bold gold-gradient mb-4">{firstIncomplete.text}</div>) :
+              (<div className="text-3xl font-bold gold-gradient mb-4">All tasks complete!</div>)}
+            <div className="text-sm text-gray-500 mb-8">{checklist.filter(c=>c.done).length} of {checklist.length} tasks done · {Math.round(checklistProgress)}%</div>
+            <button onClick={() => setFocusMode(false)} className="btn-gold px-8 py-3">Exit Focus Mode <span className="kbd-hint">ESC</span></button></div></div>); }
+            return (<div style={{ position: 'relative', minHeight: '100vh' }}><div className="ambient-bg"></div><div className="mesh-blob-3"></div><div className="mesh-blob-4"></div><div className="particles" ref={particlesRef}></div>
+            <StickyReminders reminders={reminders} onUpdate={setReminders} />
+            <SpotlightSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} apps={DEFAULT_APPS} bookmarks={bookmarks}
+            notes={notes.ideas.concat(notes.todos)} goals={goals} />
+            <QuickCalculator isOpen={showCalculator} onClose={() => setShowCalculator(false)} />
+            <div style={{ position: 'relative', zIndex: 2 }} className="min-h-screen pb-32"><div className="glass glass-hover sticky top-0 z-30 sticky-header-blur border-b load-header">
+            <div className="max-w-7xl mx-auto px-6 py-4"><div className="flex items-center justify-between">
+            <div><h1 className="hero-greeting">{getGreeting()}, <span className="gold-gradient">{settings.name || 'Aryeh'}</span></h1>
+            <div className="body-text" style={{fontSize:'0.85rem',marginTop:'0.25rem'}}>{time.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} · {settings.title || 'Loan Officer'} at {settings.company || 'FM Home Loans'}</div></div>
+            <div className="flex items-center gap-4"><div className="text-3xl font-bold gold-gradient font-mono">{time.toLocaleTimeString()}</div>
+            <div className="flex gap-2"><button onClick={() => setFocusMode(true)} className="btn-glass" title="Focus Mode (F)">
+            🎯 Focus <span className="kbd-hint">F</span></button>
+            <NotificationCenter notifications={notifications} isOpen={showNotifications} onToggle={() => setShowNotifications(!showNotifications)} />
+            <SyncStatusBadge syncId={syncId} onOpenSync={() => setShowSync(true)} />
+            <button onClick={() => setShowSettings(true)} className="btn-glass" title="Settings"><SettingsIcon /></button></div></div></div></div></div>
+            <div className="glass glass-hover backdrop-blur-md border-b py-4 px-6 load-stats"><div className="max-w-7xl mx-auto">
+            <div className="text-sm text-gray-400 mb-3 body-text" style={{fontStyle:'italic',opacity:0.7}}><TypeWriter text={getQuoteOfDay()} speed={30} /></div>
+            <div className="grid grid-cols-4 gap-3"><div className="load-stat-pill"><StatPill label={stats.pipeline.label} value={stats.pipeline.value} /></div>
+            <div className="load-stat-pill"><StatPill label={stats.followups.label} value={stats.followups.value} /></div>
+            <div className="load-stat-pill"><StatPill label={stats.lastFunded.label} value={stats.lastFunded.value} /></div>
+            <div className="load-stat-pill"><StatPill label={stats.deepWorkToday.label} value={stats.deepWorkToday.value} /></div></div></div></div>
+            <div className="max-w-7xl mx-auto px-6 py-8"><div className="layout-grid"><div className="space-y-6 load-sidebar">
+            <div className="glass glass-hover glass-primary p-6 rounded-lg shine-card animated-border"><h2 className="section-header-gradient mb-4">Apps</h2>
+            <div className="app-grid">{DEFAULT_APPS.map((app) => {
+              const lastOpened = appTimestamps[app.id]; const daysAgo = lastOpened ? Math.floor((new Date() - new Date(lastOpened)) / 86400000) : 999;
+              return (<button key={app.id} onClick={() => {
+              setAppTimestamps({ ...appTimestamps, [app.id]: new Date().toISOString() }); window.open(app.file, '_blank'); }}
+              title={`${app.name} (${app.key})`} className="draggable-card glass glass-hover p-4 rounded-lg flex flex-col items-center justify-center gap-2 hover:scale-105 transition">
+              <div className="text-3xl">{app.icon}</div><div className="text-xs font-bold text-center">{app.name}</div>
+              <div className="text-xs text-gray-500">{app.desc}</div>
+              <div className="flex items-center gap-2"><span className={`health-indicator ${daysAgo < 7 ? 'healthy' : 'neglected'}`}></span>
+              <span className="kbd-hint">{app.key}</span></div>
+              {lastOpened && <div className="text-xs text-gray-600">{timeAgo(lastOpened)}</div>}
+              </button>);})}</div></div>
+            <div className="glass glass-hover glass-primary p-6 rounded-lg animated-border"><div className="flex justify-between items-center mb-4">
+            <h2 className="section-header-gradient">Goals</h2><button onClick={() => setEditingGoals(!editingGoals)} className="btn-glass text-sm">
+            {editingGoals ? 'Done' : 'Edit'}</button></div><div className="flex gap-2 mb-4">
+            {['monthly', 'quarterly', 'annual'].map((period) => (<button key={period} onClick={() => setGoalPeriod(period)} className={`tab-btn ${goalPeriod === period ? 'active' : ''}`}>
+            {period.charAt(0).toUpperCase() + period.slice(1)}</button>))}</div>
+            <div className="space-y-3">{goals.filter((g) => g.period === goalPeriod).map((goal) => (<div key={goal.id} className="p-3 rounded bg-white bg-opacity-5">
+            <div className="flex justify-between items-start mb-2"><span className="text-sm font-medium">{goal.title}</span>
+            <span className="text-xs text-gray-500">{goal.progress}/{goal.target}</span></div><div className="w-full bg-gray-700 rounded-full h-2">
+            <div className="bg-gradient-to-r from-orange-600 to-yellow-500 h-2 rounded-full transition-all"
+            style={{ width: `${(goal.progress / goal.target) * 100}%` }}></div></div></div>))}</div></div>
+            <div className="glass glass-hover glass-primary p-6 rounded-lg"><div className="flex justify-between items-center mb-4">
+            <h2 className="section-header-gradient">Market</h2><button onClick={() => setShowMarketEdit(!showMarketEdit)} className="btn-glass text-sm">Edit</button></div>
+            {showMarketEdit ? (<div className="space-y-2">
+            {[{k:'mortgage30',l:'30-Yr Fixed'},{k:'mortgage15',l:'15-Yr Fixed'},{k:'jumbo',l:'Jumbo'},{k:'fha',l:'FHA'}].map(r => (
+              <input key={r.k} type="number" step="0.125" value={market.rates[r.k]}
+                onChange={(e) => setMarket({ ...market, rates: { ...market.rates, [r.k]: parseFloat(e.target.value) }, lastUpdated: new Date().toLocaleDateString() })}
+                placeholder={r.l} className="input-glass w-full text-xs" />))}
+            <div className="flex gap-2 mt-2">{['bullish','cautious','bearish'].map(m => (
+              <button key={m} onClick={() => setMarket({...market, mood:m})}
+                className={market.mood===m ? 'btn-gold flex-1 text-xs' : 'btn-glass flex-1 text-xs'}>
+                {m==='bullish'?'🟢':m==='cautious'?'🟡':'🔴'} {m}</button>))}</div></div>) : (<div>
+            <div className="flex items-center gap-2 mb-3"><span className="text-xs text-gray-400">Market Mood:</span>
+              <span className="status-badge active">{market.mood==='bullish'?'🟢':market.mood==='cautious'?'🟡':'🔴'} {(market.mood||'cautious').charAt(0).toUpperCase()+(market.mood||'cautious').slice(1)}</span>
+              <span className="text-xs text-gray-600 ml-auto">{market.lastUpdated}</span></div>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              <StatPill label="30-Yr" value={`${market.rates.mortgage30}%`} />
+              <StatPill label="15-Yr" value={`${market.rates.mortgage15}%`} />
+              <StatPill label="Jumbo" value={`${market.rates.jumbo}%`} />
+              <StatPill label="FHA" value={`${market.rates.fha}%`} /></div>
+            <div className="grid grid-cols-3 gap-2">
+              {[{k:'sp500',l:'S&P 500'},{k:'nasdaq',l:'NASDAQ'},{k:'dow',l:'DOW'}].map(idx => {
+                const val = market.indices[idx.k] || '0'; const isPos = String(val).startsWith('+');
+                return (<div key={idx.k} className="text-center p-2 rounded" style={{background:'rgba(255,255,255,0.02)'}}>
+                  <div className="text-xs text-gray-500 mb-1">{idx.l}</div>
+                  <div className="text-sm font-bold" style={{color: isPos ? '#22c55e' : '#ef4444'}}>{val}</div></div>);
+              })}</div></div>)}</div>
+            <PomodoroTimer stats={stats} onUpdate={setStats} /><RateLockCountdown locks={rateLocks} onUpdate={setRateLocks} /><AppHealthMonitor apps={DEFAULT_APPS} appTimestamps={appTimestamps} /></div>
+            <div className="space-y-6 load-main"><div className="glass glass-hover glass-primary p-6 rounded-lg shine-card animated-border">
+            <div className="flex justify-between items-center mb-4"><h2 className="section-header-gradient">Daily Checklist</h2>
+            <div className="w-24 h-24 flex items-center justify-center relative"><ProgressRing radius={40} circumference={2 * Math.PI * 40} percent={checklistProgress} />
+            <div className="absolute text-center"><div className="text-xl font-bold text-gray-200">
+            <AnimatedCounter value={Math.round(checklistProgress)} duration={1} />%</div></div></div></div>
+            <div className="space-y-2 mb-4">{checklist.map((item) => (<div key={item.id} className="flex items-center gap-3 p-2 rounded hover:bg-white hover:bg-opacity-5 transition">
+            <input type="checkbox" checked={item.done} onChange={() => handleChecklistToggle(item.id)} className="custom-check" />
+            <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-500' : 'text-gray-200'}`}>{item.text}</span>
+            <button onClick={() => handleChecklistDelete(item.id)} className="text-gray-500 hover:text-gray-300 transition">×</button></div>))}</div>
+            <div className="flex gap-2"><input type="text" value={newCheckItem} onChange={(e) => setNewCheckItem(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleChecklistAdd()} placeholder="Add item..." className="input-glass flex-1 text-sm" />
+            <button onClick={handleChecklistAdd} className="btn-gold text-sm">Add</button></div></div>
+            <DailyHabitTracker habits={habits} onUpdate={setHabits} /><IncomeTracker income={income} onUpdate={setIncome} />
+            <div className="glass glass-hover glass-secondary p-6 rounded-lg"><h2 className="section-header mb-4">Quick Notes</h2>
+            <div className="flex gap-2 mb-4"><button onClick={() => setNoteTab('ideas')} className={`tab-btn ${noteTab === 'ideas' ? 'active' : ''}`}>💡 Ideas</button>
+            <button onClick={() => setNoteTab('todos')} className={`tab-btn ${noteTab === 'todos' ? 'active' : ''}`}>✅ Todos</button></div>
+            <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">{notes[noteTab].map((note) => (
+            <div key={note.id} className="p-3 rounded bg-white bg-opacity-5 text-sm text-gray-300 line-clamp-2">{note.text}</div>))}</div>
+            <div className="flex gap-2"><input type="text" placeholder={noteTab === 'ideas' ? 'New idea...' : 'New todo...'}
+            onKeyPress={(e) => { if (e.key === 'Enter' && e.target.value) { const newNote = { id: Date.now(), text: e.target.value };
+            setNotes({ ...notes, [noteTab]: [...notes[noteTab], newNote] }); e.target.value = ''; } }} className="input-glass flex-1 text-sm" />
+            <button onClick={() => { if (reminders.length < 5) { setReminders([...reminders, { id: Date.now(), text: 'New reminder',
+            left: Math.random() * (window.innerWidth - 250), top: Math.random() * (window.innerHeight - 150) }]); } }} className="btn-glass text-sm" title="Create sticky reminder">📌</button></div></div>
+            <div className="glass glass-hover glass-secondary p-6 rounded-lg"><h2 className="section-header mb-4">Recent Activity</h2>
+            <div className="space-y-2 max-h-64 overflow-y-auto">{activity.length > 0 ? (activity.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 p-2 rounded hover:bg-white hover:bg-opacity-5 transition text-sm">
+            <span className="text-lg flex-shrink-0">{item.icon}</span><div className="flex-1">
+            <div className="text-gray-300">{item.action}</div><div className="text-xs text-gray-500">{timeAgo(item.time)}</div></div></div>))) : (
+            <div className="text-gray-500 text-sm text-center py-4">No activity yet</div>)}</div></div>
+            <div className="glass glass-hover glass-tertiary p-6 rounded-lg"><div className="flex justify-between items-center mb-4">
+            <h2 className="section-header">Bookmarks</h2><button onClick={() => setShowBookmarkAdd(!showBookmarkAdd)} className="btn-glass text-sm">
+            {showBookmarkAdd ? 'Done' : '+'}</button></div>{showBookmarkAdd && (
+            <div className="space-y-2 mb-4 p-3 rounded bg-white bg-opacity-5"><input type="text" value={newBookmark.title}
+            onChange={(e) => setNewBookmark({ ...newBookmark, title: e.target.value })} placeholder="Title" className="input-glass w-full text-sm" />
+            <input type="url" value={newBookmark.url} onChange={(e) => setNewBookmark({ ...newBookmark, url: e.target.value })}
+            placeholder="URL" className="input-glass w-full text-sm" /><button onClick={() => {
+            if (newBookmark.title && newBookmark.url) { setBookmarks([...bookmarks, { id: Date.now(), ...newBookmark }]);
+            setNewBookmark({ title: '', url: '' }); setShowBookmarkAdd(false); } }} className="btn-gold w-full text-sm">Add</button></div>)}
+            <div className="space-y-2">{bookmarks.map((bm) => (<a key={bm.id} href={bm.url} target="_blank" rel="noopener noreferrer"
+            className="block p-2 rounded glass glass-hover text-sm text-gold hover:text-gold-light transition">🔖 {bm.title}</a>))}</div></div></div></div></div>
+            <SyncModal isOpen={showSync} onClose={() => setShowSync(false)} onSyncChanged={(id) => setSyncId(id)} />
+            {showSettings && (<div className="modal-overlay" onClick={() => setShowSettings(false)}>
+            <div className="modal-glass p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-bold">Settings</h2>
+            <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-200"><CloseIcon /></button></div>
+            <SettingField label="Name" value={settings.name || ''} onChange={(val) => setSettings({ ...settings, name: val })} />
+            <SettingField label="Title" value={settings.title || ''} onChange={(val) => setSettings({ ...settings, title: val })} />
+            <SettingField label="Company" value={settings.company || ''} onChange={(val) => setSettings({ ...settings, company: val })} />
+            <SettingField label="Notifications" type="toggle" value={settings.notifications}
+            onChange={(val) => setSettings({ ...settings, notifications: val })} />
+            <SettingField label="Sound Effects" type="toggle" value={settings.soundEnabled}
+            onChange={(val) => setSettings({ ...settings, soundEnabled: val })} />
+            <div className="py-3 text-xs text-gray-500">Shortcuts: 1-9 launch apps · / spotlight · C calculator · F focus · ESC close</div>
+            <div className="pt-6 space-y-2"><button onClick={() => {
+            setLayout(['launcher', 'goals', 'market', 'checklist', 'notes', 'activity', 'bookmarks']); setShowSettings(false); }} className="btn-glass w-full">Reset Layout</button>
+            <button onClick={() => { if (window.confirm('Clear all data? This cannot be undone.')) { localStorage.clear(); window.location.reload(); } }} className="btn-glass w-full text-red-400 border-red-400">Clear All Data</button></div></div></div>)}
+            <div className="text-center py-12"><p className="caption-text" style={{color:'rgba(255,255,255,0.15)',letterSpacing:'0.15em'}}>COMMAND CENTER · FM HOME LOANS · BUILT WITH PURPOSE</p></div>
+            <QuickActionsToolbar onNewNote={() => { if (reminders.length < 5) { setReminders([...reminders, { id: Date.now(), text: 'New note...',
+            left: Math.random() * (window.innerWidth - 250), top: Math.random() * (window.innerHeight - 150) }]); } }} onStartTimer={() => { document.querySelector('.pomodoro-ring')?.scrollIntoView({behavior:'smooth'}); }}
+            onAddIncome={() => { document.querySelector('.income-sparkline')?.closest('.glass')?.scrollIntoView({behavior:'smooth'}); }}
+            onLogHabit={() => { document.querySelector('.habit-streak')?.closest('.glass')?.scrollIntoView({behavior:'smooth'}); }} /></div></div>); };
+        ReactDOM.render(<App />, document.getElementById('app'));
+    </script>
+</body>
+</html>

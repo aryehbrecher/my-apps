@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Center - FM Home Loans</title>
+
+  <!-- Google Fonts: Syne (headings), DM Sans (body), JetBrains Mono (data) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React 18 -->
+  <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    :root {
+      --navy: #1B365D;
+      --navy-deep: #0f1f38;
+      --navy-light: #264a80;
+      --gold: #C5A55A;
+      --gold-light: #e0cc8a;
+      --gold-pale: #f0e4c0;
+      --gold-dark: #a88a3a;
+      --gold-deep: #8a6f2a;
+      --glass-bg: rgba(255, 255, 255, 0.025);
+      --glass-border: rgba(255, 255, 255, 0.06);
+      --glass-hover: rgba(255, 255, 255, 0.055);
+      --bg-base: #060810;
+      --bg-card: #0a0e1a;
+      --font-heading: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-base);
+      color: #e8e4dc;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* === CUSTOM SCROLLBAR === */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(197, 165, 90, 0.25);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(197, 165, 90, 0.45);
+    }
+
+    #app {
+      width: 100%;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* === NOISE TEXTURE OVERLAY === */
+    #app::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    /* === AURORA MESH BACKGROUND === */
+    .aurora-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .aurora-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0;
+      animation: auroraGlow 12s ease-in-out infinite;
+    }
+
+    .aurora-orb:nth-child(1) {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(197,165,90,0.12) 0%, transparent 70%);
+      top: -10%; left: -5%;
+      animation-delay: 0s;
+      animation-duration: 18s;
+    }
+    .aurora-orb:nth-child(2) {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(27,54,93,0.2) 0%, transparent 70%);
+      bottom: -10%; right: -5%;
+      animation-delay: -4s;
+      animation-duration: 22s;
+    }
+    .aurora-orb:nth-child(3) {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(197,165,90,0.06) 0%, transparent 70%);
+      top: 40%; left: 50%;
+      animation-delay: -8s;
+      animation-duration: 25s;
+    }
+    .aurora-orb:nth-child(4) {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(38,74,128,0.15) 0%, transparent 70%);
+      top: 20%; right: 20%;
+      animation-delay: -12s;
+      animation-duration: 20s;
+    }
+
+    @keyframes auroraGlow {
+      0%, 100% { opacity: 0.4; transform: translate(0, 0) scale(1); }
+      25% { opacity: 0.7; transform: translate(30px, -20px) scale(1.05); }
+      50% { opacity: 0.5; transform: translate(-20px, 30px) scale(0.95); }
+      75% { opacity: 0.8; transform: translate(10px, 10px) scale(1.02); }
+    }
+
+    /* === PARTICLES === */
+    .particles-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0;
+      animation: particleDrift linear infinite;
+    }
+
+    @keyframes particleDrift {
+      0% { transform: translateY(100vh) translateX(0) rotate(0deg); opacity: 0; }
+      5% { opacity: var(--particle-opacity, 0.2); }
+      50% { transform: translateY(0vh) translateX(var(--drift-x, 40px)) rotate(180deg); }
+      95% { opacity: var(--particle-opacity, 0.2); }
+      100% { transform: translateY(-100vh) translateX(var(--drift-end, -30px)) rotate(360deg); opacity: 0; }
+    }
+
+    /* === GLASS MORPHISM WITH DEPTH === */
+    .glass {
+      background: linear-gradient(135deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.015) 100%);
+      border: 1px solid rgba(255,255,255,0.06);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 16px;
+      box-shadow:
+        0 4px 30px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .glass-hover {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .glass-hover:hover {
+      background: linear-gradient(135deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.025) 100%);
+      border-color: rgba(197,165,90,0.3);
+      box-shadow:
+        0 8px 40px rgba(197,165,90,0.12),
+        0 2px 20px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(197,165,90,0.1);
+      transform: translateY(-2px) scale(1.005);
+    }
+
+    /* === GOLD GRADIENT TEXT === */
+    .gold-gradient {
+      background: linear-gradient(135deg, var(--gold-deep) 0%, var(--gold) 30%, var(--gold-light) 55%, var(--gold) 80%, var(--gold-deep) 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: goldShimmer 6s ease-in-out infinite;
+    }
+
+    @keyframes goldShimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* === TYPOGRAPHY === */
+    .heading-xl {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+    }
+
+    .heading-lg {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .heading-md {
+      font-family: var(--font-heading);
+      font-weight: 600;
+    }
+
+    .label-upper {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(232,228,220,0.45);
+    }
+
+    .stat-number {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* === BUTTONS === */
+    .btn-glass {
+      font-family: var(--font-body);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #e8e4dc;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    .btn-glass:hover {
+      background: rgba(197,165,90,0.08);
+      border-color: rgba(197,165,90,0.35);
+      color: var(--gold-light);
+      box-shadow: 0 0 20px rgba(197,165,90,0.1);
+    }
+
+    .btn-gold {
+      font-family: var(--font-heading);
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 40%, var(--gold-light) 100%);
+      color: var(--navy-deep);
+      padding: 11px 22px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 2px 12px rgba(197,165,90,0.2);
+    }
+
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(197,165,90,0.35);
+    }
+
+    .btn-gold:active { transform: translateY(0); }
+
+    /* === INPUTS === */
+    .input-glass {
+      font-family: var(--font-body);
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #e8e4dc;
+      padding: 11px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .input-glass:focus {
+      outline: none;
+      border-color: rgba(197,165,90,0.45);
+      background: rgba(255,255,255,0.04);
+      box-shadow: 0 0 20px rgba(197,165,90,0.08), 0 0 0 1px rgba(197,165,90,0.15);
+    }
+
+    .input-glass::placeholder { color: rgba(232,228,220,0.3); }
+
+    /* === CHECKBOX === */
+    .custom-check {
+      appearance: none;
+      width: 20px; height: 20px;
+      border: 2px solid rgba(197,165,90,0.5);
+      border-radius: 5px;
+      cursor: pointer;
+      background: transparent;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .custom-check:checked {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      border-color: var(--gold-light);
+      position: relative;
+    }
+
+    .custom-check:checked::after {
+      content: '\2713';
+      color: var(--navy-deep);
+      font-weight: bold;
+      font-size: 12px;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* === STAGGERED ENTRANCE ANIMATIONS === */
+    @keyframes slideUp {
+      0% { opacity: 0; transform: translateY(28px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeScale {
+      0% { opacity: 0; transform: scale(0.96); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .anim-enter {
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .anim-fade {
+      animation: fadeScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* === TAB BAR === */
+    .tab-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(6, 8, 16, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .tab-button {
+      font-family: var(--font-heading);
+      padding: 14px 22px;
+      border: none;
+      background: transparent;
+      color: rgba(232,228,220,0.45);
+      cursor: pointer;
+      transition: all 0.35s ease;
+      font-weight: 600;
+      font-size: 14px;
+      position: relative;
+      letter-spacing: 0.01em;
+    }
+
+    .tab-button.active {
+      color: var(--gold);
+    }
+
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: var(--gold);
+      border-radius: 2px;
+      box-shadow: 0 0 12px rgba(197,165,90,0.5), 0 0 4px rgba(197,165,90,0.3);
+      animation: tabGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes tabGlow {
+      0%, 100% { box-shadow: 0 0 12px rgba(197,165,90,0.5), 0 0 4px rgba(197,165,90,0.3); opacity: 1; }
+      50% { box-shadow: 0 0 20px rgba(197,165,90,0.7), 0 0 8px rgba(197,165,90,0.5); opacity: 0.85; }
+    }
+
+    .tab-button:hover:not(.active) {
+      color: rgba(232,228,220,0.7);
+    }
+
+    /* === TAB CONTENT TRANSITION === */
+    .tab-content {
+      animation: tabFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes tabFadeIn {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === MAIN CONTENT === */
+    .main-content {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+    }
+
+    /* === PROGRESS BAR === */
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-light) 100%);
+      border-radius: 3px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 8px rgba(197,165,90,0.3);
+    }
+
+    /* === MODAL === */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: fadeScale 0.25s ease both;
+    }
+
+    .modal {
+      background: linear-gradient(160deg, #0d1220 0%, #0a0e18 100%);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px;
+      padding: 36px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 0 60px rgba(197,165,90,0.1), 0 24px 48px rgba(0,0,0,0.5);
+    }
+
+    /* === SPOTLIGHT === */
+    .spotlight-search { max-height: 500px; overflow-y: auto; }
+
+    .spotlight-item {
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 14px;
+    }
+
+    .spotlight-item:hover,
+    .spotlight-item.selected {
+      background: rgba(197,165,90,0.06);
+      color: var(--gold);
+    }
+
+    /* === POMODORO === */
+    .pomodoro-ring {
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: conic-gradient(var(--gold) var(--progress, 0%), rgba(255,255,255,0.04) var(--progress, 0%));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 24px auto;
+      box-shadow: 0 0 30px rgba(197,165,90,0.08);
+    }
+
+    .pomodoro-ring-inner {
+      width: 178px; height: 178px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .pomodoro-time {
+      font-family: var(--font-mono);
+      font-size: 44px;
+      font-weight: 700;
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pomodoro-label {
+      font-family: var(--font-body);
+      font-size: 11px;
+      color: rgba(232,228,220,0.45);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    /* === CALCULATOR === */
+    .calculator-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .calc-button {
+      font-family: var(--font-mono);
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.025);
+      color: #e8e4dc;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .calc-button:hover {
+      background: rgba(197,165,90,0.08);
+      border-color: rgba(197,165,90,0.3);
+      color: var(--gold);
+    }
+
+    .calc-button.operator {
+      background: rgba(197,165,90,0.08);
+      border-color: rgba(197,165,90,0.2);
+      color: var(--gold);
+    }
+
+    .calc-button.operator:hover {
+      background: rgba(197,165,90,0.15);
+      box-shadow: 0 0 15px rgba(197,165,90,0.15);
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .tab-button { padding: 10px 14px; font-size: 13px; }
+      .app-grid { grid-template-columns: repeat(2, 1fr) !important; }
+      .stat-row { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+
+    @media (max-width: 640px) {
+      .tab-button { padding: 8px 10px; font-size: 12px; }
+      .stat-row { grid-template-columns: 1fr !important; }
+      .app-grid { grid-template-columns: 1fr !important; }
+    }
+
+    /* === ACTIVITY TIME === */
+    .activity-time {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: rgba(232,228,220,0.35);
+      white-space: nowrap;
+    }
+
+    .fire-emoji { font-size: 20px; display: inline-block; margin-right: 4px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ─── Storage Helpers ───
+    const STORAGE_KEYS = {
+      THEME: 'cc-theme',
+      CHECKLIST: 'cc-checklist',
+      NOTES: 'cc-notes',
+      GOALS: 'cc-goals',
+      BOOKMARKS: 'cc-bookmarks',
+      SETTINGS: 'cc-settings',
+      ACTIVITY: 'cc-activity',
+      STATS: 'cc-stats',
+      APP_TIMESTAMPS: 'cc-app-timestamps',
+      MARKET_DATA: 'cc-market-data',
+      HABITS: 'cc-habits',
+      INCOME: 'cc-income',
+      REMINDERS: 'cc-reminders',
+      POMODORO: 'cc-pomodoro',
+      LAYOUT: 'cc-layout',
+      NOTIFICATIONS: 'cc-notifications',
+      RATE_LOCKS: 'cc-rate-locks',
+    };
+
+    const load = (key, defaultValue) => {
+      try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : defaultValue;
+      } catch (e) {
+        console.error('Error loading from localStorage:', e);
+        return defaultValue;
+      }
+    };
+
+    const save = (key, value) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        console.error('Error saving to localStorage:', e);
+      }
+    };
+
+    // ─── Default Data ───
+    const DEFAULT_APPS = [
+      { id: 'loanflow', name: 'LoanFlow', desc: 'Pipeline Dashboard', file: 'loan-pipeline.html', icon: '\u{1F4CA}', color: '#2563eb', key: '1' },
+      { id: 'referralhub', name: 'ReferralHub', desc: 'Realtor CRM', file: 'realtor-crm.html', icon: '\u{1F91D}', color: '#7c3aed', key: '2' },
+      { id: 'loancompare', name: 'LoanCompare', desc: 'Mortgage Calculator', file: 'loan-compare.html', icon: '\u{1F9EE}', color: '#0891b2', key: '3' },
+      { id: 'contentengine', name: 'ContentEngine', desc: 'Marketing Generator', file: 'content-engine.html', icon: '\u270D\uFE0F', color: '#db2777', key: '4' },
+      { id: 'emailflow', name: 'EmailFlow', desc: 'Email AI', file: 'email-rewriter.html', icon: '\u{1F4E7}', color: '#ea580c', key: '5' },
+      { id: 'edgescanner', name: 'EdgeScanner', desc: 'Trading Scanner', file: 'edge-scanner.html', icon: '\u{1F4C8}', color: '#16a34a', key: '6' },
+      { id: 'optionstracker', name: 'Options Tracker', desc: 'Options P&L', file: 'options-tracker.html', icon: '\u{1F3AF}', color: '#9333ea', key: '7' },
+      { id: 'fintracker', name: 'FinTracker', desc: 'Financial Tracker', file: 'financial-tracker.html', icon: '\u{1F4B0}', color: '#ca8a04', key: '8' },
+      { id: 'aiacademy', name: 'AI Academy', desc: 'AI Training', file: 'ai-academy.html', icon: '\u{1F9E0}', color: '#6366f1', key: '9' },
+      { id: 'dealanalyzer', name: 'DealAnalyzer', desc: 'Deal Analysis', file: 'deal-analyzer.html', icon: '\u{1F3E0}', color: '#0d9488', key: '0' },
+      { id: 'youtubestudio', name: 'YouTube Studio', desc: 'Content Studio', file: 'youtube-studio.html', icon: '\u{1F3AC}', color: '#dc2626', key: '-' },
+    ];
+
+    const DEFAULT_CHECKLIST = [
+      { id: 1, text: 'Send rate update to realtors', done: false },
+      { id: 2, text: 'Check pipeline for stalled loans', done: false },
+      { id: 3, text: 'Follow up with overdue realtor contacts', done: false },
+      { id: 4, text: 'Post on LinkedIn', done: false },
+      { id: 5, text: 'Review new leads', done: false },
+      { id: 6, text: 'Update CRM notes', done: false },
+    ];
+
+    const DEFAULT_BOOKMARKS = [
+      { id: 1, title: 'MortgageNewsDaily', url: 'https://www.mortgagenewsdaily.com' },
+      { id: 2, title: 'Fannie Mae', url: 'https://www.fanniemae.com' },
+      { id: 3, title: 'Freddie Mac', url: 'https://www.freddiemac.com' },
+      { id: 4, title: 'FHA Resource Center', url: 'https://www.hud.gov/program_offices/housing/fhahistory' },
+      { id: 5, title: 'LinkedIn', url: 'https://www.linkedin.com' },
+      { id: 6, title: 'FM Home Loans', url: 'https://www.fmhomeloans.com' },
+      { id: 7, title: 'Encompass LOS', url: 'https://www.ice.com/mortgage-technology/encompass' },
+      { id: 8, title: 'NMLS', url: 'https://www.nmlsconsumeraccess.org' },
+    ];
+
+    const DEFAULT_GOALS = [
+      { id: 1, title: 'Fund 8 loans', period: 'monthly', progress: 5, target: 8 },
+      { id: 2, title: 'Revenue $80K', period: 'monthly', progress: 52000, target: 80000, isCurrency: true },
+      { id: 3, title: 'Add 4 new realtors', period: 'monthly', progress: 3, target: 4 },
+      { id: 4, title: 'Fund 24 loans', period: 'quarterly', progress: 14, target: 24 },
+      { id: 5, title: 'Revenue $240K', period: 'quarterly', progress: 148000, target: 240000, isCurrency: true },
+      { id: 6, title: 'Add 12 realtors', period: 'quarterly', progress: 8, target: 12 },
+      { id: 7, title: 'Fund 96 loans', period: 'annual', progress: 42, target: 96 },
+      { id: 8, title: 'Revenue $960K', period: 'annual', progress: 420000, target: 960000, isCurrency: true },
+      { id: 9, title: 'Add 48 realtors', period: 'annual', progress: 24, target: 48 },
+    ];
+
+    const DEFAULT_ACTIVITY = [
+      { id: 1, action: 'Funded Kramer loan \u2014 $485K conventional', time: new Date(Date.now() - 3 * 86400000).toISOString(), icon: '\u{1F389}' },
+      { id: 2, action: 'Added 2 new realtors to CRM', time: new Date(Date.now() - 2 * 86400000).toISOString(), icon: '\u{1F91D}' },
+      { id: 3, action: 'Generated 5 LinkedIn posts for the week', time: new Date(Date.now() - 1 * 86400000).toISOString(), icon: '\u270D\uFE0F' },
+      { id: 4, action: 'Sent rate comparison to Thompson family', time: new Date(Date.now() - 4 * 3600000).toISOString(), icon: '\u{1F4E7}' },
+      { id: 5, action: 'Analyzed duplex deal on Maple Ave', time: new Date(Date.now() - 2 * 3600000).toISOString(), icon: '\u{1F3E0}' },
+      { id: 6, action: 'Completed AI prompting module 3', time: new Date(Date.now() - 1 * 3600000).toISOString(), icon: '\u{1F9E0}' },
+    ];
+
+    const DEFAULT_STATS = {
+      pipeline: { value: 12, label: 'Pipeline' },
+      followups: { value: 5, label: 'Follow-ups' },
+      lastFunded: { value: '3d ago', label: 'Last Funded' },
+      deepWorkToday: { value: '0h 0m', label: 'Deep Work' },
+    };
+
+    const DEFAULT_HABITS = [
+      { id: 1, name: 'Sent rate update', streak: 0, lastCompleted: null },
+      { id: 2, name: 'Called 3 realtors', streak: 0, lastCompleted: null },
+      { id: 3, name: 'Posted on LinkedIn', streak: 0, lastCompleted: null },
+      { id: 4, name: 'Reviewed pipeline', streak: 0, lastCompleted: null },
+      { id: 5, name: 'Exercised', streak: 0, lastCompleted: null },
+    ];
+
+    const DEFAULT_INCOME = { entries: [] };
+
+    const DEFAULT_MARKET = {
+      rates: { mortgage30: 6.875, mortgage15: 6.125, jumbo: 7.125, fha: 6.5 },
+      indices: { sp500: '+0.42%', nasdaq: '+0.68%', dow: '+0.31%' },
+      mood: 'cautious',
+      lastUpdated: new Date().toLocaleDateString(),
+    };
+
+    const DEFAULT_SETTINGS = {
+      name: 'Aryeh',
+      title: 'Loan Officer',
+      company: 'FM Home Loans',
+      darkMode: true,
+      notifications: true,
+      soundEnabled: true,
+    };
+
+    // ─── Utility Functions ───
+    const getRelativeTime = (isoString) => {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      if (diffMins < 1) return 'just now';
+      if (diffMins < 60) return diffMins + 'm ago';
+      if (diffHours < 24) return diffHours + 'h ago';
+      if (diffDays < 7) return diffDays + 'd ago';
+      return date.toLocaleDateString();
+    };
+
+    const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) return 'Good morning';
+      if (hour < 18) return 'Good afternoon';
+      return 'Good evening';
+    };
+
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
+    };
+
+    // ─── Count-Up Hook ───
+    const useCountUp = (target, duration) => {
+      const numTarget = typeof target === 'number' ? target : parseFloat(target);
+      const [count, setCount] = useState(0);
+      const rafRef = useRef(null);
+
+      useEffect(() => {
+        if (isNaN(numTarget)) { setCount(0); return; }
+        const dur = duration || 1200;
+        const start = performance.now();
+        const animate = (now) => {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / dur, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setCount(Math.round(eased * numTarget));
+          if (progress < 1) rafRef.current = requestAnimationFrame(animate);
+        };
+        rafRef.current = requestAnimationFrame(animate);
+        return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+      }, [numTarget, duration]);
+
+      return count;
+    };
+
+    // ─── Aurora Background ───
+    const AuroraBackground = () => (
+      <div className="aurora-layer">
+        <div className="aurora-orb" />
+        <div className="aurora-orb" />
+        <div className="aurora-orb" />
+        <div className="aurora-orb" />
+      </div>
+    );
+
+    // ─── Particles Background ───
+    const ParticlesBackground = () => {
+      const particles = Array.from({ length: 30 }, (_, i) => {
+        const size = 1.5 + Math.random() * 2.5;
+        const isGold = Math.random() > 0.3;
+        return {
+          id: i,
+          left: Math.random() * 100,
+          delay: Math.random() * 8,
+          duration: 12 + Math.random() * 10,
+          size,
+          opacity: 0.1 + Math.random() * 0.2,
+          driftX: -60 + Math.random() * 120,
+          driftEnd: -40 + Math.random() * 80,
+          color: isGold ? 'rgba(197,165,90,' : 'rgba(255,255,255,',
+        };
+      });
+
+      return (
+        <div className="particles-container">
+          {particles.map((p) => (
+            <div
+              key={p.id}
+              className="particle"
+              style={{
+                left: p.left + '%',
+                width: p.size + 'px',
+                height: p.size + 'px',
+                background: p.color + '1)',
+                boxShadow: '0 0 ' + (p.size * 2) + 'px ' + p.color + '0.3)',
+                animationDelay: p.delay + 's',
+                animationDuration: p.duration + 's',
+                '--particle-opacity': p.opacity,
+                '--drift-x': p.driftX + 'px',
+                '--drift-end': p.driftEnd + 'px',
+              }}
+            />
+          ))}
+        </div>
+      );
+    };
+
+    // ─── Header ───
+    const Header = ({ activeTab, setActiveTab, onSearchClick, onSettingsClick }) => {
+      const tabs = ['Dashboard', 'Apps', 'Goals', 'Tools', 'Notes'];
+
+      return (
+        <header className="tab-bar">
+          <div style={{ padding: '0 28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', height: '68px' }}>
+              <div style={{ flexShrink: 0 }}>
+                <h1 className="heading-lg gold-gradient" style={{ fontSize: '22px' }}>Command Center</h1>
+                <p className="label-upper" style={{ marginTop: '2px', fontSize: '10px', letterSpacing: '0.15em' }}>FM Home Loans</p>
+              </div>
+
+              <div style={{ flexGrow: 1, display: 'flex', gap: '2px', justifyContent: 'center' }}>
+                {tabs.map((tab, idx) => (
+                  <button
+                    key={tab}
+                    className={'tab-button' + (activeTab === idx ? ' active' : '')}
+                    onClick={() => setActiveTab(idx)}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ flexShrink: 0, display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={onSearchClick}
+                  className="btn-glass"
+                  title="Search (Cmd+K)"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <span style={{ fontSize: '14px' }}>{'\u{1F50D}'}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(232,228,220,0.35)', fontFamily: 'var(--font-mono)' }}>Cmd+K</span>
+                </button>
+                <button onClick={onSettingsClick} className="btn-glass" title="Settings">
+                  {'\u2699\uFE0F'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+      );
+    };
+
+    // ─── Settings Modal ───
+    const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
+      const [localSettings, setLocalSettings] = useState(settings);
+
+      const handleChange = (field, value) => {
+        const updated = { ...localSettings, [field]: value };
+        setLocalSettings(updated);
+        onSettingsChange(updated);
+      };
+
+      if (!isOpen) return null;
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="heading-lg gold-gradient" style={{ fontSize: '24px', marginBottom: '28px' }}>Settings</h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label className="label-upper" style={{ display: 'block', marginBottom: '8px' }}>Name</label>
+                <input type="text" className="input-glass" style={{ width: '100%' }} value={localSettings.name} onChange={(e) => handleChange('name', e.target.value)} />
+              </div>
+              <div>
+                <label className="label-upper" style={{ display: 'block', marginBottom: '8px' }}>Title</label>
+                <input type="text" className="input-glass" style={{ width: '100%' }} value={localSettings.title} onChange={(e) => handleChange('title', e.target.value)} />
+              </div>
+              <div>
+                <label className="label-upper" style={{ display: 'block', marginBottom: '8px' }}>Company</label>
+                <input type="text" className="input-glass" style={{ width: '100%' }} value={localSettings.company} onChange={(e) => handleChange('company', e.target.value)} />
+              </div>
+
+              <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                  <input type="checkbox" className="custom-check" checked={localSettings.notifications} onChange={(e) => handleChange('notifications', e.target.checked)} />
+                  <span style={{ fontSize: '14px' }}>Enable notifications</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                  <input type="checkbox" className="custom-check" checked={localSettings.soundEnabled} onChange={(e) => handleChange('soundEnabled', e.target.checked)} />
+                  <span style={{ fontSize: '14px' }}>Sound effects</span>
+                </label>
+              </div>
+
+              <button className="btn-gold" style={{ width: '100%', marginTop: '8px' }} onClick={onClose}>Close</button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Spotlight Search ───
+    const SpotlightSearch = ({ isOpen, onClose }) => {
+      const [query, setQuery] = useState('');
+      const [selectedIdx, setSelectedIdx] = useState(0);
+      const inputRef = useRef(null);
+
+      const bookmarks = load(STORAGE_KEYS.BOOKMARKS, DEFAULT_BOOKMARKS);
+      const goals = load(STORAGE_KEYS.GOALS, DEFAULT_GOALS);
+
+      const results = [];
+
+      if (query.length > 0) {
+        const lowerQuery = query.toLowerCase();
+        DEFAULT_APPS.forEach((app) => {
+          if (app.name.toLowerCase().includes(lowerQuery) || app.desc.toLowerCase().includes(lowerQuery)) {
+            results.push({ type: 'app', ...app });
+          }
+        });
+        bookmarks.forEach((bm) => {
+          if (bm.title.toLowerCase().includes(lowerQuery)) {
+            results.push({ type: 'bookmark', ...bm });
+          }
+        });
+        goals.forEach((g) => {
+          if (g.title.toLowerCase().includes(lowerQuery)) {
+            results.push({ type: 'goal', ...g });
+          }
+        });
+      }
+
+      useEffect(() => {
+        if (isOpen && inputRef.current) inputRef.current.focus();
+        setSelectedIdx(0);
+      }, [isOpen]);
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedIdx((prev) => Math.min(prev + 1, results.length - 1));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedIdx((prev) => Math.max(prev - 1, 0));
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const selected = results[selectedIdx];
+          if (selected) {
+            if (selected.type === 'app') window.open(selected.file, '_blank');
+            else if (selected.type === 'bookmark') window.open(selected.url, '_blank');
+            onClose();
+          }
+        }
+      };
+
+      if (!isOpen) return null;
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" style={{ maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+            <input
+              ref={inputRef}
+              type="text"
+              className="input-glass"
+              style={{ width: '100%', marginBottom: '16px', fontFamily: 'var(--font-mono)', fontSize: '15px' }}
+              placeholder="Search apps, bookmarks, goals..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+
+            <div className="spotlight-search">
+              {results.length === 0 && query.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(232,228,220,0.35)' }}>No results found</div>
+              )}
+
+              {results.map((result, idx) => (
+                <div
+                  key={result.type + '-' + result.id}
+                  className={'spotlight-item' + (idx === selectedIdx ? ' selected' : '')}
+                  onClick={() => {
+                    if (result.type === 'app') window.open(result.file, '_blank');
+                    else if (result.type === 'bookmark') window.open(result.url, '_blank');
+                    onClose();
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>
+                    {result.type === 'app' && result.icon}
+                    {result.type === 'bookmark' && '\u{1F517}'}
+                    {result.type === 'goal' && '\u{1F3AF}'}
+                  </span>
+                  <div>
+                    <div style={{ fontWeight: 600, fontFamily: 'var(--font-heading)' }}>{result.name || result.title}</div>
+                    {result.desc && <div style={{ fontSize: '12px', color: 'rgba(232,228,220,0.4)' }}>{result.desc}</div>}
+                    {result.url && <div style={{ fontSize: '11px', color: 'rgba(232,228,220,0.25)', fontFamily: 'var(--font-mono)' }}>{result.url}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Clock ───
+    const Clock = () => {
+      const [time, setTime] = useState(new Date());
+
+      useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+      }, []);
+
+      const hours = String(time.getHours()).padStart(2, '0');
+      const minutes = String(time.getMinutes()).padStart(2, '0');
+      const seconds = String(time.getSeconds()).padStart(2, '0');
+      const date = time.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+      return (
+        <div style={{ textAlign: 'right' }}>
+          <div className="stat-number gold-gradient" style={{ fontSize: '52px', lineHeight: 1 }}>
+            {hours + ':' + minutes}
+            <span style={{ fontSize: '20px', opacity: 0.5 }}>:{seconds}</span>
+          </div>
+          <div className="label-upper" style={{ marginTop: '8px' }}>{date}</div>
+        </div>
+      );
+    };
+
+    // ─── Stat Card (animated count-up) ───
+    const StatCard = ({ label, value, delay }) => {
+      const isNumeric = typeof value === 'number';
+      const animatedValue = useCountUp(isNumeric ? value : 0, 1400);
+
+      return (
+        <div
+          className="glass glass-hover anim-enter"
+          style={{
+            padding: '28px 24px',
+            animationDelay: (delay || 0) + 'ms',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(197,165,90,0.06) 0%, transparent 70%)' }} />
+          <div className="stat-number gold-gradient" style={{ fontSize: '48px', lineHeight: 1 }}>
+            {isNumeric ? animatedValue : value}
+          </div>
+          <div className="label-upper" style={{ marginTop: '12px' }}>{label}</div>
+        </div>
+      );
+    };
+
+    // ─── Daily Checklist ───
+    const DailyChecklist = ({ items, onToggle, onAdd, onRemove }) => {
+      const [newItem, setNewItem] = useState('');
+
+      const handleAdd = () => {
+        if (newItem.trim()) { onAdd(newItem); setNewItem(''); }
+      };
+
+      const doneCount = items.filter((i) => i.done).length;
+      const pct = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '32px', marginTop: '40px', animationDelay: '400ms' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 className="heading-md gold-gradient" style={{ fontSize: '18px' }}>Daily Checklist</h3>
+            <span className="stat-number" style={{ fontSize: '13px', color: pct === 100 ? 'var(--gold)' : 'rgba(232,228,220,0.4)' }}>{pct}%</span>
+          </div>
+
+          <div className="progress-bar" style={{ marginBottom: '20px', marginTop: 0 }}>
+            <div className="progress-fill" style={{ width: pct + '%' }} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            {items.map((item) => (
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 0' }}>
+                <input type="checkbox" className="custom-check" checked={item.done} onChange={() => onToggle(item.id)} />
+                <span style={{ flex: 1, fontSize: '14px', color: item.done ? 'rgba(232,228,220,0.3)' : '#e8e4dc', textDecoration: item.done ? 'line-through' : 'none', transition: 'all 0.3s ease' }}>{item.text}</span>
+                <button onClick={() => onRemove(item.id)} style={{ border: 'none', background: 'none', color: 'rgba(232,228,220,0.2)', cursor: 'pointer', fontSize: '14px', padding: '4px', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#ef4444'} onMouseLeave={(e) => e.target.style.color = 'rgba(232,228,220,0.2)'}>
+                  {'\u2715'}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              className="input-glass"
+              style={{ flex: 1 }}
+              placeholder="Add item..."
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              onKeyPress={(e) => { if (e.key === 'Enter') handleAdd(); }}
+            />
+            <button className="btn-gold" onClick={handleAdd}>Add</button>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── App Card ───
+    const AppCard = ({ app, index }) => {
+      const lastOpened = load(STORAGE_KEYS.APP_TIMESTAMPS, {})[app.id];
+      const lastOpenedStr = lastOpened ? new Date(lastOpened).toLocaleDateString() : 'Never';
+
+      const handleClick = () => {
+        const timestamps = load(STORAGE_KEYS.APP_TIMESTAMPS, {});
+        timestamps[app.id] = new Date().toISOString();
+        save(STORAGE_KEYS.APP_TIMESTAMPS, timestamps);
+        window.open(app.file, '_blank');
+      };
+
+      return (
+        <div
+          className="glass glass-hover anim-enter"
+          style={{ padding: '28px', cursor: 'pointer', animationDelay: (index * 60) + 'ms', position: 'relative', overflow: 'hidden' }}
+          onClick={handleClick}
+        >
+          <div style={{ position: 'absolute', top: '-10px', right: '-10px', width: '60px', height: '60px', borderRadius: '50%', background: app.color, opacity: 0.06, filter: 'blur(20px)' }} />
+          <div style={{ fontSize: '36px', marginBottom: '12px' }}>{app.icon}</div>
+          <h3 className="heading-md" style={{ fontSize: '15px', marginBottom: '4px' }}>{app.name}</h3>
+          <p style={{ fontSize: '13px', color: 'rgba(232,228,220,0.4)' }}>{app.desc}</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px' }}>
+            <span style={{ fontSize: '11px', color: 'rgba(232,228,220,0.25)', fontFamily: 'var(--font-mono)' }}>Opened: {lastOpenedStr}</span>
+            <kbd style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(232,228,220,0.4)' }}>{app.key}</kbd>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Quick Launch Grid ───
+    const QuickLaunchGrid = () => (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '12px', marginTop: '20px' }}>
+        {DEFAULT_APPS.map((app, i) => (
+          <div
+            key={app.id}
+            className="glass glass-hover anim-enter"
+            style={{ padding: '18px 12px', textAlign: 'center', cursor: 'pointer', animationDelay: (200 + i * 40) + 'ms' }}
+            onClick={() => window.open(app.file, '_blank')}
+          >
+            <div style={{ fontSize: '28px', marginBottom: '6px' }}>{app.icon}</div>
+            <p style={{ fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{app.name}</p>
+          </div>
+        ))}
+      </div>
+    );
+
+    // ─── Dashboard Tab ───
+    const DashboardTab = ({ checklist, onChecklistToggle, onChecklistAdd, onChecklistRemove, stats }) => (
+      <div className="tab-content" style={{ padding: '40px 32px' }}>
+        {/* Greeting & Clock */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '32px', marginBottom: '48px' }}>
+          <div className="anim-enter">
+            <h2 className="heading-xl" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
+              <span className="gold-gradient">{getGreeting()}</span>
+              <span style={{ color: 'rgba(232,228,220,0.7)' }}>, {load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS).name}</span>
+            </h2>
+            <p style={{ color: 'rgba(232,228,220,0.35)', marginTop: '8px', fontSize: '15px' }}>Let's make it a productive day</p>
+          </div>
+          <div className="anim-enter" style={{ animationDelay: '100ms' }}>
+            <Clock />
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div className="stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+          <StatCard label={stats.pipeline.label} value={stats.pipeline.value} delay={100} />
+          <StatCard label={stats.followups.label} value={stats.followups.value} delay={160} />
+          <StatCard label={stats.lastFunded.label} value={stats.lastFunded.value} delay={220} />
+          <StatCard label={stats.deepWorkToday.label} value={stats.deepWorkToday.value} delay={280} />
+        </div>
+
+        {/* Quick Launch */}
+        <div className="anim-enter" style={{ marginTop: '48px', animationDelay: '300ms' }}>
+          <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '4px' }}>Quick Launch</h3>
+          <QuickLaunchGrid />
+        </div>
+
+        {/* Daily Checklist */}
+        <DailyChecklist items={checklist} onToggle={onChecklistToggle} onAdd={onChecklistAdd} onRemove={onChecklistRemove} />
+      </div>
+    );
+
+    // ─── Apps Tab ───
+    const AppsTab = () => (
+      <div className="tab-content" style={{ padding: '40px 32px' }}>
+        <h2 className="heading-xl gold-gradient anim-enter" style={{ fontSize: '36px', marginBottom: '32px' }}>Applications</h2>
+        <div className="app-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          {DEFAULT_APPS.map((app, i) => (
+            <AppCard key={app.id} app={app} index={i} />
+          ))}
+        </div>
+      </div>
+    );
+
+    // ─── Goal Progress ───
+    const GoalProgress = ({ goal, onProgressChange, index }) => {
+      const percentage = Math.min((goal.progress / goal.target) * 100, 100);
+      const displayProgress = goal.isCurrency ? formatCurrency(goal.progress) : goal.progress;
+      const displayTarget = goal.isCurrency ? formatCurrency(goal.target) : goal.target;
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '20px 24px', marginBottom: '12px', animationDelay: (index * 80) + 'ms' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ flex: 1 }}>
+              <h4 className="heading-md" style={{ fontSize: '14px' }}>{goal.title}</h4>
+              <p style={{ fontSize: '12px', color: 'rgba(232,228,220,0.35)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                {displayProgress} / {displayTarget}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span className="stat-number gold-gradient" style={{ fontSize: '18px' }}>{Math.round(percentage)}%</span>
+              <button
+                onClick={() => onProgressChange(goal.id, goal.progress + 1)}
+                style={{ width: '28px', height: '28px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'var(--gold)', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: percentage + '%' }} />
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Goals Tab ───
+    const GoalsTab = ({ goals, onGoalProgressChange, habits, onHabitComplete, income, onIncomeAdd }) => {
+      const [period, setPeriod] = useState('monthly');
+      const [newIncomeAmount, setNewIncomeAmount] = useState('');
+      const [newIncomeNote, setNewIncomeNote] = useState('');
+
+      const filteredGoals = goals.filter((g) => g.period === period);
+      const incomeTotal = income.entries.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const animatedIncome = useCountUp(incomeTotal, 1000);
+
+      const handleAddIncome = () => {
+        if (newIncomeAmount.trim()) {
+          onIncomeAdd({ id: Date.now(), amount: parseFloat(newIncomeAmount), note: newIncomeNote, date: new Date().toISOString() });
+          setNewIncomeAmount('');
+          setNewIncomeNote('');
+        }
+      };
+
+      return (
+        <div className="tab-content" style={{ padding: '40px 32px' }}>
+          {/* Goals Section */}
+          <div style={{ marginBottom: '56px' }}>
+            <h2 className="heading-xl gold-gradient anim-enter" style={{ fontSize: '36px', marginBottom: '24px' }}>Goals</h2>
+
+            <div className="anim-enter" style={{ display: 'flex', gap: '8px', marginBottom: '24px', animationDelay: '100ms' }}>
+              {['monthly', 'quarterly', 'annual'].map((p) => (
+                <button
+                  key={p}
+                  className="btn-glass"
+                  style={period === p ? { borderColor: 'rgba(197,165,90,0.4)', color: 'var(--gold)', background: 'rgba(197,165,90,0.06)' } : {}}
+                  onClick={() => setPeriod(p)}
+                >
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {filteredGoals.map((goal, i) => (
+              <GoalProgress key={goal.id} goal={goal} onProgressChange={onGoalProgressChange} index={i} />
+            ))}
+          </div>
+
+          {/* Income Tracker */}
+          <div style={{ marginBottom: '56px' }}>
+            <h3 className="heading-lg gold-gradient anim-enter" style={{ fontSize: '28px', marginBottom: '20px' }}>Income Tracker</h3>
+            <div className="glass anim-enter" style={{ padding: '32px', marginBottom: '16px', animationDelay: '100ms' }}>
+              <div className="label-upper" style={{ marginBottom: '8px' }}>Total Income</div>
+              <div className="stat-number gold-gradient" style={{ fontSize: '48px', lineHeight: 1 }}>{formatCurrency(animatedIncome)}</div>
+            </div>
+
+            <div className="glass anim-enter" style={{ padding: '24px', marginBottom: '16px', animationDelay: '200ms' }}>
+              <h4 className="heading-md" style={{ fontSize: '14px', marginBottom: '16px' }}>Add Income Entry</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
+                <input type="number" className="input-glass" placeholder="Amount" value={newIncomeAmount} onChange={(e) => setNewIncomeAmount(e.target.value)} />
+                <input type="text" className="input-glass" placeholder="Note" value={newIncomeNote} onChange={(e) => setNewIncomeNote(e.target.value)} />
+                <button className="btn-gold" onClick={handleAddIncome}>Add</button>
+              </div>
+            </div>
+
+            {income.entries.length > 0 && (
+              <div className="glass anim-enter" style={{ padding: '24px', animationDelay: '300ms' }}>
+                <h4 className="heading-md" style={{ fontSize: '14px', marginBottom: '16px' }}>Recent Entries</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                  {[...income.entries].reverse().map((entry) => (
+                    <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: 'rgba(232,228,220,0.6)' }}>{entry.note || 'Income'}</span>
+                      <span className="stat-number" style={{ color: 'var(--gold)' }}>{formatCurrency(entry.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Habit Streaks */}
+          <div>
+            <h3 className="heading-lg gold-gradient anim-enter" style={{ fontSize: '28px', marginBottom: '20px' }}>Habit Streaks</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {habits.map((habit, i) => (
+                <div
+                  key={habit.id}
+                  className="glass glass-hover anim-enter"
+                  style={{ padding: '18px 24px', cursor: 'pointer', animationDelay: (i * 60) + 'ms' }}
+                  onClick={() => onHabitComplete(habit.id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 500, fontSize: '14px' }}>{habit.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <span className="fire-emoji">{habit.streak > 0 ? '\u{1F525}' : ''}</span>
+                      <span className="stat-number gold-gradient" style={{ fontSize: '18px', marginLeft: '4px' }}>{habit.streak}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Calculator ───
+    const Calculator = () => {
+      const [display, setDisplay] = useState('0');
+      const [prev, setPrev] = useState(null);
+      const [operation, setOperation] = useState(null);
+      const [newNumber, setNewNumber] = useState(true);
+
+      const handleDigit = (digit) => {
+        if (newNumber) { setDisplay(String(digit)); setNewNumber(false); }
+        else { setDisplay(display === '0' ? String(digit) : display + digit); }
+      };
+
+      const handleDecimal = () => {
+        if (newNumber) { setDisplay('0.'); setNewNumber(false); }
+        else if (!display.includes('.')) { setDisplay(display + '.'); }
+      };
+
+      const performCalculation = (a, b, op) => {
+        switch (op) {
+          case '+': return a + b;
+          case '-': return a - b;
+          case '*': return a * b;
+          case '/': return a / b;
+          default: return b;
+        }
+      };
+
+      const handleOperation = (op) => {
+        const currentValue = parseFloat(display);
+        if (prev === null) { setPrev(currentValue); }
+        else if (operation) {
+          const result = performCalculation(prev, currentValue, operation);
+          setDisplay(String(result));
+          setPrev(result);
+        }
+        setOperation(op);
+        setNewNumber(true);
+      };
+
+      const handleEquals = () => {
+        if (operation && prev !== null) {
+          const result = performCalculation(prev, parseFloat(display), operation);
+          setDisplay(String(result));
+          setPrev(null);
+          setOperation(null);
+          setNewNumber(true);
+        }
+      };
+
+      const handleClear = () => { setDisplay('0'); setPrev(null); setOperation(null); setNewNumber(true); };
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '28px' }}>
+          <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '16px' }}>Calculator</h3>
+          <div className="input-glass stat-number" style={{ width: '100%', textAlign: 'right', fontSize: '24px', padding: '14px 18px', marginBottom: '16px' }}>{display}</div>
+
+          <div className="calculator-grid">
+            <button className="calc-button" onClick={handleClear} style={{ gridColumn: 'span 2' }}>Clear</button>
+            <button className="calc-button operator" onClick={() => handleOperation('/')}>{'\u00F7'}</button>
+            <button className="calc-button operator" onClick={() => handleOperation('*')}>{'\u00D7'}</button>
+
+            {[7, 8, 9].map((n) => (<button key={n} className="calc-button" onClick={() => handleDigit(n)}>{n}</button>))}
+            <button className="calc-button operator" onClick={() => handleOperation('-')}>{'\u2212'}</button>
+
+            {[4, 5, 6].map((n) => (<button key={n} className="calc-button" onClick={() => handleDigit(n)}>{n}</button>))}
+            <button className="calc-button operator" onClick={() => handleOperation('+')}>+</button>
+
+            {[1, 2, 3].map((n) => (<button key={n} className="calc-button" onClick={() => handleDigit(n)}>{n}</button>))}
+            <button className="calc-button operator" onClick={handleEquals} style={{ gridRow: 'span 2' }}>=</button>
+
+            <button className="calc-button" onClick={() => handleDigit(0)} style={{ gridColumn: 'span 2' }}>0</button>
+            <button className="calc-button" onClick={handleDecimal}>.</button>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Mortgage Calculator ───
+    const MortgageCalculator = () => {
+      const [loanAmount, setLoanAmount] = useState('300000');
+      const [rate, setRate] = useState('6.875');
+      const [years, setYears] = useState('30');
+
+      const calculatePayment = () => {
+        const principal = parseFloat(loanAmount);
+        const monthlyRate = parseFloat(rate) / 100 / 12;
+        const numberOfPayments = parseFloat(years) * 12;
+        if (monthlyRate === 0) return (principal / numberOfPayments).toFixed(2);
+        const monthlyPayment = (principal * (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments))) / (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+        return monthlyPayment.toFixed(2);
+      };
+
+      const monthlyPayment = calculatePayment();
+      const totalPayment = (parseFloat(monthlyPayment) * parseFloat(years) * 12).toFixed(2);
+      const totalInterest = (parseFloat(totalPayment) - parseFloat(loanAmount)).toFixed(2);
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '28px', animationDelay: '100ms' }}>
+          <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '20px' }}>Mortgage Calculator</h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+            <div>
+              <label className="label-upper" style={{ display: 'block', marginBottom: '6px' }}>Loan Amount</label>
+              <input type="number" className="input-glass" style={{ width: '100%' }} value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} />
+            </div>
+            <div>
+              <label className="label-upper" style={{ display: 'block', marginBottom: '6px' }}>Annual Interest Rate (%)</label>
+              <input type="number" step="0.01" className="input-glass" style={{ width: '100%' }} value={rate} onChange={(e) => setRate(e.target.value)} />
+            </div>
+            <div>
+              <label className="label-upper" style={{ display: 'block', marginBottom: '6px' }}>Loan Term (years)</label>
+              <input type="number" className="input-glass" style={{ width: '100%' }} value={years} onChange={(e) => setYears(e.target.value)} />
+            </div>
+          </div>
+
+          <div style={{ paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="label-upper">Monthly Payment</span>
+              <span className="stat-number gold-gradient" style={{ fontSize: '28px' }}>{formatCurrency(monthlyPayment)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+              <span style={{ color: 'rgba(232,228,220,0.4)' }}>Total Payment</span>
+              <span className="stat-number" style={{ color: 'rgba(232,228,220,0.7)' }}>{formatCurrency(totalPayment)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+              <span style={{ color: 'rgba(232,228,220,0.4)' }}>Total Interest</span>
+              <span className="stat-number" style={{ color: 'rgba(232,228,220,0.7)' }}>{formatCurrency(totalInterest)}</span>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Pomodoro Timer ───
+    const PomodoroTimer = () => {
+      const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+      const [isRunning, setIsRunning] = useState(false);
+      const [isWorkMode, setIsWorkMode] = useState(true);
+      const intervalRef = useRef(null);
+
+      useEffect(() => {
+        if (isRunning) {
+          intervalRef.current = setInterval(() => {
+            setSecondsLeft((prev) => {
+              if (prev <= 1) {
+                setIsRunning(false);
+                setIsWorkMode(!isWorkMode);
+                return isWorkMode ? 5 * 60 : 25 * 60;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        } else {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+        }
+        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+      }, [isRunning, isWorkMode]);
+
+      const minutes = Math.floor(secondsLeft / 60);
+      const seconds = secondsLeft % 60;
+      const progress = (isWorkMode ? (25 * 60 - secondsLeft) / (25 * 60) : (5 * 60 - secondsLeft) / (5 * 60)) * 100;
+
+      const handleReset = () => { setIsRunning(false); setIsWorkMode(true); setSecondsLeft(25 * 60); };
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '28px', animationDelay: '200ms' }}>
+          <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '16px' }}>Pomodoro Timer</h3>
+
+          <div className="pomodoro-ring" style={{ '--progress': progress + '%' }}>
+            <div className="pomodoro-ring-inner">
+              <div className="pomodoro-time">
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              </div>
+              <div className="pomodoro-label">{isWorkMode ? 'Work' : 'Break'}</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '20px' }}>
+            <button className="btn-glass" onClick={() => setIsRunning(!isRunning)}>
+              {isRunning ? '\u23F8 Pause' : '\u25B6 Start'}
+            </button>
+            <button className="btn-glass" onClick={handleReset}>
+              {'\u21BB Reset'}
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Rate Lock Countdown ───
+    const RateLockCountdown = () => {
+      const [rateLocks, setRateLocks] = useState(load(STORAGE_KEYS.RATE_LOCKS, []));
+      const [expiryDate, setExpiryDate] = useState('');
+      const [clientName, setClientName] = useState('');
+
+      const handleAddLock = () => {
+        if (expiryDate && clientName) {
+          const newLock = { id: Date.now(), client: clientName, expiryDate: expiryDate };
+          const updated = [...rateLocks, newLock];
+          setRateLocks(updated);
+          save(STORAGE_KEYS.RATE_LOCKS, updated);
+          setExpiryDate('');
+          setClientName('');
+        }
+      };
+
+      const handleRemove = (id) => {
+        const updated = rateLocks.filter((r) => r.id !== id);
+        setRateLocks(updated);
+        save(STORAGE_KEYS.RATE_LOCKS, updated);
+      };
+
+      const getDaysRemaining = (dateStr) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        return Math.ceil((date - now) / 86400000);
+      };
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '28px', animationDelay: '300ms' }}>
+          <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '16px' }}>Rate Lock Countdown</h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            <input type="text" className="input-glass" placeholder="Client name" value={clientName} onChange={(e) => setClientName(e.target.value)} />
+            <input type="date" className="input-glass" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+            <button className="btn-gold" style={{ width: '100%' }} onClick={handleAddLock}>Add Lock</button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {rateLocks.length === 0 && <p style={{ color: 'rgba(232,228,220,0.3)', fontSize: '13px' }}>No active rate locks</p>}
+            {rateLocks.map((lock) => {
+              const daysRemaining = getDaysRemaining(lock.expiryDate);
+              const isExpired = daysRemaining < 0;
+              const isUrgent = daysRemaining >= 0 && daysRemaining <= 5;
+              return (
+                <div key={lock.id} className="glass" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isExpired ? 'rgba(239,68,68,0.2)' : isUrgent ? 'rgba(234,179,8,0.2)' : undefined }}>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '14px' }}>{lock.client}</p>
+                    <p className="stat-number" style={{ fontSize: '12px', color: isExpired ? '#ef4444' : isUrgent ? '#eab308' : 'rgba(232,228,220,0.4)', marginTop: '2px' }}>
+                      {isExpired ? 'Expired' : daysRemaining + 'd remaining'}
+                    </p>
+                  </div>
+                  <button onClick={() => handleRemove(lock.id)} style={{ border: 'none', background: 'none', color: 'rgba(232,228,220,0.2)', cursor: 'pointer', fontSize: '14px', padding: '4px', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#ef4444'} onMouseLeave={(e) => e.target.style.color = 'rgba(232,228,220,0.2)'}>
+                    {'\u2715'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Tools Tab ───
+    const ToolsTab = () => (
+      <div className="tab-content" style={{ padding: '40px 32px' }}>
+        <h2 className="heading-xl gold-gradient anim-enter" style={{ fontSize: '36px', marginBottom: '32px' }}>Tools</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+          <Calculator />
+          <MortgageCalculator />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginTop: '20px' }}>
+          <PomodoroTimer />
+          <RateLockCountdown />
+        </div>
+      </div>
+    );
+
+    // ─── Bookmarks Manager ───
+    const BookmarksManager = ({ bookmarks, onRemove, onAdd }) => {
+      const [newTitle, setNewTitle] = useState('');
+      const [newUrl, setNewUrl] = useState('');
+
+      const handleAdd = () => {
+        if (newTitle.trim() && newUrl.trim()) {
+          onAdd({ id: Date.now(), title: newTitle, url: newUrl });
+          setNewTitle('');
+          setNewUrl('');
+        }
+      };
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '28px', marginBottom: '24px' }}>
+          <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '20px' }}>Bookmarks</h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px', maxHeight: '280px', overflowY: 'auto' }}>
+            {bookmarks.map((bm) => (
+              <div key={bm.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', transition: 'background 0.2s' }}>
+                <a href={bm.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: '#e8e4dc', textDecoration: 'none', fontSize: '13px', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--gold)'} onMouseLeave={(e) => e.target.style.color = '#e8e4dc'}>
+                  {'\u{1F517}'} {bm.title}
+                </a>
+                <button onClick={() => onRemove(bm.id)} style={{ border: 'none', background: 'none', color: 'rgba(232,228,220,0.2)', cursor: 'pointer', fontSize: '13px', padding: '4px', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#ef4444'} onMouseLeave={(e) => e.target.style.color = 'rgba(232,228,220,0.2)'}>
+                  {'\u2715'}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <input type="text" className="input-glass" placeholder="Title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+            <input type="url" className="input-glass" placeholder="URL" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
+            <button className="btn-gold" style={{ width: '100%' }} onClick={handleAdd}>Add Bookmark</button>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Activity Feed ───
+    const ActivityFeed = ({ activities }) => (
+      <div className="glass anim-enter" style={{ padding: '28px', marginBottom: '24px', animationDelay: '100ms' }}>
+        <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '20px' }}>Activity Feed</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '380px', overflowY: 'auto' }}>
+          {activities.map((activity) => (
+            <div key={activity.id} style={{ display: 'flex', gap: '14px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ fontSize: '22px', flexShrink: 0 }}>{activity.icon}</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: '13px', color: 'rgba(232,228,220,0.7)', lineHeight: 1.4 }}>{activity.action}</p>
+                <p className="activity-time" style={{ marginTop: '4px' }}>{getRelativeTime(activity.time)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+    // ─── Sticky Notes ───
+    const StickyNotes = ({ notes, onAdd, onRemove }) => {
+      const [newNote, setNewNote] = useState('');
+
+      const handleAdd = () => {
+        if (newNote.trim()) { onAdd({ id: Date.now(), text: newNote, created: new Date().toISOString() }); setNewNote(''); }
+      };
+
+      return (
+        <div className="glass anim-enter" style={{ padding: '28px', animationDelay: '200ms' }}>
+          <h3 className="heading-md gold-gradient" style={{ fontSize: '18px', marginBottom: '20px' }}>Sticky Notes</h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+            <textarea className="input-glass" style={{ width: '100%', height: '80px', resize: 'vertical', fontFamily: 'var(--font-body)' }} placeholder="Write a note..." value={newNote} onChange={(e) => setNewNote(e.target.value)} />
+            <button className="btn-gold" style={{ width: '100%' }} onClick={handleAdd}>Add Note</button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', maxHeight: '280px', overflowY: 'auto' }}>
+            {notes.map((note) => (
+              <div key={note.id} style={{ padding: '16px', borderRadius: '12px', background: 'rgba(197,165,90,0.04)', border: '1px solid rgba(197,165,90,0.1)' }}>
+                <p style={{ fontSize: '13px', color: 'rgba(232,228,220,0.7)', marginBottom: '10px', lineHeight: 1.45 }}>{note.text}</p>
+                <button onClick={() => onRemove(note.id)} style={{ border: 'none', background: 'none', color: 'rgba(232,228,220,0.25)', cursor: 'pointer', fontSize: '11px', padding: 0, transition: 'color 0.2s', fontFamily: 'var(--font-body)' }} onMouseEnter={(e) => e.target.style.color = '#ef4444'} onMouseLeave={(e) => e.target.style.color = 'rgba(232,228,220,0.25)'}>
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Notes Tab ───
+    const NotesTab = ({ bookmarks, onBookmarkRemove, onBookmarkAdd, activities, notes, onNoteAdd, onNoteRemove }) => (
+      <div className="tab-content" style={{ padding: '40px 32px' }}>
+        <h2 className="heading-xl gold-gradient anim-enter" style={{ fontSize: '36px', marginBottom: '32px' }}>Notes & Links</h2>
+        <BookmarksManager bookmarks={bookmarks} onRemove={onBookmarkRemove} onAdd={onBookmarkAdd} />
+        <ActivityFeed activities={activities} />
+        <StickyNotes notes={notes} onAdd={onNoteAdd} onRemove={onNoteRemove} />
+      </div>
+    );
+
+    // ─── Main App ───
+    const App = () => {
+      const [activeTab, setActiveTab] = useState(0);
+      const [showSettings, setShowSettings] = useState(false);
+      const [showSpotlight, setShowSpotlight] = useState(false);
+
+      const [checklist, setChecklist] = useState(() => load(STORAGE_KEYS.CHECKLIST, DEFAULT_CHECKLIST));
+      const [goals, setGoals] = useState(() => load(STORAGE_KEYS.GOALS, DEFAULT_GOALS));
+      const [bookmarks, setBookmarks] = useState(() => load(STORAGE_KEYS.BOOKMARKS, DEFAULT_BOOKMARKS));
+      const [activities, setActivities] = useState(() => load(STORAGE_KEYS.ACTIVITY, DEFAULT_ACTIVITY));
+      const [stats, setStats] = useState(() => load(STORAGE_KEYS.STATS, DEFAULT_STATS));
+      const [habits, setHabits] = useState(() => load(STORAGE_KEYS.HABITS, DEFAULT_HABITS));
+      const [income, setIncome] = useState(() => load(STORAGE_KEYS.INCOME, DEFAULT_INCOME));
+      const [notes, setNotes] = useState(() => load(STORAGE_KEYS.NOTES, []));
+      const [settings, setSettings] = useState(() => load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS));
+
+      const handleChecklistToggle = (id) => {
+        const updated = checklist.map((item) => item.id === id ? { ...item, done: !item.done } : item);
+        setChecklist(updated);
+        save(STORAGE_KEYS.CHECKLIST, updated);
+      };
+
+      const handleChecklistAdd = (text) => {
+        const updated = [...checklist, { id: Date.now(), text, done: false }];
+        setChecklist(updated);
+        save(STORAGE_KEYS.CHECKLIST, updated);
+      };
+
+      const handleChecklistRemove = (id) => {
+        const updated = checklist.filter((item) => item.id !== id);
+        setChecklist(updated);
+        save(STORAGE_KEYS.CHECKLIST, updated);
+      };
+
+      const handleGoalProgressChange = (id, newProgress) => {
+        const updated = goals.map((g) => (g.id === id ? { ...g, progress: newProgress } : g));
+        setGoals(updated);
+        save(STORAGE_KEYS.GOALS, updated);
+      };
+
+      const handleHabitComplete = (id) => {
+        const today = new Date().toISOString().split('T')[0];
+        const updated = habits.map((h) => {
+          if (h.id === id) {
+            const newStreak =
+              h.lastCompleted === today
+                ? h.streak
+                : h.lastCompleted &&
+                  new Date(h.lastCompleted).toISOString().split('T')[0] ===
+                    new Date(Date.now() - 86400000).toISOString().split('T')[0]
+                ? h.streak + 1
+                : 1;
+            return { ...h, streak: newStreak, lastCompleted: today };
+          }
+          return h;
+        });
+        setHabits(updated);
+        save(STORAGE_KEYS.HABITS, updated);
+      };
+
+      const handleIncomeAdd = (entry) => {
+        const updated = { entries: [...income.entries, entry] };
+        setIncome(updated);
+        save(STORAGE_KEYS.INCOME, updated);
+      };
+
+      const handleBookmarkAdd = (bookmark) => {
+        const updated = [...bookmarks, bookmark];
+        setBookmarks(updated);
+        save(STORAGE_KEYS.BOOKMARKS, updated);
+      };
+
+      const handleBookmarkRemove = (id) => {
+        const updated = bookmarks.filter((b) => b.id !== id);
+        setBookmarks(updated);
+        save(STORAGE_KEYS.BOOKMARKS, updated);
+      };
+
+      const handleNoteAdd = (note) => {
+        const updated = [...notes, note];
+        setNotes(updated);
+        save(STORAGE_KEYS.NOTES, updated);
+      };
+
+      const handleNoteRemove = (id) => {
+        const updated = notes.filter((n) => n.id !== id);
+        setNotes(updated);
+        save(STORAGE_KEYS.NOTES, updated);
+      };
+
+      const handleSettingsChange = (newSettings) => {
+        setSettings(newSettings);
+        save(STORAGE_KEYS.SETTINGS, newSettings);
+      };
+
+      // Keyboard shortcuts
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            setShowSpotlight(!showSpotlight);
+          }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [showSpotlight]);
+
+      return (
+        <div className="main-content">
+          <AuroraBackground />
+          <ParticlesBackground />
+          <Header activeTab={activeTab} setActiveTab={setActiveTab} onSearchClick={() => setShowSpotlight(true)} onSettingsClick={() => setShowSettings(true)} />
+
+          {activeTab === 0 && (
+            <DashboardTab
+              checklist={checklist}
+              onChecklistToggle={handleChecklistToggle}
+              onChecklistAdd={handleChecklistAdd}
+              onChecklistRemove={handleChecklistRemove}
+              stats={stats}
+            />
+          )}
+          {activeTab === 1 && <AppsTab />}
+          {activeTab === 2 && (
+            <GoalsTab
+              goals={goals}
+              onGoalProgressChange={handleGoalProgressChange}
+              habits={habits}
+              onHabitComplete={handleHabitComplete}
+              income={income}
+              onIncomeAdd={handleIncomeAdd}
+            />
+          )}
+          {activeTab === 3 && <ToolsTab />}
+          {activeTab === 4 && (
+            <NotesTab
+              bookmarks={bookmarks}
+              onBookmarkRemove={handleBookmarkRemove}
+              onBookmarkAdd={handleBookmarkAdd}
+              activities={activities}
+              notes={notes}
+              onNoteAdd={handleNoteAdd}
+              onNoteRemove={handleNoteRemove}
+            />
+          )}
+
+          <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} settings={settings} onSettingsChange={handleSettingsChange} />
+          <SpotlightSearch isOpen={showSpotlight} onClose={() => setShowSpotlight(false)} />
+        </div>
+      );
+    };
+
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('app'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

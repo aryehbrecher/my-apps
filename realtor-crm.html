@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReferralHub — Aryeh Brecher | FM Home Loans</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  * { font-family: 'Inter', sans-serif; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+  .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+  .light ::-webkit-scrollbar-thumb { background: #d1d5db; }
+  .fade-in { animation: fadeIn 0.2s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+</style>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' }
+        }
+      }
+    }
+  }
+</script>
+</head>
+<body class="dark bg-gray-950 text-gray-100 min-h-screen">
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ── Utilities ──
+const genId = () => Math.random().toString(36).substr(2, 9);
+const daysSince = (dateStr) => {
+  if (!dateStr) return 999;
+  const d = new Date(dateStr);
+  const now = new Date();
+  return Math.floor((now - d) / 86400000);
+};
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+const fmtCurrency = (n) => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(n);
+const freqDays = { weekly:7, biweekly:14, monthly:30, quarterly:90 };
+
+function getStatus(lastContact, frequency) {
+  const days = daysSince(lastContact);
+  const goal = freqDays[frequency] || 30;
+  if (days <= goal * 0.7) return 'green';
+  if (days <= goal) return 'yellow';
+  return 'red';
+}
+
+function getStatusLabel(s) {
+  return s === 'green' ? 'On Track' : s === 'yellow' ? 'Due Soon' : 'Overdue';
+}
+
+// ── Sample Data ──
+const today = new Date().toISOString().split('T')[0];
+const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split('T')[0]; };
+
+const SAMPLE_REALTORS = [
+  {
+    id: genId(), name: 'Sarah Mitchell', company: 'Keller Williams Realty', email: 'sarah.mitchell@kw.com', phone: '(443) 555-0172',
+    address: '1200 Reisterstown Rd, Pikesville, MD 21208', tags: ['Top Producer', 'Active Partner'],
+    howMet: 'Met at Maryland Association of Realtors conference 2024', preferredContact: 'text',
+    notes: 'Birthday: March 15. Husband: David. Two kids (Jake 8, Emma 5). Loves Italian food — take to Chiapparelli\'s. Coaches youth soccer.',
+    frequency: 'weekly', lastContact: daysAgo(3),
+    contactHistory: [
+      { date: daysAgo(3), type: 'Called', notes: 'Discussed new construction rates for her buyer in Owings Mills' },
+      { date: daysAgo(10), type: 'Met for coffee', notes: 'Starbucks Pikesville — talked about co-marketing open houses' },
+      { date: daysAgo(18), type: 'Sent market update', notes: 'Forwarded rate sheet and FHA guideline changes' },
+    ],
+    referrals: [
+      { id: genId(), borrower: 'The Johnson Family', loanAmount: 425000, status: 'funded', date: daysAgo(45) },
+      { id: genId(), borrower: 'Michael Torres', loanAmount: 310000, status: 'funded', date: daysAgo(90) },
+      { id: genId(), borrower: 'Lisa & Kevin Park', loanAmount: 520000, status: 'in_process', date: daysAgo(15) },
+      { id: genId(), borrower: 'Amanda Chen', loanAmount: 380000, status: 'funded', date: daysAgo(120) },
+      { id: genId(), borrower: 'Robert Williams', loanAmount: 275000, status: 'funded', date: daysAgo(180) },
+    ],
+    nurture: [
+      { date: daysAgo(10), type: 'Coffee Meeting', notes: 'Starbucks Pikesville' },
+      { date: daysAgo(60), type: 'Co-hosted Open House', notes: 'Listing on Park Heights Ave' },
+    ],
+    receivesMarketUpdate: true, partnerSince: '2024-03-01',
+  },
+  {
+    id: genId(), name: 'David Park', company: 'Coldwell Banker Realty', email: 'dpark@coldwellbanker.com', phone: '(410) 555-0298',
+    address: '7600 Old Georgetown Rd, Bethesda, MD 20814', tags: ['Top Producer', 'Active Partner'],
+    howMet: 'Referred by Sarah Mitchell', preferredContact: 'call',
+    notes: 'Birthday: July 22. Wife: Jennifer (also an agent at CB). Big Ravens fan — send tickets when available. Specializes in luxury market $800K+.',
+    frequency: 'biweekly', lastContact: daysAgo(12),
+    contactHistory: [
+      { date: daysAgo(12), type: 'Called', notes: 'Talked about jumbo loan options for his $1.2M listing' },
+      { date: daysAgo(25), type: 'Texted', notes: 'Shared new jumbo rate pricing' },
+    ],
+    referrals: [
+      { id: genId(), borrower: 'The Goldstein Family', loanAmount: 875000, status: 'funded', date: daysAgo(30) },
+      { id: genId(), borrower: 'Dr. Priya Sharma', loanAmount: 1200000, status: 'funded', date: daysAgo(75) },
+      { id: genId(), borrower: 'James & Carol White', loanAmount: 650000, status: 'in_process', date: daysAgo(10) },
+    ],
+    nurture: [
+      { date: daysAgo(30), type: 'Lunch', notes: 'Ruth\'s Chris — discussed Q2 marketing plan' },
+    ],
+    receivesMarketUpdate: true, partnerSince: '2024-06-15',
+  },
+  {
+    id: genId(), name: 'Rachel Gonzalez', company: 'Long & Foster Real Estate', email: 'rachel.g@longandfoster.com', phone: '(301) 555-0445',
+    address: '4650 East-West Hwy, Bethesda, MD 20814', tags: ['Warm Lead', 'New Contact'],
+    howMet: 'Connected on LinkedIn — she liked my market update post', preferredContact: 'email',
+    notes: 'Birthday: November 3. Single, no kids. Runs half-marathons. New to the area from California. Could be a big producer — hungry and motivated.',
+    frequency: 'biweekly', lastContact: daysAgo(20),
+    contactHistory: [
+      { date: daysAgo(20), type: 'Email', notes: 'Sent welcome email with rate sheet and lender comparison' },
+      { date: daysAgo(22), type: 'LinkedIn message', notes: 'Initial outreach — she responded same day' },
+    ],
+    referrals: [
+      { id: genId(), borrower: 'Tyler & Maria Ruiz', loanAmount: 340000, status: 'in_process', date: daysAgo(8) },
+    ],
+    nurture: [],
+    receivesMarketUpdate: true, partnerSince: '2025-12-01',
+  },
+  {
+    id: genId(), name: 'Marcus Thompson', company: 'RE/MAX Advantage Realty', email: 'marcus@remaxadvantage.com', phone: '(410) 555-0631',
+    address: '9 E Lexington St, Baltimore, MD 21202', tags: ['Active Partner'],
+    howMet: 'Met at Baltimore City open house networking event', preferredContact: 'text',
+    notes: 'Birthday: January 8. Wife: Keisha. Three kids. Deacon at his church. Specializes in first-time homebuyers in Baltimore City. Huge community presence.',
+    frequency: 'monthly', lastContact: daysAgo(35),
+    contactHistory: [
+      { date: daysAgo(35), type: 'Met for coffee', notes: 'Daily Grind Fells Point — discussed DCHFA programs for his FTHBs' },
+      { date: daysAgo(50), type: 'Called', notes: 'Quick check-in about rate lock on the Davis file' },
+    ],
+    referrals: [
+      { id: genId(), borrower: 'Jasmine Davis', loanAmount: 225000, status: 'funded', date: daysAgo(60) },
+      { id: genId(), borrower: 'Andre & Patrice Coleman', loanAmount: 290000, status: 'funded', date: daysAgo(130) },
+    ],
+    nurture: [
+      { date: daysAgo(35), type: 'Coffee Meeting', notes: 'Daily Grind Fells Point' },
+      { date: daysAgo(100), type: 'Gift', notes: 'Sent Edible Arrangement for his birthday' },
+    ],
+    receivesMarketUpdate: true, partnerSince: '2024-09-01',
+  },
+  {
+    id: genId(), name: 'Jennifer Liu', company: 'Compass Real Estate', email: 'jliu@compass.com', phone: '(240) 555-0887',
+    address: '4800 Hampden Ln, Bethesda, MD 20814', tags: ['Top Producer', 'Active Partner'],
+    howMet: 'Her previous LO retired — she reached out after seeing FM Home Loans ad', preferredContact: 'WhatsApp',
+    notes: 'Birthday: September 29. Partner: Amy. Fluent in Mandarin — gets a lot of international buyer referrals. Wine enthusiast — likes Napa reds.',
+    frequency: 'weekly', lastContact: daysAgo(9),
+    contactHistory: [
+      { date: daysAgo(9), type: 'WhatsApp', notes: 'Sent her updated non-QM options for foreign national buyer' },
+      { date: daysAgo(14), type: 'Called', notes: 'Discussed pre-approval strategy for her $2M listing' },
+    ],
+    referrals: [
+      { id: genId(), borrower: 'Wei & Mei Zhang', loanAmount: 980000, status: 'funded', date: daysAgo(40) },
+      { id: genId(), borrower: 'Takashi Yamamoto', loanAmount: 750000, status: 'funded', date: daysAgo(100) },
+      { id: genId(), borrower: 'Sophia Petrov', loanAmount: 1100000, status: 'in_process', date: daysAgo(5) },
+    ],
+    nurture: [
+      { date: daysAgo(20), type: 'Gift', notes: 'Sent a bottle of Opus One for closing 3 deals in a month' },
+    ],
+    receivesMarketUpdate: true, partnerSince: '2025-01-10',
+  },
+  {
+    id: genId(), name: 'Brian O\'Connor', company: 'Berkshire Hathaway HomeServices', email: 'boconnor@bhhsmd.com', phone: '(443) 555-0194',
+    address: '100 West Rd, Towson, MD 21204', tags: ['New Contact', 'Warm Lead'],
+    howMet: 'Realtor mixer at Topgolf — exchanged cards', preferredContact: 'call',
+    notes: 'Birthday: May 30. Divorced, one son (Liam, 12). Golf fanatic — invite to charity tournament. Been an agent 2 years. Eager but needs guidance on the loan process.',
+    frequency: 'monthly', lastContact: daysAgo(42),
+    contactHistory: [
+      { date: daysAgo(42), type: 'Called', notes: 'Intro call — walked him through FM Home Loans programs' },
+    ],
+    referrals: [],
+    nurture: [],
+    receivesMarketUpdate: false, partnerSince: '2026-02-15',
+  },
+];
+
+const TAG_COLORS = {
+  'Top Producer': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  'New Contact': 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+  'Warm Lead': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  'Active Partner': 'bg-violet-500/20 text-violet-400 border-violet-500/30',
+  'Inactive': 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+};
+
+const TAG_COLORS_LIGHT = {
+  'Top Producer': 'bg-amber-100 text-amber-700 border-amber-300',
+  'New Contact': 'bg-sky-100 text-sky-700 border-sky-300',
+  'Warm Lead': 'bg-emerald-100 text-emerald-700 border-emerald-300',
+  'Active Partner': 'bg-violet-100 text-violet-700 border-violet-300',
+  'Inactive': 'bg-gray-100 text-gray-700 border-gray-300',
+};
+
+const CONTACT_TYPES = ['Called', 'Texted', 'Email', 'Met for coffee', 'Met for lunch', 'WhatsApp', 'LinkedIn message', 'Sent market update', 'Co-hosted event', 'Other'];
+const NURTURE_TYPES = ['Coffee Meeting', 'Lunch', 'Gift', 'Co-hosted Open House', 'Sent Market Update', 'Anniversary Card', 'Holiday Gift', 'Referral Thank You', 'Other'];
+const ALL_TAGS = ['Top Producer', 'New Contact', 'Warm Lead', 'Active Partner', 'Inactive'];
+
+const TALKING_POINTS = [
+  "Rates ticked down this week — great excuse to reconnect about any fence-sitters.",
+  "Spring buying season is heating up — ask about their new listings.",
+  "Remind them about FM Home Loans' 21-day close guarantee.",
+  "Ask if they have any first-time homebuyers who need pre-approval letters.",
+  "Share the latest market stats for their zip code.",
+  "Offer to co-host a homebuyer seminar or open house.",
+  "Mention the new renovation loan program — great for fixer-uppers.",
+  "Ask about their business goals for this quarter and how you can help.",
+];
+
+// ── Icons ──
+const Icons = {
+  dashboard: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+  queue: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.49 8.49l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.49-8.49l2.83-2.83"/></svg>,
+  people: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  chart: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  settings: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.73 12.73l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+  phone: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+  mail: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  check: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  plus: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  search: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  x: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  sun: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  moon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  back: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
+  download: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  upload: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  heart: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  trash: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+  edit: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  gift: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
+  alert: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  clock: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  menu: <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+};
+
+// ── Avatar ──
+function Avatar({ name, size = 'md' }) {
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const colors = ['bg-blue-600','bg-violet-600','bg-emerald-600','bg-amber-600','bg-rose-600','bg-cyan-600','bg-indigo-600','bg-teal-600'];
+  const idx = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
+  const sz = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-16 h-16 text-xl' : 'w-10 h-10 text-sm';
+  return <div className={`${colors[idx]} ${sz} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0`}>{initials}</div>;
+}
+
+// ── StatusDot ──
+function StatusDot({ status, withLabel = false }) {
+  const c = status === 'green' ? 'bg-emerald-400' : status === 'yellow' ? 'bg-amber-400' : 'bg-red-400';
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`w-2.5 h-2.5 rounded-full ${c} ${status === 'red' ? 'pulse-dot' : ''}`}/>
+      {withLabel && <span className="text-xs font-medium">{getStatusLabel(status)}</span>}
+    </span>
+  );
+}
+
+// ── Tag ──
+function Tag({ label, dark }) {
+  const cls = dark ? (TAG_COLORS[label] || TAG_COLORS['Inactive']) : (TAG_COLORS_LIGHT[label] || TAG_COLORS_LIGHT['Inactive']);
+  return <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${cls}`}>{label}</span>;
+}
+
+// ── Modal ──
+function Modal({ open, onClose, title, children, wide }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
+      <div className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl ${wide ? 'max-w-3xl' : 'max-w-lg'} w-full max-h-[90vh] overflow-y-auto fade-in`} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">{Icons.x}</button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Input helpers ──
+function Input({ label, ...props }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{label}</span>
+      <input {...props} className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none" />
+    </label>
+  );
+}
+
+function Select({ label, options, ...props }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{label}</span>
+      <select {...props} className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none">
+        {options.map(o => <option key={typeof o === 'string' ? o : o.value} value={typeof o === 'string' ? o : o.value}>{typeof o === 'string' ? o : o.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function Textarea({ label, ...props }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{label}</span>
+      <textarea {...props} className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none resize-none" rows={3} />
+    </label>
+  );
+}
+
+// ── Referral Chart ──
+function ReferralChart({ realtors, dark }) {
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const allRefs = realtors.flatMap(r => r.referrals.map(ref => ({ ...ref, realtorName: r.name })));
+    const months = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      months[key] = { sent: 0, funded: 0 };
+    }
+    allRefs.forEach(r => {
+      const d = new Date(r.date);
+      const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      if (months[key]) {
+        months[key].sent++;
+        if (r.status === 'funded') months[key].funded++;
+      }
+    });
+    const labels = Object.keys(months);
+    if (chartRef.current) chartRef.current.destroy();
+    chartRef.current = new Chart(canvasRef.current, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Referrals Received', data: labels.map(l => months[l].sent), backgroundColor: dark ? 'rgba(96,165,250,0.7)' : 'rgba(59,130,246,0.7)', borderRadius: 6, barPercentage: 0.6 },
+          { label: 'Funded', data: labels.map(l => months[l].funded), backgroundColor: dark ? 'rgba(52,211,153,0.7)' : 'rgba(16,185,129,0.7)', borderRadius: 6, barPercentage: 0.6 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: dark ? '#9ca3af' : '#6b7280', font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { color: dark ? '#6b7280' : '#9ca3af' }, grid: { display: false } },
+          y: { ticks: { color: dark ? '#6b7280' : '#9ca3af', stepSize: 1 }, grid: { color: dark ? 'rgba(55,65,81,0.3)' : 'rgba(209,213,219,0.5)' }, beginAtZero: true }
+        }
+      }
+    });
+    return () => { if (chartRef.current) chartRef.current.destroy(); };
+  }, [realtors, dark]);
+
+  return <canvas ref={canvasRef}/>;
+}
+
+// ── Realtor Form Modal ──
+function RealtorForm({ open, onClose, onSave, realtor }) {
+  const isEdit = !!realtor;
+  const blank = { name:'', company:'', email:'', phone:'', address:'', tags:[], howMet:'', notes:'', preferredContact:'call', frequency:'monthly', lastContact: today, contactHistory:[], referrals:[], nurture:[], receivesMarketUpdate:false, partnerSince: today };
+  const [form, setForm] = useState(realtor || blank);
+  useEffect(() => { setForm(realtor || blank); }, [realtor, open]);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const toggleTag = (t) => set('tags', form.tags.includes(t) ? form.tags.filter(x => x !== t) : [...form.tags, t]);
+
+  return (
+    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Realtor' : 'Add Realtor'} wide>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input label="Full Name" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Sarah Mitchell" />
+        <Input label="Company / Brokerage" value={form.company} onChange={e => set('company', e.target.value)} placeholder="e.g. Keller Williams" />
+        <Input label="Email" type="email" value={form.email} onChange={e => set('email', e.target.value)} />
+        <Input label="Phone" value={form.phone} onChange={e => set('phone', e.target.value)} />
+        <div className="md:col-span-2"><Input label="Office Address" value={form.address} onChange={e => set('address', e.target.value)} /></div>
+        <Select label="Preferred Contact" value={form.preferredContact} onChange={e => set('preferredContact', e.target.value)} options={[{value:'call',label:'Phone Call'},{value:'text',label:'Text'},{value:'email',label:'Email'},{value:'WhatsApp',label:'WhatsApp'}]} />
+        <Select label="Contact Frequency" value={form.frequency} onChange={e => set('frequency', e.target.value)} options={[{value:'weekly',label:'Weekly'},{value:'biweekly',label:'Bi-Weekly'},{value:'monthly',label:'Monthly'},{value:'quarterly',label:'Quarterly'}]} />
+        <div className="md:col-span-2">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Tags</span>
+          <div className="flex flex-wrap gap-2">
+            {ALL_TAGS.map(t => (
+              <button key={t} onClick={() => toggleTag(t)} className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${form.tags.includes(t) ? 'bg-brand-600 text-white border-brand-500' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 border-gray-300 dark:border-gray-600'}`}>{t}</button>
+            ))}
+          </div>
+        </div>
+        <div className="md:col-span-2"><Input label="How You Met / Referral Source" value={form.howMet} onChange={e => set('howMet', e.target.value)} /></div>
+        <div className="md:col-span-2"><Textarea label="Personal Notes (birthday, family, interests)" value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
+        <Input label="Partner Since" type="date" value={form.partnerSince} onChange={e => set('partnerSince', e.target.value)} />
+        <label className="flex items-center gap-2 self-end pb-2">
+          <input type="checkbox" checked={form.receivesMarketUpdate} onChange={e => set('receivesMarketUpdate', e.target.checked)} className="rounded" />
+          <span className="text-sm text-gray-700 dark:text-gray-300">Receives daily market update</span>
+        </label>
+      </div>
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+        <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Cancel</button>
+        <button onClick={() => { if (form.name.trim()) { onSave({ ...form, id: form.id || genId() }); onClose(); } }} className="px-5 py-2 text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-xl transition-colors">
+          {isEdit ? 'Save Changes' : 'Add Realtor'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Log Contact Modal ──
+function LogContactModal({ open, onClose, onSave, realtorName }) {
+  const [type, setType] = useState('Called');
+  const [notes, setNotes] = useState('');
+  useEffect(() => { setType('Called'); setNotes(''); }, [open]);
+  return (
+    <Modal open={open} onClose={onClose} title={`Log Contact — ${realtorName}`}>
+      <div className="space-y-4">
+        <Select label="Contact Type" value={type} onChange={e => setType(e.target.value)} options={CONTACT_TYPES} />
+        <Textarea label="Notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="What did you discuss?" />
+      </div>
+      <div className="flex justify-end gap-3 mt-6">
+        <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+        <button onClick={() => { onSave({ date: today, type, notes }); onClose(); }} className="px-5 py-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">Log Contact</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Add Referral Modal ──
+function AddReferralModal({ open, onClose, onSave }) {
+  const [form, setForm] = useState({ borrower: '', loanAmount: '', status: 'in_process' });
+  useEffect(() => { setForm({ borrower: '', loanAmount: '', status: 'in_process' }); }, [open]);
+  return (
+    <Modal open={open} onClose={onClose} title="Add Referral">
+      <div className="space-y-4">
+        <Input label="Borrower Name" value={form.borrower} onChange={e => setForm(f => ({ ...f, borrower: e.target.value }))} />
+        <Input label="Loan Amount ($)" type="number" value={form.loanAmount} onChange={e => setForm(f => ({ ...f, loanAmount: e.target.value }))} />
+        <Select label="Status" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} options={[{value:'in_process',label:'In Process'},{value:'funded',label:'Funded'},{value:'lost',label:'Lost'}]} />
+      </div>
+      <div className="flex justify-end gap-3 mt-6">
+        <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+        <button onClick={() => { if (form.borrower.trim()) { onSave({ id: genId(), borrower: form.borrower, loanAmount: Number(form.loanAmount) || 0, status: form.status, date: today }); onClose(); }}} className="px-5 py-2 text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-xl">Add Referral</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Add Nurture Modal ──
+function AddNurtureModal({ open, onClose, onSave }) {
+  const [type, setType] = useState('Coffee Meeting');
+  const [notes, setNotes] = useState('');
+  useEffect(() => { setType('Coffee Meeting'); setNotes(''); }, [open]);
+  return (
+    <Modal open={open} onClose={onClose} title="Log Nurture Activity">
+      <div className="space-y-4">
+        <Select label="Activity Type" value={type} onChange={e => setType(e.target.value)} options={NURTURE_TYPES} />
+        <Textarea label="Notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Details..." />
+      </div>
+      <div className="flex justify-end gap-3 mt-6">
+        <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+        <button onClick={() => { onSave({ date: today, type, notes }); onClose(); }} className="px-5 py-2 text-sm font-bold bg-violet-600 hover:bg-violet-700 text-white rounded-xl">Log Activity</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── MAIN APP ──
+function App() {
+  const [dark, setDark] = useState(true);
+  const [view, setView] = useState('queue'); // queue, dashboard, realtors, detail, data
+  const [realtors, setRealtors] = useState(() => {
+    try { const d = localStorage.getItem('referralhub_data'); return d ? JSON.parse(d) : SAMPLE_REALTORS; }
+    catch { return SAMPLE_REALTORS; }
+  });
+  const [selectedId, setSelectedId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [filterTag, setFilterTag] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [showForm, setShowForm] = useState(false);
+  const [editRealtor, setEditRealtor] = useState(null);
+  const [showLogContact, setShowLogContact] = useState(null);
+  const [showAddReferral, setShowAddReferral] = useState(null);
+  const [showAddNurture, setShowAddNurture] = useState(null);
+  const [mobileMenu, setMobileMenu] = useState(false);
+
+  useEffect(() => { localStorage.setItem('referralhub_data', JSON.stringify(realtors)); }, [realtors]);
+  useEffect(() => { document.body.className = dark ? 'dark bg-gray-950 text-gray-100' : 'light bg-gray-50 text-gray-900'; }, [dark]);
+
+  const updateRealtor = (id, fn) => setRealtors(rs => rs.map(r => r.id === id ? fn(r) : r));
+  const selected = realtors.find(r => r.id === selectedId);
+
+  const withStatus = useMemo(() => realtors.map(r => ({ ...r, status: getStatus(r.lastContact, r.frequency), daysSince: daysSince(r.lastContact) })), [realtors]);
+  const overdue = useMemo(() => withStatus.filter(r => r.status === 'red').sort((a, b) => b.daysSince - a.daysSince), [withStatus]);
+  const dueSoon = useMemo(() => withStatus.filter(r => r.status === 'yellow').sort((a, b) => b.daysSince - a.daysSince), [withStatus]);
+  const onTrack = useMemo(() => withStatus.filter(r => r.status === 'green'), [withStatus]);
+
+  const followUpQueue = useMemo(() => {
+    const topProducerIds = new Set(realtors.filter(r => r.tags.includes('Top Producer')).map(r => r.id));
+    return [...overdue, ...dueSoon].sort((a, b) => {
+      if (a.status === 'red' && b.status !== 'red') return -1;
+      if (b.status === 'red' && a.status !== 'red') return 1;
+      if (topProducerIds.has(a.id) && !topProducerIds.has(b.id)) return -1;
+      if (topProducerIds.has(b.id) && !topProducerIds.has(a.id)) return 1;
+      return b.daysSince - a.daysSince;
+    });
+  }, [overdue, dueSoon, realtors]);
+
+  const topByReferrals = useMemo(() =>
+    [...withStatus].sort((a, b) => b.referrals.filter(r => r.status === 'funded').length - a.referrals.filter(r => r.status === 'funded').length).slice(0, 10)
+  , [withStatus]);
+
+  const healthScore = useMemo(() => {
+    if (!withStatus.length) return 0;
+    return Math.round((onTrack.length / withStatus.length) * 100);
+  }, [withStatus, onTrack]);
+
+  const totalRevenue = useMemo(() =>
+    realtors.reduce((sum, r) => sum + r.referrals.filter(ref => ref.status === 'funded').reduce((s, ref) => s + (ref.loanAmount * 0.01), 0), 0)
+  , [realtors]);
+
+  const filtered = useMemo(() => {
+    return withStatus.filter(r => {
+      if (search && !r.name.toLowerCase().includes(search.toLowerCase()) && !r.company.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterTag !== 'All' && !r.tags.includes(filterTag)) return false;
+      if (filterStatus !== 'All' && r.status !== filterStatus) return false;
+      return true;
+    });
+  }, [withStatus, search, filterTag, filterStatus]);
+
+  const todayTip = TALKING_POINTS[new Date().getDay() % TALKING_POINTS.length];
+
+  // ── Handlers ──
+  const quickLog = (id, type) => {
+    updateRealtor(id, r => ({
+      ...r,
+      lastContact: today,
+      contactHistory: [{ date: today, type, notes: '' }, ...r.contactHistory]
+    }));
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(realtors, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'referralhub-export.json'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportJSON = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { try { setRealtors(JSON.parse(ev.target.result)); } catch { alert('Invalid JSON'); } };
+    reader.readAsText(file);
+  };
+
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const lines = ev.target.result.split('\n').filter(l => l.trim());
+      if (lines.length < 2) return;
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const newRealtors = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+        return {
+          id: genId(), name: obj.name || '', company: obj.company || obj.brokerage || '', email: obj.email || '',
+          phone: obj.phone || '', address: obj.address || '', tags: (obj.tags || '').split(';').filter(Boolean),
+          howMet: obj.howmet || obj['how met'] || '', notes: obj.notes || '', preferredContact: obj.preferredcontact || 'call',
+          frequency: obj.frequency || 'monthly', lastContact: obj.lastcontact || today,
+          contactHistory: [], referrals: [], nurture: [], receivesMarketUpdate: false, partnerSince: today,
+        };
+      });
+      setRealtors(prev => [...prev, ...newRealtors]);
+    };
+    reader.readAsText(file);
+  };
+
+  const deleteRealtor = (id) => {
+    if (confirm('Delete this realtor? This cannot be undone.')) {
+      setRealtors(rs => rs.filter(r => r.id !== id));
+      if (selectedId === id) { setSelectedId(null); setView('realtors'); }
+    }
+  };
+
+  // ── Nav ──
+  const navItems = [
+    { id:'queue', icon: Icons.alert, label:'Follow-Up Queue' },
+    { id:'dashboard', icon: Icons.dashboard, label:'Dashboard' },
+    { id:'realtors', icon: Icons.people, label:'Realtors' },
+    { id:'data', icon: Icons.settings, label:'Data & Settings' },
+  ];
+
+  const goToDetail = (id) => { setSelectedId(id); setView('detail'); setMobileMenu(false); };
+
+  // ── Stat Card ──
+  const Stat = ({ label, value, sub, color }) => (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</div>
+      <div className={`text-2xl font-extrabold ${color || 'text-gray-900 dark:text-white'}`}>{value}</div>
+      {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
+    </div>
+  );
+
+  // ── Views ──
+  const renderQueue = () => (
+    <div className="fade-in space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Good morning, Aryeh</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Here's who needs your attention today.</p>
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' })}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{followUpQueue.length} follow-ups pending</div>
+        </div>
+      </div>
+
+      {/* Talking Point */}
+      <div className="bg-gradient-to-r from-brand-600/10 to-violet-600/10 border border-brand-500/20 rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          <span className="text-brand-500 mt-0.5">💡</span>
+          <div>
+            <div className="text-xs font-bold text-brand-400 uppercase tracking-wide mb-1">Today's Talking Point</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">{todayTip}</div>
+          </div>
+        </div>
+      </div>
+
+      {followUpQueue.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <div className="text-4xl mb-3">🎉</div>
+          <div className="font-bold text-lg">You're all caught up!</div>
+          <div className="text-sm mt-1">All relationships are on track. Great work.</div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {followUpQueue.map(r => (
+            <div key={r.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 hover:border-brand-500/40 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="cursor-pointer" onClick={() => goToDetail(r.id)}><Avatar name={r.name} /></div>
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => goToDetail(r.id)}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900 dark:text-white truncate">{r.name}</span>
+                    <StatusDot status={r.status} />
+                    {r.tags.includes('Top Producer') && <span className="text-xs text-amber-500 font-bold">★</span>}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.company}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    Last contact: {fmtDate(r.lastContact)} <span className={r.status === 'red' ? 'text-red-400 font-bold' : 'text-amber-400'}>({r.daysSince}d ago)</span>
+                    {' · '}{r.frequency} check-in · prefers {r.preferredContact}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => quickLog(r.id, 'Called')} title="Called" className="px-3 py-1.5 text-xs font-medium bg-emerald-600/10 text-emerald-500 border border-emerald-500/20 rounded-lg hover:bg-emerald-600/20 transition-all">📞 Called</button>
+                  <button onClick={() => quickLog(r.id, 'Texted')} title="Texted" className="px-3 py-1.5 text-xs font-medium bg-blue-600/10 text-blue-500 border border-blue-500/20 rounded-lg hover:bg-blue-600/20 transition-all">💬 Texted</button>
+                  <button onClick={() => setShowLogContact(r)} title="More" className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">More…</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Realtors going cold */}
+      {overdue.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-bold text-red-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+            {Icons.alert} Realtors Going Cold ({overdue.length})
+          </h2>
+          <div className="grid gap-2">
+            {overdue.slice(0, 5).map(r => (
+              <div key={r.id} className="flex items-center justify-between bg-red-500/5 border border-red-500/20 rounded-xl px-4 py-3 cursor-pointer hover:bg-red-500/10 transition-all" onClick={() => goToDetail(r.id)}>
+                <div className="flex items-center gap-3">
+                  <Avatar name={r.name} size="sm" />
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-white">{r.name}</div>
+                    <div className="text-xs text-gray-500">{r.company}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-bold text-red-400">{r.daysSince} days</div>
+                  <div className="text-xs text-gray-500">since contact</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderDashboard = () => (
+    <div className="fade-in space-y-6">
+      <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Dashboard</h1>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat label="Active Realtors" value={realtors.length} />
+        <Stat label="Overdue Follow-ups" value={overdue.length} color={overdue.length > 0 ? 'text-red-400' : 'text-emerald-400'} />
+        <Stat label="Relationship Health" value={`${healthScore}%`} color={healthScore > 70 ? 'text-emerald-400' : healthScore > 40 ? 'text-amber-400' : 'text-red-400'} sub={`${onTrack.length} on track · ${dueSoon.length} due soon · ${overdue.length} overdue`} />
+        <Stat label="Est. Revenue (1% of funded)" value={fmtCurrency(totalRevenue)} color="text-emerald-400" />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Referral Trend Chart */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Referral Trend (6 months)</h3>
+          <div className="h-56"><ReferralChart realtors={realtors} dark={dark} /></div>
+        </div>
+
+        {/* Top 10 Leaderboard */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Top Realtors by Funded Referrals</h3>
+          <div className="space-y-2.5">
+            {topByReferrals.map((r, i) => {
+              const funded = r.referrals.filter(ref => ref.status === 'funded').length;
+              const rev = r.referrals.filter(ref => ref.status === 'funded').reduce((s, ref) => s + ref.loanAmount, 0);
+              return (
+                <div key={r.id} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl px-3 py-2 transition-all" onClick={() => goToDetail(r.id)}>
+                  <span className="text-sm font-bold text-gray-400 w-6">{i + 1}</span>
+                  <Avatar name={r.name} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{r.name}</div>
+                    <div className="text-xs text-gray-500">{r.company}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-brand-500">{funded} funded</div>
+                    <div className="text-xs text-gray-400">{fmtCurrency(rev)} volume</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Health Breakdown */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Relationship Health Breakdown</h3>
+        <div className="flex items-center gap-1 h-6 rounded-full overflow-hidden">
+          {onTrack.length > 0 && <div className="bg-emerald-500 h-full rounded-l-full transition-all" style={{ width: `${(onTrack.length / withStatus.length) * 100}%` }}/>}
+          {dueSoon.length > 0 && <div className="bg-amber-500 h-full transition-all" style={{ width: `${(dueSoon.length / withStatus.length) * 100}%` }}/>}
+          {overdue.length > 0 && <div className="bg-red-500 h-full rounded-r-full transition-all" style={{ width: `${(overdue.length / withStatus.length) * 100}%` }}/>}
+        </div>
+        <div className="flex justify-between mt-3 text-xs">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"/> On Track ({onTrack.length})</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"/> Due Soon ({dueSoon.length})</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"/> Overdue ({overdue.length})</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRealtors = () => (
+    <div className="fade-in space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Realtors</h1>
+        <button onClick={() => { setEditRealtor(null); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors">
+          {Icons.plus} Add Realtor
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{Icons.search}</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or company..." className="w-full pl-9 pr-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" />
+        </div>
+        <select value={filterTag} onChange={e => setFilterTag(e.target.value)} className="px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white">
+          <option value="All">All Tags</option>
+          {ALL_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white">
+          <option value="All">All Status</option>
+          <option value="green">On Track</option>
+          <option value="yellow">Due Soon</option>
+          <option value="red">Overdue</option>
+        </select>
+      </div>
+
+      {/* List */}
+      <div className="grid gap-3">
+        {filtered.map(r => {
+          const funded = r.referrals.filter(ref => ref.status === 'funded').length;
+          return (
+            <div key={r.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 hover:border-brand-500/30 transition-all cursor-pointer group" onClick={() => goToDetail(r.id)}>
+              <div className="flex items-center gap-4">
+                <Avatar name={r.name} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-gray-900 dark:text-white">{r.name}</span>
+                    <StatusDot status={r.status} withLabel />
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{r.company}</div>
+                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    {r.tags.map(t => <Tag key={t} label={t} dark={dark} />)}
+                  </div>
+                </div>
+                <div className="text-right hidden sm:block">
+                  <div className="text-sm text-gray-500">{daysSince(r.lastContact)}d ago</div>
+                  <div className="text-xs text-gray-400">{funded} funded · {r.referrals.length} total</div>
+                </div>
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => { setEditRealtor(r); setShowForm(true); }} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">{Icons.edit}</button>
+                  <button onClick={() => deleteRealtor(r.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400">{Icons.trash}</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <div className="text-center py-12 text-gray-400">No realtors match your filters.</div>}
+      </div>
+    </div>
+  );
+
+  const renderDetail = () => {
+    if (!selected) return <div className="text-center py-12 text-gray-400">Realtor not found.</div>;
+    const r = selected;
+    const st = getStatus(r.lastContact, r.frequency);
+    const funded = r.referrals.filter(ref => ref.status === 'funded');
+    const inProcess = r.referrals.filter(ref => ref.status === 'in_process');
+    const convRate = r.referrals.length ? Math.round((funded.length / r.referrals.length) * 100) : 0;
+    const revenue = funded.reduce((s, ref) => s + (ref.loanAmount * 0.01), 0);
+    const partnerMonths = r.partnerSince ? Math.round(daysSince(r.partnerSince) / 30) : 0;
+
+    return (
+      <div className="fade-in space-y-6">
+        <button onClick={() => setView('realtors')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-brand-500 transition-colors">{Icons.back} Back to Realtors</button>
+
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
+          <div className="flex items-start gap-5">
+            <Avatar name={r.name} size="lg" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{r.name}</h1>
+                <StatusDot status={st} withLabel />
+              </div>
+              <div className="text-sm text-gray-500 mt-1">{r.company}</div>
+              <div className="flex gap-1.5 mt-2 flex-wrap">{r.tags.map(t => <Tag key={t} label={t} dark={dark} />)}</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                <div><span className="text-gray-400 text-xs block">Email</span><a href={`mailto:${r.email}`} className="text-brand-500 hover:underline">{r.email}</a></div>
+                <div><span className="text-gray-400 text-xs block">Phone</span><a href={`tel:${r.phone}`} className="text-brand-500 hover:underline">{r.phone}</a></div>
+                <div><span className="text-gray-400 text-xs block">Prefers</span>{r.preferredContact}</div>
+                <div><span className="text-gray-400 text-xs block">Frequency</span>{r.frequency}</div>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button onClick={() => { setEditRealtor(r); setShowForm(true); }} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700">{Icons.edit}</button>
+              <button onClick={() => deleteRealtor(r.id)} className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 border border-gray-200 dark:border-gray-700">{Icons.trash}</button>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {(r.notes || r.howMet) && (
+            <div className="mt-5 pt-5 border-t border-gray-200 dark:border-gray-800">
+              {r.howMet && <div className="text-sm text-gray-600 dark:text-gray-400 mb-2"><span className="font-bold text-gray-700 dark:text-gray-300">How we met:</span> {r.howMet}</div>}
+              {r.notes && <div className="text-sm text-gray-600 dark:text-gray-400"><span className="font-bold text-gray-700 dark:text-gray-300">Notes:</span> {r.notes}</div>}
+              {r.partnerSince && <div className="text-xs text-gray-400 mt-2">Partner for {partnerMonths} months (since {fmtDate(r.partnerSince)})</div>}
+            </div>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <Stat label="Last Contact" value={`${daysSince(r.lastContact)}d ago`} sub={fmtDate(r.lastContact)} />
+          <Stat label="Total Referrals" value={r.referrals.length} sub={`${inProcess.length} in process`} />
+          <Stat label="Funded" value={funded.length} color="text-emerald-400" />
+          <Stat label="Conversion Rate" value={`${convRate}%`} color={convRate >= 70 ? 'text-emerald-400' : convRate >= 50 ? 'text-amber-400' : 'text-red-400'} />
+          <Stat label="Est. Revenue" value={fmtCurrency(revenue)} color="text-emerald-400" />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => quickLog(r.id, 'Called')} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl">📞 Log Call</button>
+          <button onClick={() => quickLog(r.id, 'Texted')} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl">💬 Log Text</button>
+          <button onClick={() => setShowLogContact(r)} className="flex items-center gap-1.5 px-4 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm font-bold rounded-xl">{Icons.plus} Log Other Contact</button>
+          <button onClick={() => setShowAddReferral(r)} className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-xl">{Icons.plus} Add Referral</button>
+          <button onClick={() => setShowAddNurture(r)} className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl">{Icons.gift} Log Nurture</button>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Contact History */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Contact History</h3>
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {r.contactHistory.length === 0 && <div className="text-sm text-gray-400">No contact logged yet.</div>}
+              {r.contactHistory.map((c, i) => (
+                <div key={i} className="flex gap-3 text-sm">
+                  <div className="text-xs text-gray-400 w-20 flex-shrink-0 pt-0.5">{fmtDate(c.date)}</div>
+                  <div>
+                    <span className="font-bold text-gray-700 dark:text-gray-300">{c.type}</span>
+                    {c.notes && <div className="text-gray-500 text-xs mt-0.5">{c.notes}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Referrals */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Referrals</h3>
+            <div className="space-y-2.5 max-h-80 overflow-y-auto">
+              {r.referrals.length === 0 && <div className="text-sm text-gray-400">No referrals yet.</div>}
+              {r.referrals.map(ref => (
+                <div key={ref.id} className="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-800/50 rounded-xl px-3 py-2.5">
+                  <div>
+                    <div className="font-bold text-gray-700 dark:text-gray-300">{ref.borrower}</div>
+                    <div className="text-xs text-gray-400">{fmtDate(ref.date)} · {fmtCurrency(ref.loanAmount)}</div>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${ref.status === 'funded' ? 'bg-emerald-500/20 text-emerald-400' : ref.status === 'in_process' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {ref.status === 'funded' ? 'Funded' : ref.status === 'in_process' ? 'In Process' : 'Lost'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Nurture */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Nurture Activities</h3>
+            <div className="space-y-2.5 max-h-80 overflow-y-auto">
+              {r.nurture.length === 0 && <div className="text-sm text-gray-400">No nurture activities logged.</div>}
+              {r.nurture.map((n, i) => (
+                <div key={i} className="flex gap-3 text-sm">
+                  <div className="text-xs text-gray-400 w-20 flex-shrink-0 pt-0.5">{fmtDate(n.date)}</div>
+                  <div>
+                    <span className="font-bold text-gray-700 dark:text-gray-300">{n.type}</span>
+                    {n.notes && <div className="text-gray-500 text-xs mt-0.5">{n.notes}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Details</h3>
+            <div className="space-y-3 text-sm">
+              <div><span className="text-gray-400 text-xs block">Address</span><span className="text-gray-700 dark:text-gray-300">{r.address || '—'}</span></div>
+              <div><span className="text-gray-400 text-xs block">Receives Market Update</span><span className={r.receivesMarketUpdate ? 'text-emerald-400 font-bold' : 'text-gray-500'}>{r.receivesMarketUpdate ? 'Yes' : 'No'}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderData = () => {
+    const jsonRef = useRef(null);
+    const csvRef = useRef(null);
+    return (
+      <div className="fade-in space-y-6">
+        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Data & Settings</h1>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Export</h3>
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl w-full justify-center">
+              {Icons.download} Export All Data (JSON)
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Import</h3>
+            <input ref={jsonRef} type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
+            <button onClick={() => jsonRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm font-bold rounded-xl w-full justify-center">
+              {Icons.upload} Import JSON
+            </button>
+            <input ref={csvRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+            <button onClick={() => csvRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm font-bold rounded-xl w-full justify-center">
+              {Icons.upload} Import CSV (bulk add realtors)
+            </button>
+            <p className="text-xs text-gray-400">CSV headers: name, company, email, phone, address, tags (semicolon-separated), howmet, notes, preferredcontact, frequency</p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Reset</h3>
+            <button onClick={() => { if (confirm('Load sample data? This will replace all current data.')) setRealtors(SAMPLE_REALTORS); }} className="flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl w-full justify-center">
+              Reset to Sample Data
+            </button>
+            <button onClick={() => { if (confirm('Delete ALL data? This cannot be undone.')) setRealtors([]); }} className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl w-full justify-center">
+              {Icons.trash} Clear All Data
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Stats</h3>
+            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex justify-between"><span>Total Realtors</span><span className="font-bold text-gray-900 dark:text-white">{realtors.length}</span></div>
+              <div className="flex justify-between"><span>Total Referrals</span><span className="font-bold text-gray-900 dark:text-white">{realtors.reduce((s, r) => s + r.referrals.length, 0)}</span></div>
+              <div className="flex justify-between"><span>Funded Referrals</span><span className="font-bold text-emerald-400">{realtors.reduce((s, r) => s + r.referrals.filter(ref => ref.status === 'funded').length, 0)}</span></div>
+              <div className="flex justify-between"><span>Total Loan Volume</span><span className="font-bold text-gray-900 dark:text-white">{fmtCurrency(realtors.reduce((s, r) => s + r.referrals.filter(ref => ref.status === 'funded').reduce((ss, ref) => ss + ref.loanAmount, 0), 0))}</span></div>
+              <div className="flex justify-between"><span>Receiving Market Updates</span><span className="font-bold text-gray-900 dark:text-white">{realtors.filter(r => r.receivesMarketUpdate).length}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={dark ? 'dark' : ''}>
+      <div className="flex h-screen bg-gray-100 dark:bg-gray-950">
+        {/* Sidebar */}
+        <aside className={`${mobileMenu ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform flex flex-col`}>
+          <div className="p-5 border-b border-gray-200 dark:border-gray-800">
+            <div className="text-lg font-extrabold text-brand-500">ReferralHub</div>
+            <div className="text-xs text-gray-400 mt-0.5">Aryeh Brecher · FM Home Loans</div>
+          </div>
+          <nav className="flex-1 p-3 space-y-1">
+            {navItems.map(n => (
+              <button key={n.id} onClick={() => { setView(n.id); setMobileMenu(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${view === n.id ? 'bg-brand-600/10 text-brand-500' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                {n.icon} {n.label}
+                {n.id === 'queue' && followUpQueue.length > 0 && (
+                  <span className="ml-auto text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">{followUpQueue.length}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+          <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+            <button onClick={() => setDark(!dark)} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+              {dark ? Icons.sun : Icons.moon} {dark ? 'Light Mode' : 'Dark Mode'}
+            </button>
+          </div>
+        </aside>
+
+        {/* Overlay for mobile menu */}
+        {mobileMenu && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMobileMenu(false)}/>}
+
+        {/* Main */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="lg:hidden sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex items-center gap-3">
+            <button onClick={() => setMobileMenu(!mobileMenu)} className="text-gray-500">{Icons.menu}</button>
+            <span className="font-bold text-brand-500">ReferralHub</span>
+          </div>
+          <div className="p-4 md:p-8 max-w-6xl mx-auto">
+            {view === 'queue' && renderQueue()}
+            {view === 'dashboard' && renderDashboard()}
+            {view === 'realtors' && renderRealtors()}
+            {view === 'detail' && renderDetail()}
+            {view === 'data' && renderData()}
+          </div>
+        </main>
+      </div>
+
+      {/* Modals */}
+      <RealtorForm open={showForm} onClose={() => { setShowForm(false); setEditRealtor(null); }} onSave={(r) => { if (editRealtor) { setRealtors(rs => rs.map(x => x.id === r.id ? { ...x, ...r } : x)); } else { setRealtors(rs => [...rs, r]); } }} realtor={editRealtor} />
+      <LogContactModal open={!!showLogContact} onClose={() => setShowLogContact(null)} realtorName={showLogContact?.name || ''} onSave={(entry) => { updateRealtor(showLogContact.id, r => ({ ...r, lastContact: today, contactHistory: [entry, ...r.contactHistory] })); }} />
+      <AddReferralModal open={!!showAddReferral} onClose={() => setShowAddReferral(null)} onSave={(ref) => { updateRealtor(showAddReferral.id, r => ({ ...r, referrals: [ref, ...r.referrals] })); }} />
+      <AddNurtureModal open={!!showAddNurture} onClose={() => setShowAddNurture(null)} onSave={(n) => { updateRealtor(showAddNurture.id, r => ({ ...r, nurture: [n, ...r.nurture] })); }} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

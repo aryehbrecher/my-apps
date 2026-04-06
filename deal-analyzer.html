@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DealAnalyzer - Investment Property Analysis</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: '#1B365D',
+                        gold: '#C5A55A',
+                        'gold-light': '#D4B96A',
+                        'gold-dark': '#B08F45',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { transition: background-color 0.3s ease, color 0.3s ease; }
+        .chart-container { position: relative; height: 400px; margin: 20px 0; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Utility Functions
+        const formatCurrency = (value) => {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(value);
+        };
+
+        const formatCurrencyPrecise = (value) => {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(value);
+        };
+
+        const formatPercent = (value) => {
+            return parseFloat(value).toFixed(2) + '%';
+        };
+
+        // Mortgage Calculation using amortization formula
+        const calculateMortgagePayment = (principal, annualRate, years) => {
+            if (principal <= 0 || annualRate < 0 || years <= 0) return 0;
+            const monthlyRate = annualRate / 100 / 12;
+            const numPayments = years * 12;
+            if (monthlyRate === 0) return principal / numPayments;
+            return (principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments))) /
+                   (Math.pow(1 + monthlyRate, numPayments) - 1);
+        };
+
+        // Calculate remaining loan balance after N months
+        const calculateLoanBalance = (originalPrincipal, annualRate, years, monthsPaid) => {
+            const monthlyRate = annualRate / 100 / 12;
+            const totalPayments = years * 12;
+            const monthlyPayment = calculateMortgagePayment(originalPrincipal, annualRate, years);
+            return originalPrincipal * Math.pow(1 + monthlyRate, monthsPaid) -
+                   monthlyPayment * ((Math.pow(1 + monthlyRate, monthsPaid) - 1) / monthlyRate);
+        };
+
+        // Core Analysis Calculation
+        const calculateAnalysis = (inputs, defaults) => {
+            const {
+                purchasePrice = 0,
+                downPaymentPercent = defaults.downPayment,
+                interestRate = defaults.interestRate,
+                loanTerm = defaults.loanTerm,
+                closingCosts = defaults.closingCosts * purchasePrice / 100,
+                rehabCosts = 0,
+                monthlyRent = 0,
+                otherIncome = 0,
+                propertyTax = 0,
+                insurance = 0,
+                hoa = 0,
+                propertyMgmt = defaults.propertyManagement,
+                vacancyRate = defaults.vacancyRate,
+                maintenanceReserve = defaults.maintenanceReserve,
+                utilities = 0,
+            } = inputs;
+
+            const downPayment = purchasePrice * (downPaymentPercent / 100);
+            const loanAmount = purchasePrice - downPayment;
+            const monthlyPayment = calculateMortgagePayment(loanAmount, interestRate, loanTerm);
+            const annualDebtService = monthlyPayment * 12;
+
+            const effectiveRent = monthlyRent * (1 - vacancyRate / 100);
+            const monthlyOtherIncome = otherIncome || 0;
+            const monthlyGrossIncome = effectiveRent + monthlyOtherIncome;
+            const annualGrossIncome = monthlyGrossIncome * 12;
+
+            const propertyMgmtCost = monthlyGrossIncome * (propertyMgmt / 100);
+            const maintenanceCost = monthlyGrossIncome * (maintenanceReserve / 100);
+            const monthlyOperatingExpenses = (propertyTax / 12) + (insurance / 12) + hoa + propertyMgmtCost + maintenanceCost + utilities;
+            const annualOperatingExpenses = monthlyOperatingExpenses * 12;
+
+            const noi = annualGrossIncome - annualOperatingExpenses;
+            const monthlyNOI = monthlyGrossIncome - monthlyOperatingExpenses;
+            const monthlyCashFlow = monthlyNOI - monthlyPayment;
+            const annualCashFlow = monthlyCashFlow * 12;
+
+            const totalCashInvested = downPayment + closingCosts + rehabCosts;
+            const cashOnCashReturn = totalCashInvested > 0 ? (annualCashFlow / totalCashInvested) * 100 : 0;
+            const capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
+
+            const dscr = annualDebtService > 0 ? noi / annualDebtService : 0;
+            const onePercentRule = monthlyRent >= (purchasePrice * 0.01);
+            const fiftyPercentRule = annualOperatingExpenses >= (annualGrossIncome * 0.5);
+
+            const breakEvenOccupancy = monthlyPayment > 0 ?
+                ((monthlyOperatingExpenses + monthlyPayment) / monthlyRent) * 100 : 0;
+
+            let verdict = 'pass';
+            let verdictColor = 'red';
+            if (dscr < 1.0 || monthlyCashFlow < 0) {
+                verdict = 'pass';
+                verdictColor = 'red';
+            } else if (cashOnCashReturn >= 10 && monthlyCashFlow > 0 && dscr >= 1.25) {
+                verdict = 'strong';
+                verdictColor = 'green';
+            } else if (cashOnCashReturn >= 6 && monthlyCashFlow > 0) {
+                verdict = 'decent';
+                verdictColor = 'blue';
+            } else if (monthlyCashFlow > 0) {
+                verdict = 'weak';
+                verdictColor = 'amber';
+            }
+
+            const firstYearMortgageInterest = monthlyPayment * 12 - (loanAmount / loanTerm);
+
+            return {
+                downPayment,
+                loanAmount,
+                monthlyPayment,
+                annualDebtService,
+                monthlyGrossIncome,
+                annualGrossIncome,
+                monthlyOperatingExpenses,
+                annualOperatingExpenses,
+                noi,
+                monthlyNOI,
+                monthlyCashFlow,
+                annualCashFlow,
+                totalCashInvested,
+                cashOnCashReturn,
+                capRate,
+                dscr,
+                onePercentRule,
+                fiftyPercentRule,
+                breakEvenOccupancy,
+                verdict,
+                verdictColor,
+                firstYearMortgageInterest,
+            };
+        };
+
+        // Main App Component
+        function DealAnalyzer() {
+            const [darkMode, setDarkMode] = useState(true);
+            const [activeTab, setActiveTab] = useState('quick');
+            const [savedDeals, setSavedDeals] = useState([]);
+            const [defaults, setDefaults] = useState({
+                vacancyRate: 8,
+                maintenanceReserve: 10,
+                propertyManagement: 10,
+                appreciation: 3,
+                rentIncrease: 2,
+                expenseInflation: 2,
+                closingCosts: 3,
+                downPayment: 25,
+                interestRate: 7,
+                loanTerm: 30,
+            });
+
+            // Input State
+            const [inputs, setInputs] = useState({
+                purchasePrice: 0,
+                downPaymentPercent: defaults.downPayment,
+                interestRate: defaults.interestRate,
+                loanTerm: defaults.loanTerm,
+                closingCosts: 0,
+                rehabCosts: 0,
+                monthlyRent: 0,
+                otherIncome: 0,
+                propertyTax: 0,
+                insurance: 0,
+                hoa: 0,
+                propertyMgmt: defaults.propertyManagement,
+                vacancyRate: defaults.vacancyRate,
+                maintenanceReserve: defaults.maintenanceReserve,
+                utilities: 0,
+            });
+
+            const [analysis, setAnalysis] = useState(null);
+
+            // Initialize localStorage
+            useEffect(() => {
+                const saved = localStorage.getItem('dealAnalyzerSavedDeals');
+                const savedDefaults = localStorage.getItem('dealAnalyzerDefaults');
+
+                if (savedDefaults) {
+                    setDefaults(JSON.parse(savedDefaults));
+                } else {
+                    const sampleDeals = [
+                        {
+                            id: 'sample-1',
+                            name: '123 Oak Street - Duplex',
+                            date: new Date().toLocaleDateString(),
+                            notes: 'Sample duplex in good neighborhood',
+                            inputs: {
+                                purchasePrice: 285000,
+                                downPaymentPercent: 25,
+                                interestRate: 7,
+                                loanTerm: 30,
+                                closingCosts: 0,
+                                rehabCosts: 15000,
+                                monthlyRent: 2800,
+                                otherIncome: 200,
+                                propertyTax: 3400,
+                                insurance: 1800,
+                                hoa: 0,
+                                propertyMgmt: 10,
+                                vacancyRate: 8,
+                                maintenanceReserve: 10,
+                                utilities: 0,
+                            },
+                        },
+                        {
+                            id: 'sample-2',
+                            name: '456 Pine Ave - SFR',
+                            date: new Date().toLocaleDateString(),
+                            notes: 'Single family rental with solid fundamentals',
+                            inputs: {
+                                purchasePrice: 195000,
+                                downPaymentPercent: 20,
+                                interestRate: 7.25,
+                                loanTerm: 30,
+                                closingCosts: 0,
+                                rehabCosts: 5000,
+                                monthlyRent: 1650,
+                                otherIncome: 0,
+                                propertyTax: 2200,
+                                insurance: 1200,
+                                hoa: 0,
+                                propertyMgmt: 10,
+                                vacancyRate: 8,
+                                maintenanceReserve: 10,
+                                utilities: 0,
+                            },
+                        },
+                    ];
+                    localStorage.setItem('dealAnalyzerSavedDeals', JSON.stringify(sampleDeals));
+                    setSavedDeals(sampleDeals);
+                }
+
+                if (saved) {
+                    setSavedDeals(JSON.parse(saved));
+                }
+            }, []);
+
+            // Save deals to localStorage
+            useEffect(() => {
+                localStorage.setItem('dealAnalyzerSavedDeals', JSON.stringify(savedDeals));
+            }, [savedDeals]);
+
+            // Save defaults to localStorage
+            useEffect(() => {
+                localStorage.setItem('dealAnalyzerDefaults', JSON.stringify(defaults));
+            }, [defaults]);
+
+            const handleInputChange = (field, value) => {
+                setInputs(prev => ({
+                    ...prev,
+                    [field]: value === '' ? 0 : parseFloat(value) || 0,
+                }));
+            };
+
+            const handleAnalyze = () => {
+                const result = calculateAnalysis(inputs, defaults);
+                setAnalysis(result);
+                setActiveTab('results');
+            };
+
+            const saveDeal = (name, notes) => {
+                const newDeal = {
+                    id: Date.now().toString(),
+                    name,
+                    date: new Date().toLocaleDateString(),
+                    notes,
+                    inputs: { ...inputs },
+                    analysis: analysis ? { ...analysis } : null,
+                };
+                setSavedDeals(prev => [newDeal, ...prev]);
+            };
+
+            const loadDeal = (deal) => {
+                setInputs(deal.inputs);
+                setAnalysis(deal.analysis);
+            };
+
+            const deleteDeal = (id) => {
+                setSavedDeals(prev => prev.filter(d => d.id !== id));
+            };
+
+            const bgClass = darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900';
+            const cardClass = darkMode ? 'rounded-lg shadow-lg p-6 transition-all bg-gray-800 border border-gray-700' : 'rounded-lg shadow-lg p-6 transition-all bg-gray-50 border border-gray-200';
+            const inputClass = darkMode ? 'bg-gray-700 border border-gray-600 text-white placeholder-gray-400' : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-500';
+            const btnPrimaryClass = darkMode ? 'bg-gold hover:bg-gold-dark text-white' : 'bg-gold-light hover:bg-gold text-white';
+            const navItemInactiveClass = darkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-gray-100 hover:bg-gray-200 text-gray-900';
+
+            return (
+                <div className={bgClass}>
+                    <div className="flex h-screen">
+                        {/* Sidebar */}
+                        <div className={`w-64 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} border-r flex flex-col`}>
+                            <div className="p-6 border-b border-inherit">
+                                <h1 className={`text-2xl font-bold ${darkMode ? 'text-gold' : 'text-gold-dark'}`}>
+                                    DealAnalyzer
+                                </h1>
+                                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Investment Analysis Tool
+                                </p>
+                            </div>
+
+                            <div className="flex-1 p-4 overflow-y-auto">
+                                <div className="flex flex-col space-y-2">
+                                    {[
+                                        { id: 'quick', label: '📊 Quick Analysis', icon: '📊' },
+                                        { id: 'results', label: '📈 Results', icon: '📈' },
+                                        { id: 'projection', label: '📅 5/10 Yr Projection', icon: '📅' },
+                                        { id: 'compare', label: '⚖️ Compare Deals', icon: '⚖️' },
+                                        { id: 'brrrr', label: '🔄 BRRRR Calculator', icon: '🔄' },
+                                        { id: 'househack', label: '🏠 House Hack', icon: '🏠' },
+                                        { id: 'taxes', label: '💰 Tax Benefits', icon: '💰' },
+                                        { id: 'saved', label: '💾 Saved Deals', icon: '💾' },
+                                        { id: 'settings', label: '⚙️ Settings', icon: '⚙️' },
+                                    ].map(tab => (
+                                        <div
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`p-3 rounded-lg cursor-pointer transition-all ${activeTab === tab.id ? 'bg-gold text-white' : navItemInactiveClass}`}
+                                        >
+                                            {tab.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                <button
+                                    onClick={() => setDarkMode(!darkMode)}
+                                    className={`w-full p-2 rounded text-sm font-medium ${btnPrimaryClass}`}
+                                >
+                                    {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+                                </button>
+                            </div>
+
+                            <div className={`p-3 text-xs text-center ${darkMode ? 'text-gray-500' : 'text-gray-600'} border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                <p>Powered by FM Home Loans</p>
+                                <p className="font-semibold">Aryeh Brecher</p>
+                                <p>Senior Loan Officer</p>
+                            </div>
+                        </div>
+
+                        {/* Main Content */}
+                        <div className="flex-1 overflow-y-auto p-8">
+                            {activeTab === 'quick' && <QuickAnalysisTab inputs={inputs} handleInputChange={handleInputChange} handleAnalyze={handleAnalyze} defaults={defaults} cardClass={cardClass} inputClass={inputClass} btnPrimaryClass={btnPrimaryClass} />}
+                            {activeTab === 'results' && analysis && <ResultsTab analysis={analysis} inputs={inputs} cardClass={cardClass} />}
+                            {activeTab === 'projection' && analysis && <ProjectionTab analysis={analysis} inputs={inputs} defaults={defaults} cardClass={cardClass} darkMode={darkMode} />}
+                            {activeTab === 'compare' && <CompareTab savedDeals={savedDeals} defaults={defaults} cardClass={cardClass} inputClass={inputClass} btnPrimaryClass={btnPrimaryClass} />}
+                            {activeTab === 'brrrr' && <BRRRRTab cardClass={cardClass} inputClass={inputClass} btnPrimaryClass={btnPrimaryClass} />}
+                            {activeTab === 'househack' && <HouseHackTab cardClass={cardClass} inputClass={inputClass} btnPrimaryClass={btnPrimaryClass} darkMode={darkMode} />}
+                            {activeTab === 'taxes' && <TaxBenefitsTab analysis={analysis} inputs={inputs} defaults={defaults} cardClass={cardClass} inputClass={inputClass} btnPrimaryClass={btnPrimaryClass} />}
+                            {activeTab === 'saved' && <SavedDealsTab savedDeals={savedDeals} onLoad={loadDeal} onDelete={deleteDeal} onSave={saveDeal} onCompare={() => setActiveTab('compare')} cardClass={cardClass} btnPrimaryClass={btnPrimaryClass} />}
+                            {activeTab === 'settings' && <SettingsTab defaults={defaults} setDefaults={setDefaults} cardClass={cardClass} inputClass={inputClass} btnPrimaryClass={btnPrimaryClass} />}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Quick Analysis Tab
+        function QuickAnalysisTab({ inputs, handleInputChange, handleAnalyze, defaults, cardClass, inputClass, btnPrimaryClass }) {
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-bold">Quick Analysis</h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Property Card */}
+                        <div className={cardClass}>
+                            <h3 className="text-xl font-bold mb-4">🏠 Property</h3>
+                            <div className="space-y-3">
+                                <InputField label="Purchase Price" value={inputs.purchasePrice} onChange={(v) => handleInputChange('purchasePrice', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Down Payment %" value={inputs.downPaymentPercent} onChange={(v) => handleInputChange('downPaymentPercent', v)} inputClass={inputClass} suffix="%" />
+                                <div className="text-sm text-gray-400">Down: {formatCurrency(inputs.purchasePrice * (inputs.downPaymentPercent / 100))}</div>
+                                <InputField label="Interest Rate" value={inputs.interestRate} onChange={(v) => handleInputChange('interestRate', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Loan Term" value={inputs.loanTerm} onChange={(v) => handleInputChange('loanTerm', v)} inputClass={inputClass} suffix="yrs" />
+                                <InputField label="Closing Costs" value={inputs.closingCosts} onChange={(v) => handleInputChange('closingCosts', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Rehab Costs" value={inputs.rehabCosts} onChange={(v) => handleInputChange('rehabCosts', v)} inputClass={inputClass} prefix="$" />
+                            </div>
+                        </div>
+
+                        {/* Income Card */}
+                        <div className={cardClass}>
+                            <h3 className="text-xl font-bold mb-4">💰 Income</h3>
+                            <div className="space-y-3">
+                                <InputField label="Monthly Rent" value={inputs.monthlyRent} onChange={(v) => handleInputChange('monthlyRent', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Laundry/Parking" value={inputs.otherIncome} onChange={(v) => handleInputChange('otherIncome', v)} inputClass={inputClass} prefix="$" />
+                            </div>
+                        </div>
+
+                        {/* Expenses Card */}
+                        <div className={cardClass}>
+                            <h3 className="text-xl font-bold mb-4">💸 Expenses</h3>
+                            <div className="space-y-3">
+                                <InputField label="Property Tax/Year" value={inputs.propertyTax} onChange={(v) => handleInputChange('propertyTax', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Insurance/Year" value={inputs.insurance} onChange={(v) => handleInputChange('insurance', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="HOA/Month" value={inputs.hoa} onChange={(v) => handleInputChange('hoa', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Mgmt %" value={inputs.propertyMgmt} onChange={(v) => handleInputChange('propertyMgmt', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Vacancy %" value={inputs.vacancyRate} onChange={(v) => handleInputChange('vacancyRate', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Maintenance %" value={inputs.maintenanceReserve} onChange={(v) => handleInputChange('maintenanceReserve', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Utilities/Month" value={inputs.utilities} onChange={(v) => handleInputChange('utilities', v)} inputClass={inputClass} prefix="$" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <button onClick={handleAnalyze} className={`px-8 py-4 rounded-lg font-bold text-lg ${btnPrimaryClass}`}>
+                            🚀 Analyze Deal
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Input Field Component
+        function InputField({ label, value, onChange, inputClass, prefix, suffix }) {
+            return (
+                <div>
+                    <label className="text-sm font-semibold block mb-1">{label}</label>
+                    <div className="flex items-center">
+                        {prefix && <span className="text-gray-500 mr-2">{prefix}</span>}
+                        <input
+                            type="number"
+                            value={value}
+                            onChange={(e) => onChange(e.target.value)}
+                            className={`flex-1 p-2 rounded text-sm ${inputClass}`}
+                        />
+                        {suffix && <span className="text-gray-500 ml-2">{suffix}</span>}
+                    </div>
+                </div>
+            );
+        }
+
+        // Results Tab
+        function ResultsTab({ analysis, inputs, cardClass }) {
+            const verdictConfig = {
+                strong: { color: 'bg-green-600', label: 'Strong Deal 🔥', emoji: '✅' },
+                decent: { color: 'bg-blue-600', label: 'Decent Deal 👍', emoji: '👍' },
+                weak: { color: 'bg-amber-500', label: 'Weak Deal ⚠️', emoji: '⚠️' },
+                pass: { color: 'bg-red-600', label: 'Pass ❌', emoji: '❌' },
+            };
+
+            const config = verdictConfig[analysis.verdict] || verdictConfig.pass;
+
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-bold">Analysis Results</h2>
+
+                    {/* Verdict Card */}
+                    <div className={`${config.color} text-white rounded-lg p-8 text-center`}>
+                        <div className="text-6xl mb-4">{config.emoji}</div>
+                        <h3 className="text-2xl font-bold">{config.label}</h3>
+                    </div>
+
+                    {/* Key Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <MetricCard title="Monthly Cash Flow" value={analysis.monthlyCashFlow} format="currency" color={analysis.monthlyCashFlow > 0 ? 'green' : 'red'} />
+                        <MetricCard title="Annual Cash Flow" value={analysis.annualCashFlow} format="currency" color={analysis.annualCashFlow > 0 ? 'green' : 'red'} />
+                        <MetricCard title="Cash-on-Cash Return" value={analysis.cashOnCashReturn} format="percent" color={analysis.cashOnCashReturn >= 10 ? 'green' : 'blue'} />
+                        <MetricCard title="Cap Rate" value={analysis.capRate} format="percent" color="blue" />
+                    </div>
+
+                    {/* Secondary Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <MetricCard title="DSCR" value={analysis.dscr} format="number" decimal={2} color={analysis.dscr >= 1.25 ? 'green' : 'amber'} />
+                        <MetricCard title="Break-Even Occupancy" value={analysis.breakEvenOccupancy} format="percent" color="blue" />
+                        <div className={cardClass}>
+                            <div className="text-sm text-gray-400">1% Rule</div>
+                            <div className="text-2xl font-bold">{analysis.onePercentRule ? '✅ Pass' : '❌ Fail'}</div>
+                        </div>
+                        <div className={cardClass}>
+                            <div className="text-sm text-gray-400">50% Rule</div>
+                            <div className="text-2xl font-bold">{analysis.fiftyPercentRule ? '✅ Fair' : '✅ Good'}</div>
+                        </div>
+                    </div>
+
+                    {/* Detailed Breakdown */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <DetailCard title="Income & Expenses" items={[
+                            { label: 'Gross Monthly Income', value: analysis.monthlyGrossIncome, format: 'currency' },
+                            { label: 'Monthly Operating Expenses', value: analysis.monthlyOperatingExpenses, format: 'currency' },
+                            { label: 'Monthly NOI', value: analysis.monthlyNOI, format: 'currency' },
+                            { label: 'Monthly Mortgage Payment', value: analysis.monthlyPayment, format: 'currency' },
+                        ]} cardClass={cardClass} />
+
+                        <DetailCard title="Investment Summary" items={[
+                            { label: 'Down Payment', value: analysis.downPayment, format: 'currency' },
+                            { label: 'Loan Amount', value: analysis.loanAmount, format: 'currency' },
+                            { label: 'Total Cash Invested', value: analysis.totalCashInvested, format: 'currency' },
+                            { label: 'Mortgage Payment', value: analysis.monthlyPayment, format: 'currency' },
+                        ]} cardClass={cardClass} />
+                    </div>
+                </div>
+            );
+        }
+
+        // Metric Card Component
+        function MetricCard({ title, value, format, color, decimal }) {
+            let displayValue;
+            if (format === 'currency') {
+                displayValue = formatCurrency(value);
+            } else if (format === 'percent') {
+                displayValue = formatPercent(value);
+            } else if (format === 'number') {
+                displayValue = parseFloat(value).toFixed(decimal || 2);
+            }
+
+            const colorClass = {
+                green: 'bg-green-700/30 border-green-500',
+                red: 'bg-red-700/30 border-red-500',
+                blue: 'bg-blue-700/30 border-blue-500',
+                amber: 'bg-amber-700/30 border-amber-500',
+            }[color] || 'bg-gray-700/30 border-gray-500';
+
+            return (
+                <div className={`rounded-lg p-4 border ${colorClass}`}>
+                    <div className="text-sm text-gray-400 mb-2">{title}</div>
+                    <div className="text-2xl font-bold">{displayValue}</div>
+                </div>
+            );
+        }
+
+        // Detail Card Component
+        function DetailCard({ title, items, cardClass }) {
+            return (
+                <div className={cardClass}>
+                    <h3 className="text-lg font-bold mb-4">{title}</h3>
+                    <div className="space-y-3">
+                        {items.map((item, i) => (
+                            <div key={i} className="flex justify-between items-center py-2 border-b border-gray-600">
+                                <span className="text-gray-400">{item.label}</span>
+                                <span className="font-semibold">
+                                    {item.format === 'currency' ? formatCurrency(item.value) : formatPercent(item.value)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Projection Tab
+        function ProjectionTab({ analysis, inputs, defaults, cardClass, darkMode }) {
+            const [projectionYears, setProjectionYears] = useState(5);
+            const [chartData, setChartData] = useState(null);
+            const chartRefWealth = useRef(null);
+            const chartRefCashFlow = useRef(null);
+            const chartInstanceWealth = useRef(null);
+            const chartInstanceCashFlow = useRef(null);
+
+            useEffect(() => {
+                const projection = [];
+                let currentPropertyValue = inputs.purchasePrice;
+                let loanBalance = analysis.loanAmount;
+                let cumulativeCashFlow = 0;
+
+                for (let year = 1; year <= projectionYears; year++) {
+                    const yearlyRentIncrease = 1 + (defaults.rentIncrease / 100);
+                    const yearlyExpenseInflation = 1 + (defaults.expenseInflation / 100);
+                    const yearlyAppreciation = 1 + (defaults.appreciation / 100);
+
+                    const rentalIncome = analysis.annualGrossIncome * Math.pow(yearlyRentIncrease, year);
+                    const operatingExpenses = analysis.annualOperatingExpenses * Math.pow(yearlyExpenseInflation, year);
+                    const noi = rentalIncome - operatingExpenses;
+                    const cashFlow = noi - analysis.annualDebtService;
+                    cumulativeCashFlow += cashFlow;
+
+                    currentPropertyValue = inputs.purchasePrice * Math.pow(yearlyAppreciation, year);
+                    loanBalance = calculateLoanBalance(analysis.loanAmount, inputs.interestRate, inputs.loanTerm, year * 12);
+
+                    const totalEquity = currentPropertyValue - loanBalance;
+                    const totalReturn = totalEquity + cumulativeCashFlow;
+
+                    projection.push({
+                        year,
+                        rentalIncome: Math.round(rentalIncome),
+                        operatingExpenses: Math.round(operatingExpenses),
+                        noi: Math.round(noi),
+                        mortgagePayment: Math.round(analysis.annualDebtService),
+                        cashFlow: Math.round(cashFlow),
+                        cumulativeCashFlow: Math.round(cumulativeCashFlow),
+                        propertyValue: Math.round(currentPropertyValue),
+                        loanBalance: Math.round(loanBalance),
+                        totalEquity: Math.round(totalEquity),
+                        totalReturn: Math.round(totalReturn),
+                    });
+                }
+
+                setChartData(projection);
+
+                // Chart setup
+                if (chartRefWealth.current && projection.length > 0) {
+                    if (chartInstanceWealth.current) chartInstanceWealth.current.destroy();
+                    const ctx = chartRefWealth.current.getContext('2d');
+                    chartInstanceWealth.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: projection.map(p => `Year ${p.year}`),
+                            datasets: [
+                                {
+                                    label: 'Total Equity',
+                                    data: projection.map(p => p.totalEquity),
+                                    borderColor: '#C5A55A',
+                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                    tension: 0.4,
+                                    fill: true,
+                                },
+                                {
+                                    label: 'Cumulative Cash Flow',
+                                    data: projection.map(p => p.cumulativeCashFlow),
+                                    borderColor: '#1B365D',
+                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                    tension: 0.4,
+                                    fill: true,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { labels: { color: darkMode ? '#fff' : '#000' } },
+                            },
+                            scales: {
+                                x: { ticks: { color: darkMode ? '#999' : '#666' } },
+                                y: { ticks: { color: darkMode ? '#999' : '#666' } },
+                            },
+                        },
+                    });
+                }
+
+                if (chartRefCashFlow.current && projection.length > 0) {
+                    if (chartInstanceCashFlow.current) chartInstanceCashFlow.current.destroy();
+                    const ctx = chartRefCashFlow.current.getContext('2d');
+                    chartInstanceCashFlow.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: projection.map(p => `Year ${p.year}`),
+                            datasets: [
+                                {
+                                    label: 'Annual Cash Flow',
+                                    data: projection.map(p => p.cashFlow),
+                                    backgroundColor: projection.map(p => p.cashFlow >= 0 ? '#10b981' : '#ef4444'),
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { labels: { color: darkMode ? '#fff' : '#000' } },
+                            },
+                            scales: {
+                                x: { ticks: { color: darkMode ? '#999' : '#666' } },
+                                y: { ticks: { color: darkMode ? '#999' : '#666' } },
+                            },
+                        },
+                    });
+                }
+
+                return () => {
+                    if (chartInstanceWealth.current) chartInstanceWealth.current.destroy();
+                    if (chartInstanceCashFlow.current) chartInstanceCashFlow.current.destroy();
+                };
+            }, [projectionYears, inputs, analysis, defaults, darkMode]);
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-3xl font-bold">5 & 10 Year Projection</h2>
+                        <div className="flex gap-2">
+                            <button onClick={() => setProjectionYears(5)} className={`px-4 py-2 rounded ${projectionYears === 5 ? 'bg-gold text-white' : 'bg-gray-700'}`}>5 Years</button>
+                            <button onClick={() => setProjectionYears(10)} className={`px-4 py-2 rounded ${projectionYears === 10 ? 'bg-gold text-white' : 'bg-gray-700'}`}>10 Years</button>
+                        </div>
+                    </div>
+
+                    <div className={cardClass}>
+                        <div className="chart-container">
+                            <canvas ref={chartRefWealth}></canvas>
+                        </div>
+                    </div>
+
+                    <div className={cardClass}>
+                        <div className="chart-container">
+                            <canvas ref={chartRefCashFlow}></canvas>
+                        </div>
+                    </div>
+
+                    {/* Projection Table */}
+                    <div className={cardClass}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-600">
+                                        <th className="text-left py-2 px-2">Yr</th>
+                                        <th className="text-right py-2 px-2">Rent</th>
+                                        <th className="text-right py-2 px-2">Exp</th>
+                                        <th className="text-right py-2 px-2">NOI</th>
+                                        <th className="text-right py-2 px-2">CF</th>
+                                        <th className="text-right py-2 px-2">Cum CF</th>
+                                        <th className="text-right py-2 px-2">Value</th>
+                                        <th className="text-right py-2 px-2">Balance</th>
+                                        <th className="text-right py-2 px-2">Equity</th>
+                                        <th className="text-right py-2 px-2">Total Return</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {chartData && chartData.map((row, i) => (
+                                        <tr key={i} className="border-b border-gray-700">
+                                            <td className="py-2 px-2">{row.year}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.rentalIncome)}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.operatingExpenses)}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.noi)}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.cashFlow)}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.cumulativeCashFlow)}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.propertyValue)}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.loanBalance)}</td>
+                                            <td className="text-right py-2 px-2">{formatCurrency(row.totalEquity)}</td>
+                                            <td className="text-right py-2 px-2 font-bold">{formatCurrency(row.totalReturn)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Compare Tab
+        function CompareTab({ savedDeals, defaults, cardClass, inputClass, btnPrimaryClass }) {
+            const [selectedDeals, setSelectedDeals] = useState([]);
+            const [compareInputs, setCompareInputs] = useState([{}, {}, {}]);
+            const [adjustments, setAdjustments] = useState({
+                rateAdj: 0,
+                priceAdj: 0,
+                rentAdj: 0,
+            });
+            const [comparisons, setComparisons] = useState([]);
+
+            const handleLoadDeal = (index, deal) => {
+                const newInputs = [...compareInputs];
+                newInputs[index] = { ...deal.inputs };
+                setCompareInputs(newInputs);
+                setSelectedDeals(prev => {
+                    const updated = [...prev];
+                    updated[index] = deal.name;
+                    return updated;
+                });
+            };
+
+            const handleCustomInput = (index, field, value) => {
+                const newInputs = [...compareInputs];
+                if (!newInputs[index]) newInputs[index] = {};
+                newInputs[index][field] = parseFloat(value) || 0;
+                setCompareInputs(newInputs);
+            };
+
+            const handleCompare = () => {
+                const results = compareInputs.map(inputs => {
+                    const adjusted = {
+                        ...inputs,
+                        interestRate: (inputs.interestRate || defaults.interestRate) + adjustments.rateAdj,
+                        purchasePrice: (inputs.purchasePrice || 0) * (1 + adjustments.priceAdj / 100),
+                        monthlyRent: (inputs.monthlyRent || 0) * (1 + adjustments.rentAdj / 100),
+                    };
+                    return calculateAnalysis(adjusted, defaults);
+                });
+                setComparisons(results);
+            };
+
+            const metrics = [
+                { key: 'monthlyCashFlow', label: 'Monthly Cash Flow', format: 'currency' },
+                { key: 'annualCashFlow', label: 'Annual Cash Flow', format: 'currency' },
+                { key: 'cashOnCashReturn', label: 'Cash-on-Cash %', format: 'percent' },
+                { key: 'capRate', label: 'Cap Rate %', format: 'percent' },
+                { key: 'dscr', label: 'DSCR', format: 'number' },
+                { key: 'cashOnCashReturn', label: 'ROI %', format: 'percent' },
+            ];
+
+            const getWinnerIndex = (metric, format) => {
+                if (comparisons.length < 2) return -1;
+                let maxIdx = 0;
+                for (let i = 1; i < comparisons.length; i++) {
+                    if (comparisons[i][metric] > comparisons[maxIdx][metric]) {
+                        maxIdx = i;
+                    }
+                }
+                return maxIdx;
+            };
+
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-bold">Compare Deals</h2>
+
+                    {/* Adjustment Sliders */}
+                    <div className={cardClass}>
+                        <h3 className="text-lg font-bold mb-4">What-If Adjustments</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="text-sm font-semibold">Interest Rate Adj</label>
+                                <input
+                                    type="range"
+                                    min="-2"
+                                    max="2"
+                                    step="0.25"
+                                    value={adjustments.rateAdj}
+                                    onChange={(e) => setAdjustments(prev => ({ ...prev, rateAdj: parseFloat(e.target.value) }))}
+                                    className="w-full"
+                                />
+                                <div className="text-sm text-gray-400">{adjustments.rateAdj > 0 ? '+' : ''}{adjustments.rateAdj}%</div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-semibold">Purchase Price Adj</label>
+                                <input
+                                    type="range"
+                                    min="-20"
+                                    max="20"
+                                    step="1"
+                                    value={adjustments.priceAdj}
+                                    onChange={(e) => setAdjustments(prev => ({ ...prev, priceAdj: parseFloat(e.target.value) }))}
+                                    className="w-full"
+                                />
+                                <div className="text-sm text-gray-400">{adjustments.priceAdj > 0 ? '+' : ''}{adjustments.priceAdj}%</div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-semibold">Monthly Rent Adj</label>
+                                <input
+                                    type="range"
+                                    min="-20"
+                                    max="20"
+                                    step="1"
+                                    value={adjustments.rentAdj}
+                                    onChange={(e) => setAdjustments(prev => ({ ...prev, rentAdj: parseFloat(e.target.value) }))}
+                                    className="w-full"
+                                />
+                                <div className="text-sm text-gray-400">{adjustments.rentAdj > 0 ? '+' : ''}{adjustments.rentAdj}%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Deal Selection */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[0, 1, 2].map(index => (
+                            <div key={index} className={cardClass}>
+                                <h3 className="text-lg font-bold mb-4">Deal {index + 1}</h3>
+                                {savedDeals.length > 0 && (
+                                    <div className="mb-4">
+                                        <label className="text-sm font-semibold block mb-2">Load Saved Deal</label>
+                                        <select
+                                            onChange={(e) => {
+                                                const deal = savedDeals.find(d => d.id === e.target.value);
+                                                if (deal) handleLoadDeal(index, deal);
+                                            }}
+                                            className={`w-full p-2 rounded text-sm bg-gray-700 border border-gray-600 text-white`}
+                                        >
+                                            <option value="">-- Select Deal --</option>
+                                            {savedDeals.map(deal => (
+                                                <option key={deal.id} value={deal.id}>{deal.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                <div className="space-y-2 text-sm">
+                                    {compareInputs[index] && (
+                                        <>
+                                            <div><strong>Price:</strong> {formatCurrency(compareInputs[index].purchasePrice || 0)}</div>
+                                            <div><strong>Rent:</strong> {formatCurrency(compareInputs[index].monthlyRent || 0)}/mo</div>
+                                            <div><strong>Rate:</strong> {(compareInputs[index].interestRate || 0).toFixed(2)}%</div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex justify-center">
+                        <button onClick={handleCompare} className={`px-8 py-3 rounded-lg font-bold ${btnPrimaryClass}`}>
+                            Compare Deals
+                        </button>
+                    </div>
+
+                    {/* Comparison Table */}
+                    {comparisons.length > 0 && (
+                        <div className={cardClass}>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-600">
+                                            <th className="text-left py-2 px-2">Metric</th>
+                                            {[0, 1, 2].map(i => (
+                                                <th key={i} className="text-right py-2 px-2">Deal {i + 1}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {metrics.map((metric, idx) => (
+                                            <tr key={idx} className="border-b border-gray-700">
+                                                <td className="py-2 px-2 font-semibold">{metric.label}</td>
+                                                {comparisons.map((comp, dealIdx) => {
+                                                    const value = comp[metric.key];
+                                                    const isWinner = dealIdx === getWinnerIndex(metric.key, metric.format);
+                                                    const bgClass = isWinner ? 'bg-gold/30' : '';
+                                                    let display = value;
+                                                    if (metric.format === 'currency') display = formatCurrency(value);
+                                                    else if (metric.format === 'percent') display = formatPercent(value);
+                                                    else display = value.toFixed(2);
+
+                                                    return <td key={dealIdx} className={`text-right py-2 px-2 ${bgClass}`}>{display}</td>;
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // BRRRR Calculator Tab
+        function BRRRRTab({ cardClass, inputClass, btnPrimaryClass }) {
+            const [inputs, setInputs] = useState({
+                purchasePrice: 0,
+                rehabCosts: 0,
+                arv: 0,
+                refinanceLTV: 75,
+                refinanceRate: 7,
+                refinanceTerm: 30,
+                monthlyRent: 0,
+                operatingExpenses: 0,
+            });
+
+            const [results, setResults] = useState(null);
+
+            const handleInputChange = (field, value) => {
+                setInputs(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+            };
+
+            const calculate = () => {
+                const allInCost = inputs.purchasePrice + inputs.rehabCosts;
+                const refinanceLoan = inputs.arv * (inputs.refinanceLTV / 100);
+                const cashRecouped = refinanceLoan - inputs.purchasePrice;
+                const closingCosts = refinanceLoan * 0.03;
+                const cashLeft = allInCost - refinanceLoan + closingCosts;
+
+                const monthlyPayment = calculateMortgagePayment(refinanceLoan, inputs.refinanceRate, inputs.refinanceTerm);
+                const monthlyCashFlow = inputs.monthlyRent - inputs.operatingExpenses - monthlyPayment;
+                const cashOnCash = cashLeft > 0 ? ((monthlyCashFlow * 12) / cashLeft) * 100 : Infinity;
+
+                setResults({
+                    allInCost,
+                    refinanceLoan,
+                    cashRecouped,
+                    closingCosts,
+                    cashLeft,
+                    monthlyPayment,
+                    monthlyCashFlow,
+                    cashOnCash,
+                });
+            };
+
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-bold">BRRRR Calculator</h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Purchase & Rehab</h3>
+                            <div className="space-y-3">
+                                <InputField label="Purchase Price" value={inputs.purchasePrice} onChange={(v) => handleInputChange('purchasePrice', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Rehab Costs" value={inputs.rehabCosts} onChange={(v) => handleInputChange('rehabCosts', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="After-Repair Value (ARV)" value={inputs.arv} onChange={(v) => handleInputChange('arv', v)} inputClass={inputClass} prefix="$" />
+                            </div>
+                        </div>
+
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Refinance</h3>
+                            <div className="space-y-3">
+                                <InputField label="Refinance LTV %" value={inputs.refinanceLTV} onChange={(v) => handleInputChange('refinanceLTV', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Refinance Rate" value={inputs.refinanceRate} onChange={(v) => handleInputChange('refinanceRate', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Loan Term" value={inputs.refinanceTerm} onChange={(v) => handleInputChange('refinanceTerm', v)} inputClass={inputClass} suffix="yrs" />
+                            </div>
+                        </div>
+
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Rental</h3>
+                            <div className="space-y-3">
+                                <InputField label="Monthly Rent" value={inputs.monthlyRent} onChange={(v) => handleInputChange('monthlyRent', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Operating Expenses" value={inputs.operatingExpenses} onChange={(v) => handleInputChange('operatingExpenses', v)} inputClass={inputClass} prefix="$" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <button onClick={calculate} className={`px-8 py-3 rounded-lg font-bold ${btnPrimaryClass}`}>
+                            Calculate BRRRR
+                        </button>
+                    </div>
+
+                    {results && (
+                        <div className="space-y-6">
+                            {results.cashLeft <= 0 && (
+                                <div className="bg-gold text-white rounded-lg p-8 text-center">
+                                    <div className="text-4xl font-bold mb-2">♾️ INFINITE RETURN!</div>
+                                    <p className="text-lg">All Cash Recovered at Refinance</p>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <MetricCard title="All-In Cost" value={results.allInCost} format="currency" color="blue" />
+                                <MetricCard title="Refinance Loan" value={results.refinanceLoan} format="currency" color="blue" />
+                                <MetricCard title="Cash Recouped" value={results.cashRecouped} format="currency" color="green" />
+                                <MetricCard title="Cash Left in Deal" value={results.cashLeft} format="currency" color={results.cashLeft <= 0 ? 'green' : 'amber'} />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <MetricCard title="Monthly Mortgage Payment" value={results.monthlyPayment} format="currency" color="blue" />
+                                <MetricCard title="Monthly Cash Flow" value={results.monthlyCashFlow} format="currency" color={results.monthlyCashFlow > 0 ? 'green' : 'red'} />
+                                {results.cashOnCash !== Infinity && <MetricCard title="Cash-on-Cash Return" value={results.cashOnCash} format="percent" color="green" />}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // House Hack Tab
+        function HouseHackTab({ cardClass, inputClass, btnPrimaryClass, darkMode }) {
+            const [inputs, setInputs] = useState({
+                propertyType: 'duplex',
+                purchasePrice: 0,
+                downPayment: 0,
+                interestRate: 7,
+                loanTerm: 30,
+                totalExpenses: 0,
+                unitRent1: 0,
+                unitRent2: 0,
+                unitRent3: 0,
+                currentRent: 0,
+            });
+
+            const [results, setResults] = useState(null);
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            const handleInputChange = (field, value) => {
+                setInputs(prev => ({ ...prev, [field]: field === 'propertyType' ? value : parseFloat(value) || 0 }));
+            };
+
+            const calculate = () => {
+                const loanAmount = inputs.purchasePrice - inputs.downPayment;
+                const monthlyPayment = calculateMortgagePayment(loanAmount, inputs.interestRate, inputs.loanTerm);
+
+                const totalRentalIncome = inputs.unitRent1 + inputs.unitRent2 + inputs.unitRent3;
+                const monthlyExpenses = inputs.totalExpenses / 12;
+                const netHousingCost = monthlyPayment + monthlyExpenses - totalRentalIncome;
+                const monthlySavings = inputs.currentRent - netHousingCost;
+                const annualSavings = monthlySavings * 12;
+
+                setResults({
+                    loanAmount,
+                    monthlyPayment,
+                    totalRentalIncome,
+                    monthlyExpenses,
+                    netHousingCost,
+                    monthlySavings,
+                    annualSavings,
+                });
+
+                // Chart
+                if (chartRef.current) {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                    const ctx = chartRef.current.getContext('2d');
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Current Rent', 'House Hack Net Cost'],
+                            datasets: [{
+                                label: 'Monthly Cost',
+                                data: [inputs.currentRent, Math.max(netHousingCost, 0)],
+                                backgroundColor: ['#ef4444', '#10b981'],
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { labels: { color: darkMode ? '#fff' : '#000' } },
+                            },
+                            scales: {
+                                x: { ticks: { color: darkMode ? '#999' : '#666' } },
+                                y: { ticks: { color: darkMode ? '#999' : '#666' } },
+                            },
+                        },
+                    });
+                }
+            };
+
+            const unitCount = inputs.propertyType === 'duplex' ? 2 : inputs.propertyType === 'triplex' ? 3 : 4;
+
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-bold">House Hack Calculator</h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Property Info</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-sm font-semibold block mb-1">Property Type</label>
+                                    <select value={inputs.propertyType} onChange={(e) => handleInputChange('propertyType', e.target.value)} className={`w-full p-2 rounded text-sm ${inputClass}`}>
+                                        <option value="duplex">Duplex (2 Units)</option>
+                                        <option value="triplex">Triplex (3 Units)</option>
+                                        <option value="quad">Quad (4 Units)</option>
+                                    </select>
+                                </div>
+                                <InputField label="Purchase Price" value={inputs.purchasePrice} onChange={(v) => handleInputChange('purchasePrice', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Down Payment" value={inputs.downPayment} onChange={(v) => handleInputChange('downPayment', v)} inputClass={inputClass} prefix="$" />
+                                <InputField label="Interest Rate" value={inputs.interestRate} onChange={(v) => handleInputChange('interestRate', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Loan Term" value={inputs.loanTerm} onChange={(v) => handleInputChange('loanTerm', v)} inputClass={inputClass} suffix="yrs" />
+                                <InputField label="Total Annual Expenses" value={inputs.totalExpenses} onChange={(v) => handleInputChange('totalExpenses', v)} inputClass={inputClass} prefix="$" />
+                            </div>
+                        </div>
+
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Unit Rents</h3>
+                            <div className="space-y-3">
+                                <InputField label="Your Unit (Owner)" value={0} onChange={() => {}} inputClass={inputClass} prefix="$" disabled />
+                                <InputField label="Unit 1 Rent" value={inputs.unitRent1} onChange={(v) => handleInputChange('unitRent1', v)} inputClass={inputClass} prefix="$" />
+                                {unitCount >= 2 && <InputField label="Unit 2 Rent" value={inputs.unitRent2} onChange={(v) => handleInputChange('unitRent2', v)} inputClass={inputClass} prefix="$" />}
+                                {unitCount >= 3 && <InputField label="Unit 3 Rent" value={inputs.unitRent3} onChange={(v) => handleInputChange('unitRent3', v)} inputClass={inputClass} prefix="$" />}
+                                <InputField label="Current Rent (if renting)" value={inputs.currentRent} onChange={(v) => handleInputChange('currentRent', v)} inputClass={inputClass} prefix="$" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <button onClick={calculate} className={`px-8 py-3 rounded-lg font-bold ${btnPrimaryClass}`}>
+                            Calculate House Hack
+                        </button>
+                    </div>
+
+                    {results && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <MetricCard title="Total Rental Income" value={results.totalRentalIncome} format="currency" color="green" />
+                                <MetricCard title="Net Housing Cost" value={results.netHousingCost} format="currency" color={results.netHousingCost > 0 ? 'red' : 'green'} />
+                                <MetricCard title="Monthly Savings" value={results.monthlySavings} format="currency" color="green" />
+                            </div>
+
+                            <div className={cardClass}>
+                                <div className="chart-container">
+                                    <canvas ref={chartRef}></canvas>
+                                </div>
+                            </div>
+
+                            <div className={cardClass}>
+                                <h3 className="text-lg font-bold mb-4">Summary</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between py-2 border-b border-gray-600">
+                                        <span>Annual Savings:</span>
+                                        <span className="font-bold">{formatCurrency(results.annualSavings)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Tax Benefits Tab
+        function TaxBenefitsTab({ analysis, inputs, defaults, cardClass, inputClass, btnPrimaryClass }) {
+            const [taxInputs, setTaxInputs] = useState({
+                landValuePercent: 20,
+                marginalTaxRate: 24,
+            });
+
+            const handleTaxInputChange = (field, value) => {
+                setTaxInputs(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+            };
+
+            if (!analysis) return <div className={cardClass}>Run an analysis first</div>;
+
+            const depreciableValue = inputs.purchasePrice * (1 - taxInputs.landValuePercent / 100);
+            const annualDepreciation = depreciableValue / 27.5;
+            const mortgageInterest = analysis.firstYearMortgageInterest;
+            const operatingExpenses = analysis.annualOperatingExpenses;
+            const totalDeductions = annualDepreciation + mortgageInterest + operatingExpenses;
+            const taxSavings = totalDeductions * (taxInputs.marginalTaxRate / 100);
+            const afterTaxCashFlow = analysis.annualCashFlow + taxSavings;
+            const afterTaxROI = inputs.purchasePrice > 0 ? (afterTaxCashFlow / (inputs.purchasePrice * (inputs.downPaymentPercent / 100))) * 100 : 0;
+
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-bold">Tax Benefits Estimator</h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Tax Inputs</h3>
+                            <div className="space-y-3">
+                                <InputField label="Land Value %" value={taxInputs.landValuePercent} onChange={(v) => handleTaxInputChange('landValuePercent', v)} inputClass={inputClass} suffix="%" />
+                                <div>
+                                    <label className="text-sm font-semibold block mb-1">Marginal Tax Rate</label>
+                                    <select value={taxInputs.marginalTaxRate} onChange={(e) => handleTaxInputChange('marginalTaxRate', e.target.value)} className={`w-full p-2 rounded text-sm ${inputClass}`}>
+                                        <option value={22}>22%</option>
+                                        <option value={24}>24%</option>
+                                        <option value={32}>32%</option>
+                                        <option value={35}>35%</option>
+                                        <option value={37}>37%</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Annual Deductions</h3>
+                            <div className="space-y-3 text-sm">
+                                <div className="flex justify-between py-2 border-b border-gray-600">
+                                    <span>Depreciation</span>
+                                    <span className="font-bold">{formatCurrency(annualDepreciation)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-gray-600">
+                                    <span>Mortgage Interest</span>
+                                    <span className="font-bold">{formatCurrency(mortgageInterest)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-gray-600">
+                                    <span>Operating Expenses</span>
+                                    <span className="font-bold">{formatCurrency(operatingExpenses)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-gray-600 text-lg">
+                                    <span className="font-bold">Total Deductions</span>
+                                    <span className="font-bold">{formatCurrency(totalDeductions)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <MetricCard title="Tax Savings/Year" value={taxSavings} format="currency" color="green" />
+                        <MetricCard title="After-Tax Cash Flow" value={afterTaxCashFlow} format="currency" color={afterTaxCashFlow > 0 ? 'green' : 'red'} />
+                        <MetricCard title="After-Tax ROI" value={afterTaxROI} format="percent" color="green" />
+                        <MetricCard title="5-Yr Tax Savings" value={taxSavings * 5} format="currency" color="green" />
+                    </div>
+                </div>
+            );
+        }
+
+        // Saved Deals Tab
+        function SavedDealsTab({ savedDeals, onLoad, onDelete, onSave, onCompare, cardClass, btnPrimaryClass }) {
+            const [showSaveForm, setShowSaveForm] = useState(false);
+            const [saveName, setSaveName] = useState('');
+            const [saveNotes, setSaveNotes] = useState('');
+
+            const handleExport = () => {
+                const dataStr = JSON.stringify(savedDeals, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'deals.json';
+                link.click();
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-3xl font-bold">Saved Deals</h2>
+                        <button onClick={handleExport} className={`px-4 py-2 rounded font-semibold ${btnPrimaryClass}`}>
+                            📥 Export JSON
+                        </button>
+                    </div>
+
+                    {showSaveForm && (
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Save New Deal</h3>
+                            <input
+                                type="text"
+                                placeholder="Deal name/address"
+                                value={saveName}
+                                onChange={(e) => setSaveName(e.target.value)}
+                                className="w-full p-2 rounded mb-3 bg-gray-700 border border-gray-600 text-white"
+                            />
+                            <textarea
+                                placeholder="Notes"
+                                value={saveNotes}
+                                onChange={(e) => setSaveNotes(e.target.value)}
+                                className="w-full p-2 rounded mb-3 bg-gray-700 border border-gray-600 text-white"
+                                rows="3"
+                            ></textarea>
+                            <div className="flex gap-2">
+                                <button onClick={() => {
+                                    onSave(saveName, saveNotes);
+                                    setSaveName('');
+                                    setSaveNotes('');
+                                    setShowSaveForm(false);
+                                }} className={`px-4 py-2 rounded font-semibold ${btnPrimaryClass}`}>
+                                    Save
+                                </button>
+                                <button onClick={() => setShowSaveForm(false)} className="px-4 py-2 rounded bg-gray-700">Cancel</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!showSaveForm && (
+                        <button onClick={() => setShowSaveForm(true)} className={`px-6 py-3 rounded font-semibold ${btnPrimaryClass}`}>
+                            💾 Save Current Deal
+                        </button>
+                    )}
+
+                    {savedDeals.length === 0 ? (
+                        <div className={cardClass}>No saved deals yet</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {savedDeals.map(deal => (
+                                <div key={deal.id} className={cardClass}>
+                                    <h3 className="text-lg font-bold mb-2">{deal.name}</h3>
+                                    <p className="text-xs text-gray-400 mb-3">{deal.date}</p>
+                                    {deal.notes && <p className="text-sm text-gray-300 mb-3">{deal.notes}</p>}
+                                    {deal.analysis && (
+                                        <div className="text-sm space-y-1 mb-4">
+                                            <div>Monthly CF: {formatCurrency(deal.analysis.monthlyCashFlow)}</div>
+                                            <div>CoC: {formatPercent(deal.analysis.cashOnCashReturn)}</div>
+                                            <div>Cap Rate: {formatPercent(deal.analysis.capRate)}</div>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <button onClick={() => onLoad(deal)} className="flex-1 px-3 py-2 rounded text-sm bg-blue-600 hover:bg-blue-700">Load</button>
+                                        <button onClick={() => onDelete(deal.id)} className="flex-1 px-3 py-2 rounded text-sm bg-red-600 hover:bg-red-700">Delete</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Settings Tab
+        function SettingsTab({ defaults, setDefaults, cardClass, inputClass, btnPrimaryClass }) {
+            const handleDefaultChange = (field, value) => {
+                setDefaults(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+            };
+
+            const resetDefaults = () => {
+                const factoryDefaults = {
+                    vacancyRate: 8,
+                    maintenanceReserve: 10,
+                    propertyManagement: 10,
+                    appreciation: 3,
+                    rentIncrease: 2,
+                    expenseInflation: 2,
+                    closingCosts: 3,
+                    downPayment: 25,
+                    interestRate: 7,
+                    loanTerm: 30,
+                };
+                setDefaults(factoryDefaults);
+            };
+
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-bold">Smart Defaults</h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Expense Assumptions</h3>
+                            <div className="space-y-3">
+                                <InputField label="Default Vacancy Rate" value={defaults.vacancyRate} onChange={(v) => handleDefaultChange('vacancyRate', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Default Maintenance Reserve" value={defaults.maintenanceReserve} onChange={(v) => handleDefaultChange('maintenanceReserve', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Default Property Management" value={defaults.propertyManagement} onChange={(v) => handleDefaultChange('propertyManagement', v)} inputClass={inputClass} suffix="%" />
+                            </div>
+                        </div>
+
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Growth Rates</h3>
+                            <div className="space-y-3">
+                                <InputField label="Default Appreciation %" value={defaults.appreciation} onChange={(v) => handleDefaultChange('appreciation', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Default Rent Increase %" value={defaults.rentIncrease} onChange={(v) => handleDefaultChange('rentIncrease', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Default Expense Inflation %" value={defaults.expenseInflation} onChange={(v) => handleDefaultChange('expenseInflation', v)} inputClass={inputClass} suffix="%" />
+                            </div>
+                        </div>
+
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Mortgage Defaults</h3>
+                            <div className="space-y-3">
+                                <InputField label="Default Down Payment %" value={defaults.downPayment} onChange={(v) => handleDefaultChange('downPayment', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Default Interest Rate %" value={defaults.interestRate} onChange={(v) => handleDefaultChange('interestRate', v)} inputClass={inputClass} suffix="%" />
+                                <InputField label="Default Loan Term" value={defaults.loanTerm} onChange={(v) => handleDefaultChange('loanTerm', v)} inputClass={inputClass} suffix="yrs" />
+                            </div>
+                        </div>
+
+                        <div className={cardClass}>
+                            <h3 className="text-lg font-bold mb-4">Purchase Defaults</h3>
+                            <div className="space-y-3">
+                                <InputField label="Default Closing Costs %" value={defaults.closingCosts} onChange={(v) => handleDefaultChange('closingCosts', v)} inputClass={inputClass} suffix="%" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button onClick={resetDefaults} className={`px-6 py-3 rounded font-semibold ${btnPrimaryClass}`}>
+                            🔄 Reset to Factory Defaults
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render App
+        ReactDOM.createRoot(document.getElementById('root')).render(<DealAnalyzer />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LoanCompare | FM Home Loans</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        navy: { 50:'#f0f3f8', 100:'#d9e0ed', 200:'#b3c1db', 300:'#8da2c9', 400:'#6783b7', 500:'#4164a5', 600:'#2d4f8a', 700:'#1B365D', 800:'#142847', 900:'#0d1a30' },
+        gold: { 50:'#fdf9f0', 100:'#f9f0d9', 200:'#f3e1b3', 300:'#edd28d', 400:'#e7c367', 500:'#C5A55A', 600:'#a68a3e', 700:'#876e2e', 800:'#68531f', 900:'#493810' },
+      },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+    }
+  }
+};
+</script>
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: white !important; color: black !important; }
+  .dark body { background: white !important; color: black !important; }
+  * { color: black !important; background: white !important; border-color: #ccc !important; }
+  .print-break { page-break-before: always; }
+}
+.print-only { display: none; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+.dark ::-webkit-scrollbar-thumb { background: #4a5568; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+.tooltip-trigger:hover .tooltip-content { display: block; }
+.winner-glow { box-shadow: 0 0 15px rgba(197,165,90,0.5); }
+.tab-active { border-bottom: 3px solid #C5A55A; color: #C5A55A; }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ──────────────── CALCULATION ENGINE ────────────────
+const Calc = {
+  monthlyPayment(principal, annualRate, termYears) {
+    if (principal <= 0) return 0;
+    if (annualRate <= 0) return principal / (termYears * 12);
+    const r = annualRate / 100 / 12;
+    const n = termYears * 12;
+    return principal * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  },
+
+  amortizationSchedule(principal, annualRate, termYears, extraMonthly = 0, lumpSums = []) {
+    const r = annualRate / 100 / 12;
+    const n = termYears * 12;
+    const basePayment = this.monthlyPayment(principal, annualRate, termYears);
+    let balance = principal;
+    const schedule = [];
+    let totalInterest = 0;
+    let totalPrincipal = 0;
+
+    for (let month = 1; month <= n && balance > 0.01; month++) {
+      const interestPayment = balance * r;
+      let principalPayment = basePayment - interestPayment + extraMonthly;
+      const lump = lumpSums.find(l => l.month === month);
+      if (lump) principalPayment += lump.amount;
+      if (principalPayment > balance) principalPayment = balance;
+      balance -= principalPayment;
+      if (balance < 0) balance = 0;
+      totalInterest += interestPayment;
+      totalPrincipal += principalPayment;
+      schedule.push({ month, payment: interestPayment + principalPayment, principal: principalPayment, interest: interestPayment, balance, totalInterest, totalPrincipal });
+    }
+    return schedule;
+  },
+
+  totalInterest(principal, annualRate, termYears) {
+    const monthly = this.monthlyPayment(principal, annualRate, termYears);
+    return monthly * termYears * 12 - principal;
+  },
+
+  pmiRate(ltv, creditScore) {
+    if (ltv <= 80) return 0;
+    if (creditScore >= 760) return ltv > 95 ? 0.58 : ltv > 90 ? 0.41 : ltv > 85 ? 0.28 : 0.19;
+    if (creditScore >= 740) return ltv > 95 ? 0.73 : ltv > 90 ? 0.53 : ltv > 85 ? 0.37 : 0.25;
+    if (creditScore >= 720) return ltv > 95 ? 0.90 : ltv > 90 ? 0.65 : ltv > 85 ? 0.46 : 0.31;
+    if (creditScore >= 700) return ltv > 95 ? 1.07 : ltv > 90 ? 0.78 : ltv > 85 ? 0.55 : 0.37;
+    if (creditScore >= 680) return ltv > 95 ? 1.24 : ltv > 90 ? 0.90 : ltv > 85 ? 0.65 : 0.44;
+    return ltv > 95 ? 1.56 : ltv > 90 ? 1.15 : ltv > 85 ? 0.82 : 0.56;
+  },
+
+  fhaMIP(loanAmount, termYears, ltv) {
+    const upfront = loanAmount * 0.0175;
+    let annualRate;
+    if (termYears <= 15) {
+      annualRate = ltv <= 90 ? 0.15 : 0.40;
+    } else {
+      annualRate = ltv <= 95 ? 0.50 : 0.55;
+    }
+    if (loanAmount > 726200) annualRate += 0.05;
+    return { upfront, annualRate, monthly: (loanAmount + upfront) * annualRate / 100 / 12 };
+  },
+
+  vaFundingFee(loanAmount, downPaymentPct, firstTimeUse, reserveOrNG) {
+    let rate;
+    if (downPaymentPct >= 10) rate = 1.25;
+    else if (downPaymentPct >= 5) rate = 1.5;
+    else rate = firstTimeUse ? (reserveOrNG ? 2.15 : 2.15) : 3.3;
+    return loanAmount * rate / 100;
+  },
+
+  maxPurchasePrice(annualIncome, monthlyDebts, downPayment, dtiTarget, rate, termYears, taxRate, insuranceRate) {
+    const monthlyIncome = annualIncome / 12;
+    const maxTotalPayment = monthlyIncome * (dtiTarget / 100) - monthlyDebts;
+    if (maxTotalPayment <= 0) return { maxPrice: 0, maxLoan: 0, monthlyPayment: 0 };
+    const monthlyTaxIns = (pct) => pct / 100 / 12;
+    const r = rate / 100 / 12;
+    const n = termYears * 12;
+    const factor = r > 0 ? (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : 1 / n;
+    // maxPayment = loan*factor + loan*(1+dp%)*taxRate/12 + loan*(1+dp%)*insRate/12 approx
+    // Simplified: iterate
+    let lo = 0, hi = 5000000;
+    for (let i = 0; i < 50; i++) {
+      const mid = (lo + hi) / 2;
+      const loan = mid - downPayment;
+      if (loan <= 0) { hi = mid; continue; }
+      const pi = loan * factor;
+      const tax = mid * (taxRate || 1.2) / 100 / 12;
+      const ins = mid * (insuranceRate || 0.35) / 100 / 12;
+      const total = pi + tax + ins;
+      if (total < maxTotalPayment) lo = mid; else hi = mid;
+    }
+    const maxPrice = Math.floor(lo);
+    const maxLoan = maxPrice - downPayment;
+    const pi = Calc.monthlyPayment(maxLoan, rate, termYears);
+    return { maxPrice, maxLoan, monthlyPayment: pi };
+  },
+
+  stateTaxRates: {
+    'AL':0.41,'AK':1.19,'AZ':0.63,'AR':0.62,'CA':0.76,'CO':0.51,'CT':2.14,'DE':0.57,'FL':0.89,
+    'GA':0.92,'HI':0.28,'ID':0.69,'IL':2.27,'IN':0.85,'IA':1.57,'KS':1.41,'KY':0.86,'LA':0.55,
+    'ME':1.36,'MD':1.09,'MA':1.23,'MI':1.54,'MN':1.12,'MS':0.81,'MO':0.97,'MT':0.84,'NE':1.73,
+    'NV':0.60,'NH':2.18,'NJ':2.49,'NM':0.80,'NY':1.72,'NC':0.84,'ND':0.98,'OH':1.56,'OK':0.90,
+    'OR':0.97,'PA':1.58,'RI':1.63,'SC':0.57,'SD':1.31,'TN':0.71,'TX':1.80,'UT':0.63,'VT':1.90,
+    'VA':0.82,'WA':1.03,'WV':0.58,'WI':1.85,'WY':0.61,'DC':0.56
+  }
+};
+
+// ──────────────── UTILITY COMPONENTS ────────────────
+const fmt = (n) => n == null || isNaN(n) ? '$0' : '$' + Math.round(n).toLocaleString();
+const fmtDec = (n, d=2) => n == null || isNaN(n) ? '$0.00' : '$' + n.toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const pct = (n, d=2) => (n||0).toFixed(d) + '%';
+
+function Tooltip({ text, children }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative inline-flex items-center">
+      {children}
+      <span className="ml-1 cursor-help text-gold-500 text-xs font-bold" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>ⓘ</span>
+      {show && <span className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg w-64 text-left border border-gray-600">{text}</span>}
+    </span>
+  );
+}
+
+function Input({ label, value, onChange, prefix, suffix, tooltip, type="number", min, max, step, className="" }) {
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      {label && <label className="text-xs font-medium text-gray-400 dark:text-gray-400">{tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}</label>}
+      <div className="flex items-center bg-gray-800 dark:bg-gray-800 border border-gray-700 rounded-lg overflow-hidden focus-within:border-gold-500 transition-colors">
+        {prefix && <span className="px-2 text-gray-400 text-sm">{prefix}</span>}
+        <input type={type} value={value} onChange={e => onChange(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
+          min={min} max={max} step={step || "any"}
+          className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none w-full"/>
+        {suffix && <span className="px-2 text-gray-400 text-sm">{suffix}</span>}
+      </div>
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, options, tooltip, className="" }) {
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      {label && <label className="text-xs font-medium text-gray-400">{tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}</label>}
+      <select value={value} onChange={e => onChange(e.target.value)}
+        className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-gold-500 transition-colors">
+        {options.map(o => <option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function Card({ title, children, className="", highlight=false }) {
+  return (
+    <div className={`bg-gray-900 dark:bg-gray-900 border rounded-xl p-5 ${highlight ? 'border-gold-500 winner-glow' : 'border-gray-800'} ${className}`}>
+      {title && <h3 className="text-sm font-semibold text-gold-500 uppercase tracking-wider mb-4">{title}</h3>}
+      {children}
+    </div>
+  );
+}
+
+function StatBox({ label, value, sub, highlight }) {
+  return (
+    <div className={`text-center p-3 rounded-lg ${highlight ? 'bg-gold-500/10 border border-gold-500/30' : 'bg-gray-800/50'}`}>
+      <div className={`text-lg font-bold ${highlight ? 'text-gold-400' : 'text-white'}`}>{value}</div>
+      <div className="text-xs text-gray-400 mt-1">{label}</div>
+      {sub && <div className="text-xs text-gray-500 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+// ──────────────── CHART COMPONENT ────────────────
+function ChartCanvas({ type, data, options, height=300 }) {
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    if (chartRef.current) chartRef.current.destroy();
+    if (!canvasRef.current || !data) return;
+    const ctx = canvasRef.current.getContext('2d');
+    chartRef.current = new Chart(ctx, { type, data, options: { ...options, responsive: true, maintainAspectRatio: false,
+      plugins: { ...options?.plugins, legend: { ...options?.plugins?.legend, labels: { color: '#9ca3af', font: { family: 'Inter' } } } },
+      scales: options?.scales ? Object.fromEntries(Object.entries(options.scales).map(([k,v]) => [k, { ...v, ticks: { ...v?.ticks, color: '#9ca3af' }, grid: { ...v?.grid, color: '#374151' } }])) : undefined
+    }});
+    return () => { if (chartRef.current) chartRef.current.destroy(); };
+  }, [type, JSON.stringify(data), JSON.stringify(options)]);
+
+  return <div style={{height}}><canvas ref={canvasRef}/></div>;
+}
+
+// ──────────────── DEFAULT SCENARIO ────────────────
+const defaultScenario = (n) => ({
+  name: `Scenario ${n}`,
+  purchasePrice: n === 1 ? 500000 : n === 2 ? 500000 : 400000,
+  downPayment: n === 1 ? 100000 : n === 2 ? 25000 : 80000,
+  downPaymentPct: n === 1 ? 20 : n === 2 ? 5 : 20,
+  loanType: n === 2 ? 'FHA' : 'Conventional',
+  rate: n === 1 ? 6.75 : n === 2 ? 6.5 : 6.25,
+  term: n === 1 ? 30 : n === 2 ? 30 : 15,
+  points: 0,
+  creditScore: 740,
+  propertyTax: 6000,
+  insurance: 1800,
+  hoa: 0,
+  pmiOverride: null,
+  state: 'NY'
+});
+
+// ──────────────── LOAN COMPARISON ────────────────
+function LoanComparison({ settings }) {
+  const [scenarios, setScenarios] = useState([defaultScenario(1), defaultScenario(2)]);
+  const [dpMode, setDpMode] = useState(['dollar','dollar','dollar']);
+
+  const addScenario = () => { if (scenarios.length < 3) setScenarios([...scenarios, defaultScenario(scenarios.length + 1)]); };
+  const removeScenario = (i) => { if (scenarios.length > 1) { const s = [...scenarios]; s.splice(i,1); setScenarios(s); } };
+
+  const update = (i, field, val) => {
+    const s = [...scenarios];
+    s[i] = { ...s[i], [field]: val };
+    if (field === 'downPayment') s[i].downPaymentPct = s[i].purchasePrice > 0 ? (val / s[i].purchasePrice * 100) : 0;
+    if (field === 'downPaymentPct') s[i].downPayment = s[i].purchasePrice * val / 100;
+    if (field === 'purchasePrice') {
+      if (dpMode[i] === 'pct') s[i].downPayment = val * s[i].downPaymentPct / 100;
+      else s[i].downPaymentPct = val > 0 ? (s[i].downPayment / val * 100) : 0;
+    }
+    setScenarios(s);
+  };
+
+  const results = scenarios.map(s => {
+    const loan = s.purchasePrice - s.downPayment;
+    const ltv = s.purchasePrice > 0 ? (loan / s.purchasePrice * 100) : 0;
+    const pi = Calc.monthlyPayment(loan, s.rate, s.term);
+    const tax = s.propertyTax / 12;
+    const ins = s.insurance / 12;
+
+    let pmiMonthly = 0;
+    let upfrontFees = 0;
+    if (s.loanType === 'Conventional' && ltv > 80) {
+      const pmiAnnual = Calc.pmiRate(ltv, s.creditScore);
+      pmiMonthly = loan * pmiAnnual / 100 / 12;
+    } else if (s.loanType === 'FHA') {
+      const mip = Calc.fhaMIP(loan, s.term, ltv);
+      pmiMonthly = mip.monthly;
+      upfrontFees = mip.upfront;
+    } else if (s.loanType === 'VA') {
+      upfrontFees = Calc.vaFundingFee(loan, s.downPaymentPct, true, false);
+    }
+
+    const pointsCost = loan * s.points / 100;
+    const totalMonthly = pi + tax + ins + s.hoa + pmiMonthly;
+    const totalInterest = Calc.totalInterest(loan, s.rate, s.term);
+    const totalCost = totalInterest + loan + upfrontFees + pointsCost;
+
+    let breakEven = null;
+    if (s.points !== 0) {
+      const piNoPoints = Calc.monthlyPayment(loan, s.rate + s.points * 0.25, s.term);
+      const monthlySavings = piNoPoints - pi;
+      if (monthlySavings > 0) breakEven = Math.ceil(pointsCost / monthlySavings);
+    }
+
+    return { loan, ltv, pi, tax, ins, pmiMonthly, upfrontFees, pointsCost, totalMonthly, totalInterest, totalCost, breakEven };
+  });
+
+  const lowestMonthly = Math.min(...results.map(r => r.totalMonthly));
+  const lowestTotal = Math.min(...results.map(r => r.totalCost));
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-white">Side-by-Side Comparison</h2>
+        {scenarios.length < 3 && <button onClick={addScenario} className="px-4 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm font-medium transition-colors">+ Add Scenario</button>}
+      </div>
+      <div className={`grid gap-5 ${scenarios.length === 1 ? 'grid-cols-1 max-w-lg' : scenarios.length === 2 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 lg:grid-cols-3'}`}>
+        {scenarios.map((s, i) => {
+          const r = results[i];
+          const isWinnerMonthly = r.totalMonthly === lowestMonthly && scenarios.length > 1;
+          const isWinnerTotal = r.totalCost === lowestTotal && scenarios.length > 1;
+          return (
+            <Card key={i} highlight={isWinnerMonthly} className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <input value={s.name} onChange={e => update(i, 'name', e.target.value)}
+                  className="bg-transparent text-white font-semibold text-base outline-none border-b border-transparent hover:border-gray-600 focus:border-gold-500 transition-colors"/>
+                {scenarios.length > 1 && <button onClick={() => removeScenario(i)} className="text-gray-500 hover:text-red-400 text-lg">✕</button>}
+              </div>
+              {(isWinnerMonthly || isWinnerTotal) && (
+                <div className="flex gap-2 mb-3">
+                  {isWinnerMonthly && <span className="text-xs bg-gold-500/20 text-gold-400 px-2 py-1 rounded-full">★ Lowest Monthly</span>}
+                  {isWinnerTotal && <span className="text-xs bg-gold-500/20 text-gold-400 px-2 py-1 rounded-full">★ Lowest Total Cost</span>}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <Input label="Purchase Price" value={s.purchasePrice} onChange={v => update(i,'purchasePrice',v)} prefix="$"/>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-gray-400">
+                      <Tooltip text="The cash you put down at closing. Higher down payments mean lower monthly payments and may eliminate PMI.">Down Payment</Tooltip>
+                    </label>
+                    <button onClick={() => { const m = [...dpMode]; m[i] = m[i]==='dollar'?'pct':'dollar'; setDpMode(m); }}
+                      className="text-xs text-gold-500 hover:text-gold-400">{dpMode[i]==='dollar'?'Switch to %':'Switch to $'}</button>
+                  </div>
+                  {dpMode[i]==='dollar'
+                    ? <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg overflow-hidden focus-within:border-gold-500 transition-colors">
+                        <span className="px-2 text-gray-400 text-sm">$</span>
+                        <input type="number" value={s.downPayment} onChange={e => update(i,'downPayment',parseFloat(e.target.value)||0)} className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none w-full"/>
+                        <span className="px-2 text-gray-500 text-xs">{pct(s.downPaymentPct,1)}</span>
+                      </div>
+                    : <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg overflow-hidden focus-within:border-gold-500 transition-colors">
+                        <input type="number" value={s.downPaymentPct} onChange={e => update(i,'downPaymentPct',parseFloat(e.target.value)||0)} className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none w-full"/>
+                        <span className="px-2 text-gray-400 text-sm">%</span>
+                        <span className="px-2 text-gray-500 text-xs">{fmt(s.downPayment)}</span>
+                      </div>
+                  }
+                </div>
+                <Select label="Loan Type" value={s.loanType} onChange={v => update(i,'loanType',v)}
+                  tooltip="Conventional: standard loans. FHA: lower down payment, requires MIP. VA: for veterans, no down payment needed. USDA: rural areas. Jumbo: above conforming limits."
+                  options={['Conventional','FHA','VA','USDA','Jumbo']}/>
+                <Input label="Interest Rate" value={s.rate} onChange={v => update(i,'rate',v)} suffix="%" step="0.125"/>
+                <Select label="Term" value={s.term} onChange={v => update(i,'term',parseInt(v))}
+                  options={[{value:15,label:'15 years'},{value:20,label:'20 years'},{value:25,label:'25 years'},{value:30,label:'30 years'}]}/>
+                <Input label="Points / Credits" value={s.points} onChange={v => update(i,'points',v)} suffix="pts"
+                  tooltip="Discount points lower your rate (1 point = 1% of loan). Negative values = lender credits toward closing costs."/>
+                <Input label="Credit Score" value={s.creditScore} onChange={v => update(i,'creditScore',v)} min={300} max={850}
+                  tooltip="Affects PMI rates. Higher scores = lower PMI costs."/>
+                <Select label="State" value={s.state} onChange={v => { update(i,'state',v); update(i,'propertyTax', Math.round(s.purchasePrice * (Calc.stateTaxRates[v]||1.2) / 100)); }}
+                  options={Object.keys(Calc.stateTaxRates).map(st => ({value:st,label:st}))}/>
+                <Input label="Property Tax (annual)" value={s.propertyTax} onChange={v => update(i,'propertyTax',v)} prefix="$"
+                  tooltip="Annual property tax. Varies by location — national average is about 1.1% of home value."/>
+                <Input label="Insurance (annual)" value={s.insurance} onChange={v => update(i,'insurance',v)} prefix="$"
+                  tooltip="Annual homeowners insurance premium."/>
+                <Input label="HOA (monthly)" value={s.hoa} onChange={v => update(i,'hoa',v)} prefix="$"
+                  tooltip="Monthly homeowners association fee, if applicable."/>
+              </div>
+              <div className="border-t border-gray-700 pt-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <StatBox label="Monthly P&I" value={fmtDec(r.pi)}/>
+                  <StatBox label="Total Monthly" value={fmtDec(r.totalMonthly)} highlight/>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <StatBox label="Total Interest" value={fmt(r.totalInterest)}/>
+                  <StatBox label="Total Cost" value={fmt(r.totalCost)}/>
+                </div>
+                {r.pmiMonthly > 0 && <StatBox label={s.loanType==='FHA'?'Monthly MIP':'Monthly PMI'} value={fmtDec(r.pmiMonthly)} sub={`LTV: ${pct(r.ltv,1)}`}/>}
+                {r.upfrontFees > 0 && <StatBox label={s.loanType==='FHA'?'Upfront MIP':s.loanType==='VA'?'VA Funding Fee':'Upfront Fees'} value={fmt(r.upfrontFees)}/>}
+                {r.breakEven && <StatBox label="Break-even (Points)" value={`${r.breakEven} months`} sub={`${Math.round(r.breakEven/12)} years ${r.breakEven%12} months`}/>}
+                <div className="text-xs text-gray-500 space-y-1 pt-2">
+                  <div className="flex justify-between"><span>Loan Amount:</span><span>{fmt(r.loan)}</span></div>
+                  <div className="flex justify-between"><span>LTV:</span><span>{pct(r.ltv,1)}</span></div>
+                  <div className="flex justify-between"><span>P&I:</span><span>{fmtDec(r.pi)}</span></div>
+                  <div className="flex justify-between"><span>Tax:</span><span>{fmtDec(r.tax)}</span></div>
+                  <div className="flex justify-between"><span>Insurance:</span><span>{fmtDec(r.ins)}</span></div>
+                  {r.pmiMonthly > 0 && <div className="flex justify-between"><span>PMI/MIP:</span><span>{fmtDec(r.pmiMonthly)}</span></div>}
+                  {s.hoa > 0 && <div className="flex justify-between"><span>HOA:</span><span>{fmtDec(s.hoa)}</span></div>}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────── AFFORDABILITY CALCULATOR ────────────────
+function AffordabilityCalc() {
+  const [income, setIncome] = useState(120000);
+  const [debts, setDebts] = useState(500);
+  const [downPayment, setDownPayment] = useState(100000);
+  const [dti, setDti] = useState(43);
+  const [rate, setRate] = useState(6.75);
+  const [term, setTerm] = useState(30);
+  const [state, setState] = useState('NY');
+  const taxRate = Calc.stateTaxRates[state] || 1.2;
+
+  const scenarios = [0, -0.25, -0.50].map(adj => {
+    const r = rate + adj;
+    const res = Calc.maxPurchasePrice(income, debts, downPayment, dti, r, term, taxRate, 0.35);
+    return { rateAdj: adj, rate: r, ...res };
+  });
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-white mb-6">Affordability Calculator</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card title="Your Finances" className="lg:col-span-1">
+          <div className="space-y-3">
+            <Input label="Annual Gross Income" value={income} onChange={setIncome} prefix="$" tooltip="Your total household income before taxes."/>
+            <Input label="Monthly Debts" value={debts} onChange={setDebts} prefix="$" tooltip="Total monthly debt payments: car loans, student loans, credit card minimums, etc."/>
+            <Input label="Available Down Payment" value={downPayment} onChange={setDownPayment} prefix="$"/>
+            <Input label="Target DTI Ratio" value={dti} onChange={setDti} suffix="%" tooltip="Debt-to-Income ratio. Most lenders cap at 43-50%. This is the percentage of your gross monthly income that goes to debt payments."/>
+            <Input label="Interest Rate" value={rate} onChange={setRate} suffix="%"/>
+            <Select label="Term" value={term} onChange={v => setTerm(parseInt(v))}
+              options={[{value:15,label:'15 years'},{value:20,label:'20 years'},{value:30,label:'30 years'}]}/>
+            <Select label="State" value={state} onChange={setState}
+              options={Object.keys(Calc.stateTaxRates).map(st => ({value:st,label:st}))}/>
+          </div>
+        </Card>
+        <Card title="What You Can Afford" className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {scenarios.map((s, i) => (
+              <div key={i} className={`p-4 rounded-xl ${i===0 ? 'bg-navy-700/50 border border-navy-600' : 'bg-gray-800/50 border border-gray-700'}`}>
+                <div className="text-xs text-gray-400 mb-3">{i === 0 ? 'At Current Rate' : `If Rates Drop ${Math.abs(s.rateAdj).toFixed(2)}%`}</div>
+                <div className="text-sm text-gray-400 mb-1">Rate: <span className="text-gold-400 font-semibold">{pct(s.rate)}</span></div>
+                <div className="space-y-3 mt-4">
+                  <div>
+                    <div className="text-xs text-gray-500">Max Purchase Price</div>
+                    <div className="text-2xl font-bold text-white">{fmt(s.maxPrice)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Max Loan Amount</div>
+                    <div className="text-lg font-semibold text-gray-300">{fmt(s.maxLoan)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Est. Monthly P&I</div>
+                    <div className="text-lg font-semibold text-gray-300">{fmtDec(s.monthlyPayment)}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 p-4 bg-gray-800/30 rounded-lg">
+            <div className="text-xs text-gray-500 mb-2">Monthly Income Breakdown at Current Rate</div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-3 rounded-full bg-navy-600" style={{width: `${Math.min((debts/(income/12))*100, 100)}%`}}/>
+              <div className="h-3 rounded-full bg-gold-500" style={{width: `${Math.min(((scenarios[0].monthlyPayment + scenarios[0].maxPrice*taxRate/100/12 + scenarios[0].maxPrice*0.0035/12)/(income/12))*100, 100)}%`}}/>
+              <div className="h-3 rounded-full bg-gray-600 flex-1"/>
+            </div>
+            <div className="flex gap-4 text-xs text-gray-400">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-navy-600 inline-block"/>Existing Debts ({pct(debts/(income/12)*100,1)})</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gold-500 inline-block"/>Housing ({pct(dti - debts/(income/12)*100, 1)})</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-600 inline-block"/>Remaining</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────── RATE BUYDOWN ANALYZER ────────────────
+function RateBuydown() {
+  const [loanAmount, setLoanAmount] = useState(400000);
+  const [baseRate, setBaseRate] = useState(7.0);
+  const [term, setTerm] = useState(30);
+  const [tab, setTab] = useState('permanent');
+
+  const buydowns = [0.25, 0.50, 0.75, 1.0].map(reduction => {
+    const newRate = baseRate - reduction;
+    const basePayment = Calc.monthlyPayment(loanAmount, baseRate, term);
+    const newPayment = Calc.monthlyPayment(loanAmount, newRate, term);
+    const monthlySavings = basePayment - newPayment;
+    const cost = loanAmount * reduction / 100 * 4; // ~4x per 0.25% typically
+    const breakEvenMonths = monthlySavings > 0 ? Math.ceil(cost / monthlySavings) : Infinity;
+    const totalSavings = monthlySavings * term * 12 - cost;
+    return { reduction, newRate, basePayment, newPayment, monthlySavings, cost, breakEvenMonths, totalSavings };
+  });
+
+  // Temporary buydown calcs
+  const temp21 = (() => {
+    const basePayment = Calc.monthlyPayment(loanAmount, baseRate, term);
+    const y1Payment = Calc.monthlyPayment(loanAmount, baseRate - 2, term);
+    const y2Payment = Calc.monthlyPayment(loanAmount, baseRate - 1, term);
+    const cost = (basePayment - y1Payment) * 12 + (basePayment - y2Payment) * 12;
+    return [
+      { year: 1, rate: baseRate - 2, payment: y1Payment, savings: (basePayment - y1Payment) * 12 },
+      { year: 2, rate: baseRate - 1, payment: y2Payment, savings: (basePayment - y2Payment) * 12 },
+      { year: '3-' + term, rate: baseRate, payment: basePayment, savings: 0 },
+      { year: 'Total Cost', rate: null, payment: null, savings: -cost }
+    ];
+  })();
+
+  const temp321 = (() => {
+    const basePayment = Calc.monthlyPayment(loanAmount, baseRate, term);
+    const y1Payment = Calc.monthlyPayment(loanAmount, baseRate - 3, term);
+    const y2Payment = Calc.monthlyPayment(loanAmount, baseRate - 2, term);
+    const y3Payment = Calc.monthlyPayment(loanAmount, baseRate - 1, term);
+    const cost = (basePayment - y1Payment) * 12 + (basePayment - y2Payment) * 12 + (basePayment - y3Payment) * 12;
+    return [
+      { year: 1, rate: baseRate - 3, payment: y1Payment, savings: (basePayment - y1Payment) * 12 },
+      { year: 2, rate: baseRate - 2, payment: y2Payment, savings: (basePayment - y2Payment) * 12 },
+      { year: 3, rate: baseRate - 1, payment: y3Payment, savings: (basePayment - y3Payment) * 12 },
+      { year: '4-' + term, rate: baseRate, payment: basePayment, savings: 0 },
+      { year: 'Total Cost', rate: null, payment: null, savings: -cost }
+    ];
+  })();
+
+  const chartData = useMemo(() => {
+    const months = Array.from({length: term * 12}, (_, i) => i + 1);
+    const datasets = buydowns.map((b, idx) => {
+      const colors = ['#C5A55A','#4164a5','#60a5fa','#34d399'];
+      let cumSavings = [];
+      months.forEach(m => cumSavings.push(m * b.monthlySavings - b.cost));
+      return { label: `-${b.reduction}%`, data: cumSavings.filter((_, i) => i % 12 === 11), borderColor: colors[idx], backgroundColor: 'transparent', tension: 0.3 };
+    });
+    return { labels: Array.from({length: term}, (_, i) => `Year ${i+1}`), datasets };
+  }, [loanAmount, baseRate, term]);
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-white mb-6">Rate Buydown Analyzer</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        <Input label="Loan Amount" value={loanAmount} onChange={setLoanAmount} prefix="$"/>
+        <Input label="Base Rate" value={baseRate} onChange={setBaseRate} suffix="%"/>
+        <Select label="Term" value={term} onChange={v => setTerm(parseInt(v))}
+          options={[{value:15,label:'15 yrs'},{value:20,label:'20 yrs'},{value:30,label:'30 yrs'}]}/>
+      </div>
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => setTab('permanent')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab==='permanent'?'bg-gold-500 text-navy-900':'bg-gray-800 text-gray-400 hover:text-white'}`}>Permanent Buydown</button>
+        <button onClick={() => setTab('temporary')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab==='temporary'?'bg-gold-500 text-navy-900':'bg-gray-800 text-gray-400 hover:text-white'}`}>Temporary Buydown</button>
+      </div>
+
+      {tab === 'permanent' ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {buydowns.map((b, i) => (
+              <Card key={i}>
+                <div className="text-center mb-3">
+                  <div className="text-lg font-bold text-gold-400">-{b.reduction}%</div>
+                  <div className="text-sm text-gray-400">{pct(baseRate)} → {pct(b.newRate)}</div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-400">Cost:</span><span className="text-white font-medium">{fmt(b.cost)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">New Payment:</span><span className="text-white font-medium">{fmtDec(b.newPayment)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Monthly Savings:</span><span className="text-green-400 font-medium">{fmtDec(b.monthlySavings)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Break-even:</span><span className="text-white font-medium">{b.breakEvenMonths === Infinity ? 'N/A' : `${b.breakEvenMonths} mo (${(b.breakEvenMonths/12).toFixed(1)} yr)`}</span></div>
+                  <div className="flex justify-between border-t border-gray-700 pt-2"><span className="text-gray-400">Net Savings:</span><span className={`font-bold ${b.totalSavings > 0 ? 'text-green-400' : 'text-red-400'}`}>{fmt(b.totalSavings)}</span></div>
+                </div>
+              </Card>
+            ))}
+          </div>
+          <Card title="Cumulative Savings Over Time">
+            <ChartCanvas type="line" data={chartData}
+              options={{ plugins: { title: { display: false } }, scales: { y: { title: { display: true, text: 'Cumulative Savings ($)' } } } }} height={350}/>
+          </Card>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card title="2-1 Temporary Buydown">
+            <p className="text-xs text-gray-400 mb-4">Rate is reduced by 2% in year 1 and 1% in year 2, then returns to the full note rate. The cost is typically paid by the seller or builder.</p>
+            <table className="w-full text-sm">
+              <thead><tr className="text-gray-400 text-xs"><th className="text-left py-2">Year</th><th className="text-right">Rate</th><th className="text-right">Payment</th><th className="text-right">Annual Savings</th></tr></thead>
+              <tbody>
+                {temp21.map((r, i) => (
+                  <tr key={i} className={`border-t border-gray-800 ${i === temp21.length-1 ? 'font-bold text-gold-400' : ''}`}>
+                    <td className="py-2">{r.year}</td>
+                    <td className="text-right">{r.rate !== null ? pct(r.rate) : ''}</td>
+                    <td className="text-right">{r.payment !== null ? fmtDec(r.payment) : ''}</td>
+                    <td className={`text-right ${r.savings < 0 ? 'text-red-400' : r.savings > 0 ? 'text-green-400' : ''}`}>{r.savings !== 0 ? fmt(Math.abs(r.savings)) : '-'}{r.savings < 0 ? ' (cost)' : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+          <Card title="3-2-1 Temporary Buydown">
+            <p className="text-xs text-gray-400 mb-4">Rate is reduced by 3% in year 1, 2% in year 2, and 1% in year 3, then returns to the full note rate.</p>
+            <table className="w-full text-sm">
+              <thead><tr className="text-gray-400 text-xs"><th className="text-left py-2">Year</th><th className="text-right">Rate</th><th className="text-right">Payment</th><th className="text-right">Annual Savings</th></tr></thead>
+              <tbody>
+                {temp321.map((r, i) => (
+                  <tr key={i} className={`border-t border-gray-800 ${i === temp321.length-1 ? 'font-bold text-gold-400' : ''}`}>
+                    <td className="py-2">{r.year}</td>
+                    <td className="text-right">{r.rate !== null ? pct(r.rate) : ''}</td>
+                    <td className="text-right">{r.payment !== null ? fmtDec(r.payment) : ''}</td>
+                    <td className={`text-right ${r.savings < 0 ? 'text-red-400' : r.savings > 0 ? 'text-green-400' : ''}`}>{r.savings !== 0 ? fmt(Math.abs(r.savings)) : '-'}{r.savings < 0 ? ' (cost)' : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────── RENT VS BUY ────────────────
+function RentVsBuy() {
+  const [rent, setRent] = useState(2500);
+  const [rentIncrease, setRentIncrease] = useState(3);
+  const [price, setPrice] = useState(500000);
+  const [dp, setDp] = useState(100000);
+  const [rate, setRate] = useState(6.75);
+  const [term, setTerm] = useState(30);
+  const [appreciation, setAppreciation] = useState(3);
+  const [taxRate, setTaxRate] = useState(1.2);
+  const [insurance, setInsurance] = useState(1800);
+  const [maintenance, setMaintenance] = useState(1);
+  const [marginalTax, setMarginalTax] = useState(24);
+  const [investReturn, setInvestReturn] = useState(7);
+
+  const loan = price - dp;
+  const monthlyPI = Calc.monthlyPayment(loan, rate, term);
+  const schedule = Calc.amortizationSchedule(loan, rate, term);
+
+  const analysis = useMemo(() => {
+    const years = [];
+    let rentTotal = 0, buyTotal = 0;
+    let homeValue = price;
+    let investmentBalance = 0; // if renting, invest the DP + savings
+    let equityFromPayments = 0;
+
+    for (let y = 1; y <= Math.min(term, 30); y++) {
+      const yearlyRent = rent * 12 * Math.pow(1 + rentIncrease/100, y-1);
+      const yearlyTax = homeValue * taxRate / 100;
+      const yearlyIns = insurance * Math.pow(1.03, y-1);
+      const yearlyMaint = homeValue * maintenance / 100;
+      const yearlyInterest = schedule.filter(m => m.month > (y-1)*12 && m.month <= y*12).reduce((s,m) => s + m.interest, 0);
+      const yearlyPrincipal = schedule.filter(m => m.month > (y-1)*12 && m.month <= y*12).reduce((s,m) => s + m.principal, 0);
+      equityFromPayments += yearlyPrincipal;
+      const taxDeduction = yearlyInterest * marginalTax / 100 * (yearlyInterest > 13850 ? 1 : 0); // simplified
+      const yearlyBuyCost = monthlyPI * 12 + yearlyTax + yearlyIns + yearlyMaint - taxDeduction;
+      homeValue *= (1 + appreciation / 100);
+      const equity = homeValue - (loan - equityFromPayments);
+      const monthlySavingsIfRenting = yearlyBuyCost/12 - yearlyRent/12;
+      if (monthlySavingsIfRenting > 0) investmentBalance = (investmentBalance + monthlySavingsIfRenting * 12) * (1 + investReturn/100);
+      else investmentBalance *= (1 + investReturn/100);
+
+      rentTotal += yearlyRent;
+      buyTotal += yearlyBuyCost;
+
+      years.push({ year: y, rent: yearlyRent, buyCost: yearlyBuyCost, homeValue, equity, rentTotal, buyTotal,
+        monthlyRent: yearlyRent/12, monthlyBuy: yearlyBuyCost/12,
+        wealthBuy: equity, wealthRent: dp * Math.pow(1 + investReturn/100, y) + investmentBalance
+      });
+    }
+    return years;
+  }, [rent, rentIncrease, price, dp, rate, term, appreciation, taxRate, insurance, maintenance, marginalTax, investReturn]);
+
+  const breakEvenYear = analysis.findIndex(y => y.monthlyBuy < y.monthlyRent) + 1;
+  const y5 = analysis[4] || {};
+  const y10 = analysis[9] || {};
+
+  const equityChartData = {
+    labels: analysis.filter((_,i) => i % 1 === 0).map(y => `Yr ${y.year}`),
+    datasets: [
+      { label: 'Home Equity', data: analysis.map(y => Math.round(y.equity)), borderColor: '#C5A55A', backgroundColor: 'rgba(197,165,90,0.1)', fill: true, tension: 0.3 },
+      { label: 'Renter Wealth', data: analysis.map(y => Math.round(y.wealthRent)), borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', fill: true, tension: 0.3 }
+    ]
+  };
+
+  const monthlyChartData = {
+    labels: analysis.map(y => `Yr ${y.year}`),
+    datasets: [
+      { label: 'Monthly Rent', data: analysis.map(y => Math.round(y.monthlyRent)), borderColor: '#f87171', tension: 0.3 },
+      { label: 'Monthly Buy Cost', data: analysis.map(y => Math.round(y.monthlyBuy)), borderColor: '#C5A55A', tension: 0.3 }
+    ]
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-white mb-6">Rent vs. Buy Analysis</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <Card title="Renting" className="lg:col-span-1">
+          <div className="space-y-3">
+            <Input label="Current Monthly Rent" value={rent} onChange={setRent} prefix="$"/>
+            <Input label="Annual Rent Increase" value={rentIncrease} onChange={setRentIncrease} suffix="%" tooltip="Average rent increases 3-5% per year nationally."/>
+            <Input label="Investment Return (if renting)" value={investReturn} onChange={setInvestReturn} suffix="%" tooltip="Expected annual return if you invest the down payment instead of buying."/>
+          </div>
+        </Card>
+        <Card title="Buying" className="lg:col-span-1">
+          <div className="space-y-3">
+            <Input label="Purchase Price" value={price} onChange={setPrice} prefix="$"/>
+            <Input label="Down Payment" value={dp} onChange={setDp} prefix="$"/>
+            <Input label="Interest Rate" value={rate} onChange={setRate} suffix="%"/>
+            <Select label="Term" value={term} onChange={v => setTerm(parseInt(v))} options={[{value:15,label:'15 yr'},{value:30,label:'30 yr'}]}/>
+          </div>
+        </Card>
+        <Card title="Assumptions" className="lg:col-span-1">
+          <div className="space-y-3">
+            <Input label="Home Appreciation" value={appreciation} onChange={setAppreciation} suffix="%" tooltip="Historical average is about 3-4% annually."/>
+            <Input label="Property Tax Rate" value={taxRate} onChange={setTaxRate} suffix="%"/>
+            <Input label="Insurance (annual)" value={insurance} onChange={setInsurance} prefix="$"/>
+            <Input label="Maintenance" value={maintenance} onChange={setMaintenance} suffix="% of value" tooltip="Budget 1-2% of home value annually for maintenance and repairs."/>
+            <Input label="Marginal Tax Rate" value={marginalTax} onChange={setMarginalTax} suffix="%" tooltip="Your federal income tax bracket, for estimating mortgage interest deduction benefit."/>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatBox label="Break-even Point" value={breakEvenYear > 0 ? `Year ${breakEvenYear}` : 'N/A'} highlight/>
+        <StatBox label="5-Year Equity" value={fmt(y5.equity)} sub={`Home Value: ${fmt(y5.homeValue)}`}/>
+        <StatBox label="10-Year Equity" value={fmt(y10.equity)} sub={`Home Value: ${fmt(y10.homeValue)}`}/>
+        <StatBox label="10-Year Wealth Diff" value={fmt((y10.wealthBuy||0)-(y10.wealthRent||0))} sub={(y10.wealthBuy||0) > (y10.wealthRent||0) ? 'Buying wins' : 'Renting wins'} highlight/>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card title="Wealth Comparison Over Time">
+          <ChartCanvas type="line" data={equityChartData}
+            options={{ scales: { y: { title: { display: true, text: '$' } } } }} height={300}/>
+        </Card>
+        <Card title="Monthly Cost Comparison">
+          <ChartCanvas type="line" data={monthlyChartData}
+            options={{ scales: { y: { title: { display: true, text: '$/month' } } } }} height={300}/>
+        </Card>
+      </div>
+
+      <Card title="5-Year and 10-Year Wealth Summary" className="mt-6">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-gray-400 text-xs border-b border-gray-700">
+              <th className="text-left py-2">Metric</th><th className="text-right">5 Years</th><th className="text-right">10 Years</th>
+            </tr></thead>
+            <tbody className="text-gray-300">
+              <tr className="border-b border-gray-800"><td className="py-2">Total Rent Paid</td><td className="text-right">{fmt(y5.rentTotal)}</td><td className="text-right">{fmt(y10.rentTotal)}</td></tr>
+              <tr className="border-b border-gray-800"><td className="py-2">Total Buy Cost</td><td className="text-right">{fmt(y5.buyTotal)}</td><td className="text-right">{fmt(y10.buyTotal)}</td></tr>
+              <tr className="border-b border-gray-800"><td className="py-2">Home Equity (Buy)</td><td className="text-right text-gold-400 font-medium">{fmt(y5.wealthBuy)}</td><td className="text-right text-gold-400 font-medium">{fmt(y10.wealthBuy)}</td></tr>
+              <tr className="border-b border-gray-800"><td className="py-2">Investment Value (Rent)</td><td className="text-right text-blue-400 font-medium">{fmt(y5.wealthRent)}</td><td className="text-right text-blue-400 font-medium">{fmt(y10.wealthRent)}</td></tr>
+              <tr className="font-bold"><td className="py-2">Net Advantage</td>
+                <td className={`text-right ${(y5.wealthBuy||0)>(y5.wealthRent||0)?'text-green-400':'text-red-400'}`}>{fmt(Math.abs((y5.wealthBuy||0)-(y5.wealthRent||0)))} {(y5.wealthBuy||0)>(y5.wealthRent||0)?'(Buy)':'(Rent)'}</td>
+                <td className={`text-right ${(y10.wealthBuy||0)>(y10.wealthRent||0)?'text-green-400':'text-red-400'}`}>{fmt(Math.abs((y10.wealthBuy||0)-(y10.wealthRent||0)))} {(y10.wealthBuy||0)>(y10.wealthRent||0)?'(Buy)':'(Rent)'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ──────────────── AMORTIZATION SCHEDULE ────────────────
+function AmortizationView() {
+  const [loan, setLoan] = useState(400000);
+  const [rate, setRate] = useState(6.75);
+  const [term, setTerm] = useState(30);
+  const [extraMonthly, setExtraMonthly] = useState(0);
+  const [lumpMonth, setLumpMonth] = useState(12);
+  const [lumpAmount, setLumpAmount] = useState(0);
+  const [showFullTable, setShowFullTable] = useState(false);
+
+  const lumps = lumpAmount > 0 ? [{ month: lumpMonth, amount: lumpAmount }] : [];
+  const baseSchedule = Calc.amortizationSchedule(loan, rate, term);
+  const extraSchedule = Calc.amortizationSchedule(loan, rate, term, extraMonthly, lumps);
+  const baseTotal = baseSchedule.length > 0 ? baseSchedule[baseSchedule.length-1].totalInterest : 0;
+  const extraTotal = extraSchedule.length > 0 ? extraSchedule[extraSchedule.length-1].totalInterest : 0;
+  const monthsSaved = baseSchedule.length - extraSchedule.length;
+  const interestSaved = baseTotal - extraTotal;
+
+  const chartData = useMemo(() => {
+    const yearly = [];
+    for (let y = 0; y < term; y++) {
+      const yearData = baseSchedule.filter(m => m.month > y*12 && m.month <= (y+1)*12);
+      if (yearData.length === 0) break;
+      yearly.push({
+        year: y + 1,
+        principal: yearData.reduce((s,m) => s + m.principal, 0),
+        interest: yearData.reduce((s,m) => s + m.interest, 0),
+        balance: yearData[yearData.length-1]?.balance || 0
+      });
+    }
+    return {
+      labels: yearly.map(y => `Yr ${y.year}`),
+      datasets: [
+        { label: 'Principal', data: yearly.map(y => Math.round(y.principal)), backgroundColor: '#C5A55A', stack: 'a' },
+        { label: 'Interest', data: yearly.map(y => Math.round(y.interest)), backgroundColor: '#1B365D', stack: 'a' },
+      ]
+    };
+  }, [loan, rate, term]);
+
+  const balanceData = useMemo(() => ({
+    labels: baseSchedule.filter((_,i) => i % 12 === 11).map(m => `Yr ${m.month/12}`),
+    datasets: [
+      { label: 'Standard', data: baseSchedule.filter((_,i) => i % 12 === 11).map(m => Math.round(m.balance)), borderColor: '#4164a5', tension: 0.3 },
+      ...(extraMonthly > 0 || lumpAmount > 0 ? [{
+        label: 'With Extra Payments', data: extraSchedule.filter((_,i) => i % 12 === 11).map(m => Math.round(m.balance)), borderColor: '#C5A55A', tension: 0.3
+      }] : [])
+    ]
+  }), [loan, rate, term, extraMonthly, lumpAmount, lumpMonth]);
+
+  const displaySchedule = showFullTable ? extraSchedule : extraSchedule.filter(m => m.month <= 24 || m.month > extraSchedule.length - 12);
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-white mb-6">Amortization Schedule</h2>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <Input label="Loan Amount" value={loan} onChange={setLoan} prefix="$"/>
+        <Input label="Interest Rate" value={rate} onChange={setRate} suffix="%"/>
+        <Select label="Term" value={term} onChange={v => setTerm(parseInt(v))} options={[{value:15,label:'15 yr'},{value:20,label:'20 yr'},{value:25,label:'25 yr'},{value:30,label:'30 yr'}]}/>
+        <Input label="Extra Monthly" value={extraMonthly} onChange={setExtraMonthly} prefix="$" tooltip="Additional amount paid each month toward principal."/>
+        <div className="grid grid-cols-2 gap-2">
+          <Input label="Lump Sum" value={lumpAmount} onChange={setLumpAmount} prefix="$"/>
+          <Input label="At Month #" value={lumpMonth} onChange={setLumpMonth}/>
+        </div>
+      </div>
+
+      {(extraMonthly > 0 || lumpAmount > 0) && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatBox label="Interest Saved" value={fmt(interestSaved)} highlight/>
+          <StatBox label="Time Saved" value={`${Math.floor(monthsSaved/12)} yr ${monthsSaved%12} mo`} highlight/>
+          <StatBox label="Payoff" value={`${Math.floor(extraSchedule.length/12)} yr ${extraSchedule.length%12} mo`} sub={`vs. ${term} years`}/>
+          <StatBox label="Total Interest" value={fmt(extraTotal)} sub={`vs. ${fmt(baseTotal)}`}/>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card title="Principal vs. Interest (Annual)">
+          <ChartCanvas type="bar" data={chartData}
+            options={{ scales: { x: { stacked: true }, y: { stacked: true, title: { display: true, text: '$' } } } }} height={300}/>
+        </Card>
+        <Card title="Remaining Balance Over Time">
+          <ChartCanvas type="line" data={balanceData}
+            options={{ scales: { y: { title: { display: true, text: '$' } } } }} height={300}/>
+        </Card>
+      </div>
+
+      <Card title="Payment Schedule">
+        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-gray-900"><tr className="text-gray-400 border-b border-gray-700">
+              <th className="text-left py-2 px-2">#</th><th className="text-right px-2">Payment</th><th className="text-right px-2">Principal</th><th className="text-right px-2">Interest</th><th className="text-right px-2">Balance</th>
+            </tr></thead>
+            <tbody>
+              {displaySchedule.map((m, i) => (
+                <tr key={m.month} className={`border-b border-gray-800/50 ${m.month % 12 === 0 ? 'bg-gray-800/30' : ''}`}>
+                  <td className="py-1 px-2 text-gray-500">{m.month}</td>
+                  <td className="text-right px-2">{fmtDec(m.payment)}</td>
+                  <td className="text-right px-2 text-gold-400">{fmtDec(m.principal)}</td>
+                  <td className="text-right px-2 text-gray-400">{fmtDec(m.interest)}</td>
+                  <td className="text-right px-2">{fmtDec(m.balance)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!showFullTable && extraSchedule.length > 36 && (
+          <button onClick={() => setShowFullTable(true)} className="mt-3 text-gold-500 text-sm hover:text-gold-400">Show all {extraSchedule.length} months...</button>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// ──────────────── REFINANCE ANALYZER ────────────────
+function RefinanceAnalyzer() {
+  const [currentBalance, setCurrentBalance] = useState(350000);
+  const [currentRate, setCurrentRate] = useState(7.25);
+  const [currentTerm, setCurrentTerm] = useState(30);
+  const [monthsRemaining, setMonthsRemaining] = useState(324);
+  const [newRate, setNewRate] = useState(6.25);
+  const [newTerm, setNewTerm] = useState(30);
+  const [closingCosts, setClosingCosts] = useState(6000);
+  const [planToStay, setPlanToStay] = useState(7);
+
+  const currentPayment = Calc.monthlyPayment(currentBalance, currentRate, monthsRemaining / 12);
+  const newPayment = Calc.monthlyPayment(currentBalance + closingCosts, newRate, newTerm);
+  const monthlySavings = currentPayment - newPayment;
+  const breakEven = monthlySavings > 0 ? Math.ceil(closingCosts / monthlySavings) : Infinity;
+  const totalCurrentInterest = currentPayment * monthsRemaining - currentBalance;
+  const totalNewInterest = newPayment * newTerm * 12 - (currentBalance + closingCosts);
+  const netSavingsOverStay = monthlySavings * planToStay * 12 - closingCosts;
+  const lifetimeSavings = totalCurrentInterest - totalNewInterest - closingCosts;
+
+  const shouldRefi = monthlySavings > 0 && breakEven < planToStay * 12;
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-white mb-6">Refinance Analyzer</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card title="Current Loan">
+          <div className="space-y-3">
+            <Input label="Current Balance" value={currentBalance} onChange={setCurrentBalance} prefix="$"/>
+            <Input label="Current Rate" value={currentRate} onChange={setCurrentRate} suffix="%"/>
+            <Input label="Months Remaining" value={monthsRemaining} onChange={setMonthsRemaining} tooltip="How many months are left on your current mortgage."/>
+            <Input label="Current Monthly P&I" value={currentPayment.toFixed(2)} onChange={() => {}} prefix="$" tooltip="Calculated from your current balance, rate, and remaining term."/>
+          </div>
+        </Card>
+        <Card title="New Loan">
+          <div className="space-y-3">
+            <Input label="New Rate" value={newRate} onChange={setNewRate} suffix="%"/>
+            <Select label="New Term" value={newTerm} onChange={v => setNewTerm(parseInt(v))}
+              options={[{value:15,label:'15 years'},{value:20,label:'20 years'},{value:25,label:'25 years'},{value:30,label:'30 years'}]}/>
+            <Input label="Closing Costs" value={closingCosts} onChange={setClosingCosts} prefix="$" tooltip="Typical refinance closing costs are 2-5% of the loan amount."/>
+            <Input label="How Long Will You Stay?" value={planToStay} onChange={setPlanToStay} suffix="years" tooltip="How many more years you plan to live in this home. Critical for determining if refinancing makes sense."/>
+          </div>
+        </Card>
+      </div>
+
+      <div className={`p-6 rounded-xl mb-6 border-2 ${shouldRefi ? 'bg-green-900/20 border-green-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-2xl">{shouldRefi ? '✓' : '✗'}</span>
+          <span className="text-xl font-bold text-white">{shouldRefi ? 'Refinancing makes sense!' : 'Refinancing may not be worth it'}</span>
+        </div>
+        <p className="text-sm text-gray-300">
+          {shouldRefi
+            ? `You'll break even in ${breakEven} months (${(breakEven/12).toFixed(1)} years) and save ${fmt(netSavingsOverStay)} over your ${planToStay}-year stay.`
+            : monthlySavings <= 0
+              ? `The new loan would actually cost more per month (${fmtDec(Math.abs(monthlySavings))}/mo higher).`
+              : `Break-even is ${(breakEven/12).toFixed(1)} years, but you only plan to stay ${planToStay} years. You'd lose ${fmt(Math.abs(netSavingsOverStay))}.`
+          }
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatBox label="New Monthly P&I" value={fmtDec(newPayment)}/>
+        <StatBox label="Monthly Savings" value={fmtDec(monthlySavings)} highlight={monthlySavings > 0}/>
+        <StatBox label="Break-even" value={breakEven === Infinity ? 'Never' : `${breakEven} months`}/>
+        <StatBox label={`${planToStay}-Year Net Savings`} value={fmt(netSavingsOverStay)} highlight={netSavingsOverStay > 0}/>
+      </div>
+
+      <Card title="Detailed Comparison">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-gray-400 text-xs border-b border-gray-700">
+              <th className="text-left py-2">Metric</th><th className="text-right">Current Loan</th><th className="text-right">New Loan</th><th className="text-right">Difference</th>
+            </tr></thead>
+            <tbody className="text-gray-300">
+              <tr className="border-b border-gray-800"><td className="py-2">Monthly P&I</td><td className="text-right">{fmtDec(currentPayment)}</td><td className="text-right">{fmtDec(newPayment)}</td><td className={`text-right font-medium ${monthlySavings>0?'text-green-400':'text-red-400'}`}>{fmtDec(monthlySavings)}/mo</td></tr>
+              <tr className="border-b border-gray-800"><td className="py-2">Interest Rate</td><td className="text-right">{pct(currentRate)}</td><td className="text-right">{pct(newRate)}</td><td className="text-right">{pct(currentRate - newRate)}</td></tr>
+              <tr className="border-b border-gray-800"><td className="py-2">Remaining Interest</td><td className="text-right">{fmt(totalCurrentInterest)}</td><td className="text-right">{fmt(totalNewInterest)}</td><td className={`text-right font-medium ${lifetimeSavings>0?'text-green-400':'text-red-400'}`}>{fmt(lifetimeSavings)}</td></tr>
+              <tr className="border-b border-gray-800"><td className="py-2">Closing Costs</td><td className="text-right">-</td><td className="text-right">{fmt(closingCosts)}</td><td className="text-right text-red-400">-{fmt(closingCosts)}</td></tr>
+              <tr className="font-bold"><td className="py-2">Lifetime Net Savings</td><td></td><td></td><td className={`text-right ${lifetimeSavings>0?'text-green-400':'text-red-400'}`}>{fmt(lifetimeSavings)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ──────────────── PRINT VIEW ────────────────
+function PrintView({ borrowerName, setBorrowerName, settings, onClose }) {
+  const handlePrint = () => window.print();
+  return (
+    <div>
+      <div className="no-print flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-white">Print / Share Summary</h2>
+        <button onClick={onClose} className="text-gray-400 hover:text-white">← Back</button>
+      </div>
+      <Card className="no-print mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input label="Borrower Name" value={borrowerName} onChange={setBorrowerName} type="text"/>
+          <div className="flex items-end">
+            <button onClick={handlePrint} className="px-6 py-2 bg-gold-500 hover:bg-gold-400 text-navy-900 rounded-lg font-semibold transition-colors">
+              Print Summary
+            </button>
+          </div>
+        </div>
+      </Card>
+      <div className="print-only">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold" style={{color:'#1B365D'}}>Loan Comparison Summary</h1>
+          <p className="text-sm mt-1">Prepared for: <strong>{borrowerName || 'Valued Client'}</strong></p>
+          <p className="text-xs mt-1 text-gray-500">Prepared by: {settings.officerName} | {settings.company} | NMLS# {settings.nmls}</p>
+          <p className="text-xs text-gray-400 mt-1">Generated {new Date().toLocaleDateString()}</p>
+        </div>
+        <p className="text-xs text-gray-500 mt-8">This is an estimate only and does not constitute a loan offer or commitment. Actual rates, terms, and fees may vary. Please contact your loan officer for a formal Loan Estimate.</p>
+      </div>
+      <div className="no-print text-center p-12 bg-gray-800/30 rounded-xl border border-gray-700 border-dashed">
+        <p className="text-gray-400 mb-2">Click "Print Summary" to generate a clean, branded printout</p>
+        <p className="text-gray-500 text-sm">Tip: Choose "Save as PDF" in the print dialog to create a PDF</p>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────── MAIN APP ────────────────
+function App() {
+  const [tab, setTab] = useState('compare');
+  const [dark, setDark] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [borrowerName, setBorrowerName] = useState('');
+  const [settings, setSettings] = useState({
+    officerName: 'Aryeh Brecher',
+    company: 'FM Home Loans',
+    nmls: '000000',
+    defaultState: 'NY'
+  });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    if (!dark) {
+      document.body.className = 'bg-gray-50 text-gray-900 font-sans min-h-screen';
+    } else {
+      document.body.className = 'bg-gray-950 text-gray-100 font-sans min-h-screen';
+    }
+  }, [dark]);
+
+  const tabs = [
+    { id: 'compare', label: 'Compare', icon: '⚖️' },
+    { id: 'afford', label: 'Affordability', icon: '🏠' },
+    { id: 'buydown', label: 'Rate Buydown', icon: '📉' },
+    { id: 'rentvsbuy', label: 'Rent vs Buy', icon: '🔑' },
+    { id: 'amort', label: 'Amortization', icon: '📊' },
+    { id: 'refi', label: 'Refinance', icon: '🔄' },
+    { id: 'print', label: 'Print/Share', icon: '🖨️' },
+  ];
+
+  return (
+    <div className={`min-h-screen ${dark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      {/* Header */}
+      <header className={`border-b ${dark ? 'bg-gray-900/80 border-gray-800' : 'bg-white border-gray-200'} backdrop-blur-sm sticky top-0 z-50`}>
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-navy-700 flex items-center justify-center">
+                <span className="text-gold-500 font-bold text-sm">FM</span>
+              </div>
+              <div>
+                <h1 className="text-base font-bold tracking-tight">
+                  <span className="text-gold-500">Loan</span><span className={dark ? 'text-white' : 'text-gray-900'}>Compare</span>
+                </h1>
+                <p className={`text-[10px] ${dark ? 'text-gray-500' : 'text-gray-400'} leading-none`}>Aryeh Brecher · Senior Loan Officer · FM Home Loans</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-lg transition-colors ${dark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`} title="Settings">⚙️</button>
+            <button onClick={() => setDark(!dark)} className={`p-2 rounded-lg transition-colors ${dark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`} title={dark ? 'Light mode' : 'Dark mode'}>
+              {dark ? '☀️' : '🌙'}
+            </button>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden p-2 rounded-lg hover:bg-gray-800 text-gray-400">☰</button>
+          </div>
+        </div>
+        {/* Tab navigation */}
+        <div className={`max-w-7xl mx-auto px-4 ${mobileMenuOpen ? 'block' : 'hidden lg:block'}`}>
+          <nav className="flex flex-wrap gap-1 pb-2 lg:pb-0">
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => { setTab(t.id); setMobileMenuOpen(false); }}
+                className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${tab === t.id ? 'tab-active text-gold-500' : dark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'}`}>
+                <span className="mr-1">{t.icon}</span>{t.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <Card title="Settings">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Input label="Officer Name" value={settings.officerName} onChange={v => setSettings({...settings, officerName: v})} type="text"/>
+              <Input label="Company" value={settings.company} onChange={v => setSettings({...settings, company: v})} type="text"/>
+              <Input label="NMLS #" value={settings.nmls} onChange={v => setSettings({...settings, nmls: v})} type="text" tooltip="Your Nationwide Multistate Licensing System number. Required on all client-facing materials."/>
+              <Select label="Default State" value={settings.defaultState} onChange={v => setSettings({...settings, defaultState: v})}
+                options={Object.keys(Calc.stateTaxRates).map(st => ({value:st,label:st}))}/>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {tab === 'compare' && <LoanComparison settings={settings}/>}
+        {tab === 'afford' && <AffordabilityCalc/>}
+        {tab === 'buydown' && <RateBuydown/>}
+        {tab === 'rentvsbuy' && <RentVsBuy/>}
+        {tab === 'amort' && <AmortizationView/>}
+        {tab === 'refi' && <RefinanceAnalyzer/>}
+        {tab === 'print' && <PrintView borrowerName={borrowerName} setBorrowerName={setBorrowerName} settings={settings} onClose={() => setTab('compare')}/>}
+      </main>
+
+      {/* Footer */}
+      <footer className={`border-t ${dark ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-gray-50'} mt-12`}>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-2">
+          <p className={`text-xs ${dark ? 'text-gray-600' : 'text-gray-400'}`}>
+            {settings.officerName} · {settings.company} · NMLS# {settings.nmls}
+          </p>
+          <p className={`text-xs ${dark ? 'text-gray-700' : 'text-gray-300'}`}>
+            This tool provides estimates only and does not constitute a loan offer. Rates and terms subject to change.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

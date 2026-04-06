@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmailFlow — Write Like You</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161822;--bg3:#1c1f2e;--bg4:#242839;--bg5:#2c3044;
+  --border:#2a2e3f;--border2:#363b50;--border3:#484e66;
+  --text:#f0f0f5;--text2:#b0b3c5;--text3:#737691;--text4:#4a4d63;
+  --accent:#6366f1;--accent2:#4f46e5;--accent-glow:rgba(99,102,241,0.15);
+  --green:#00c805;--green2:#00a804;--green-glow:rgba(0,200,5,0.14);
+  --red:#ff3b30;--red-glow:rgba(255,59,48,0.14);
+  --gold:#f0b429;--gold-glow:rgba(240,180,41,0.14);
+  --cyan:#22d3ee;--cyan-glow:rgba(34,211,238,0.14);
+  --purple:#a78bfa;--purple-glow:rgba(167,139,250,0.14);
+  --r:10px;--r2:14px;--r3:20px;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --shadow-md:0 4px 20px rgba(0,0,0,.4);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.5);
+}
+[data-theme="light"]{
+  --bg:#f5f5f7;--bg2:#eaeaed;--bg3:#ffffff;--bg4:#f0f0f2;--bg5:#e5e5e8;
+  --border:#d8d8dc;--border2:#c8c8cc;--border3:#b0b0b5;
+  --text:#1a1a1a;--text2:#444444;--text3:#777777;--text4:#999999;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.08);
+  --shadow-md:0 4px 20px rgba(0,0,0,.12);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.16);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased;background-image:radial-gradient(ellipse at 50% 0%,rgba(99,102,241,0.04) 0%,transparent 60%)}
+[data-theme="light"] body{background-image:radial-gradient(ellipse at 50% 0%,rgba(99,102,241,0.03) 0%,transparent 60%)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+::selection{background:rgba(99,102,241,0.3)}
+textarea:focus,input:focus{outline:none}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--bg4);padding:1px 5px;border-radius:4px;font-size:11px;font-family:'SF Mono',Monaco,monospace}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.fade-in{animation:fadeIn .3s ease}
+
+/* Header */
+.header{background:rgba(15,17,23,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-bottom:1px solid var(--border);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+[data-theme="light"] .header{background:rgba(245,245,247,0.92)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 18px var(--accent-glow);font-weight:800;color:#fff}
+.logo-text{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.5px}
+.header-left{display:flex;align-items:center;gap:20px}
+.nav{display:flex;gap:1px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:3px}
+.nav-btn{background:none;border:none;color:var(--text3);padding:7px 16px;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;transition:all .18s;white-space:nowrap;letter-spacing:.1px}
+.nav-btn:hover{color:var(--text2);background:rgba(255,255,255,0.06)}
+.nav-btn.active{background:var(--bg4);color:var(--text);box-shadow:0 1px 6px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.06)}
+[data-theme="light"] .nav-btn:hover{background:rgba(0,0,0,0.04)}
+[data-theme="light"] .nav-btn.active{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.1)}
+.header-right{display:flex;align-items:center;gap:12px}
+.icon-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text3);width:34px;height:34px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .18s}
+.icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+.sample-badge{background:var(--accent-glow);border:1px solid rgba(99,102,241,0.3);color:var(--accent);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:0.3px}
+.sync-badge{padding:4px 10px;border-radius:8px;font-size:10px;font-weight:600;letter-spacing:0.3px;display:flex;align-items:center;gap:5px}
+.sync-badge.online{background:var(--green-glow);border:1px solid rgba(0,200,5,0.3);color:var(--green)}
+.sync-badge.offline{background:var(--gold-glow);border:1px solid rgba(240,180,41,0.3);color:var(--gold)}
+
+/* Main */
+.main{flex:1;padding:24px 28px 40px;max-width:960px;margin:0 auto;width:100%}
+
+/* Card */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:20px;box-shadow:var(--shadow-sm);transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* Form */
+.textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.65;padding:14px 16px;resize:vertical;min-height:120px;transition:border-color .2s}
+.textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.textarea::placeholder{color:var(--text4)}
+.input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:10px 14px;transition:border-color .2s}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.input::placeholder{color:var(--text4)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;border:none;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 2px 12px var(--accent-glow)}
+.btn-primary:hover{box-shadow:0 4px 20px rgba(99,102,241,0.3);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg5);color:var(--text);border-color:var(--border2)}
+.btn-ghost{background:transparent;color:var(--text3);border:1px solid transparent}
+.btn-ghost:hover{color:var(--text2);background:rgba(255,255,255,0.04)}
+.btn-danger{background:rgba(255,59,48,0.1);color:var(--red);border:1px solid rgba(255,59,48,0.2)}
+.btn-danger:hover{background:rgba(255,59,48,0.18)}
+.btn-sm{padding:6px 12px;font-size:11px;border-radius:8px}
+
+/* Tone pills */
+.tone-pill{padding:7px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text3);transition:all .18s;letter-spacing:0.2px}
+.tone-pill:hover{border-color:var(--border2);color:var(--text2)}
+.tone-pill.active{background:var(--accent-glow);border-color:rgba(99,102,241,0.4);color:var(--accent)}
+
+/* Tweak pills */
+.tweak-pill{padding:5px 12px;border-radius:16px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text3);transition:all .18s}
+.tweak-pill:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+
+/* Output */
+.output-area{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;min-height:140px;font-size:13px;line-height:1.65;color:var(--text);white-space:pre-wrap;word-wrap:break-word}
+
+/* Spinner */
+.spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+.loading-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:140px;color:var(--text3);font-size:12px}
+.loading-dots{display:flex;gap:4px}
+.loading-dots span{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 1.2s ease infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+
+/* Sample list */
+.sample-list{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto}
+.sample-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.5;position:relative;display:flex;gap:10px}
+.sample-item:hover{border-color:var(--border2)}
+.sample-preview{flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:pre-wrap}
+.sample-meta{font-size:10px;color:var(--text4);margin-top:4px}
+.sample-delete{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:6px;border:none;background:transparent;color:var(--text4);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;opacity:0}
+.sample-item:hover .sample-delete{opacity:1}
+.sample-delete:hover{background:var(--red-glow);color:var(--red)}
+.sample-num{width:22px;height:22px;border-radius:6px;background:var(--bg4);color:var(--text4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* History */
+.history-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:all .15s}
+.history-item:hover{border-color:var(--accent);background:var(--accent-glow)}
+.history-label{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;display:flex;justify-content:space-between}
+.history-preview{font-size:12px;color:var(--text3);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.history-meta{font-size:10px;color:var(--text4);margin-top:6px;display:flex;gap:10px}
+
+/* Settings */
+.setting-group{margin-bottom:20px}
+.setting-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px}
+.setting-desc{font-size:11px;color:var(--text4);margin-top:4px;line-height:1.4}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.5}
+.empty-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.empty-desc{font-size:12px;color:var(--text4);max-width:340px;line-height:1.5}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:12px 18px;font-size:12px;font-weight:500;color:var(--text);box-shadow:var(--shadow-md);animation:fadeIn .2s ease;z-index:999;display:flex;align-items:center;gap:8px}
+.toast-success{border-color:rgba(0,200,5,0.3);background:rgba(0,200,5,0.08)}
+.toast-error{border-color:rgba(255,59,48,0.3);background:rgba(255,59,48,0.08)}
+
+/* Auth screen */
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r3);padding:40px;max-width:420px;width:100%;box-shadow:var(--shadow-lg)}
+.auth-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px}
+.auth-logo .logo-icon{width:44px;height:44px;font-size:20px;border-radius:12px}
+.auth-logo .logo-text{font-size:22px}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--text4);font-size:11px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.auth-tabs{display:flex;gap:1px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:3px;margin-bottom:20px}
+.auth-tab{flex:1;padding:8px;border-radius:8px;border:none;background:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.auth-tab.active{background:var(--bg4);color:var(--text)}
+
+/* Section spacing */
+.section-gap{margin-top:16px}
+.section-gap-sm{margin-top:10px}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+
+/* Setup steps */
+.setup-step{display:flex;gap:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--accent-glow);border:1px solid rgba(99,102,241,0.3);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step-content{flex:1;font-size:12px;color:var(--text2);line-height:1.5}
+.step-content strong{color:var(--text)}
+.copy-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'SF Mono',Monaco,monospace;font-size:11px;color:var(--text2);margin-top:8px;position:relative;overflow-x:auto;white-space:pre;line-height:1.5;max-height:200px;overflow-y:auto}
+.copy-btn{position:absolute;top:6px;right:6px;padding:4px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text3);cursor:pointer;font-size:10px;font-weight:600;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{background:var(--bg5);color:var(--text)}
+
+/* Responsive */
+@media(max-width:700px){
+  .header{padding:0 14px;height:52px}
+  .main{padding:16px 14px 32px}
+  .header-left{gap:10px}
+  .logo-text{display:none}
+  .tone-pill{padding:5px 10px;font-size:10px}
+  .auth-card{padding:24px}
+  .nav-btn{padding:6px 10px;font-size:11px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } = React;
+
+// ─── Constants ───────────────────────────────────────────────
+const LS = {
+  API_KEY: 'ef_api_key',
+  MODEL: 'ef_model',
+  SAMPLES: 'ef_samples',
+  HISTORY: 'ef_history',
+  THEME: 'ef_theme',
+  SB_URL: 'ef_sb_url',
+  SB_KEY: 'ef_sb_key',
+};
+
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+const MODELS = [
+  { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 (fast, cheap)', short: 'Haiku 4.5' },
+  { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6 (balanced)', short: 'Sonnet 4.6' },
+  { id: 'claude-opus-4-6', label: 'Opus 4.6 (best quality)', short: 'Opus 4.6' },
+];
+
+const TONES = [
+  { id: 'professional', label: 'Professional', emoji: '💼', desc: 'Polished and business-appropriate' },
+  { id: 'casual', label: 'Casual', emoji: '😊', desc: 'Relaxed and conversational' },
+  { id: 'direct', label: 'Direct', emoji: '🎯', desc: 'Straight to the point' },
+  { id: 'friendly', label: 'Friendly', emoji: '🤝', desc: 'Warm and approachable' },
+  { id: 'concise', label: 'Concise', emoji: '⚡', desc: 'Minimal words, max clarity' },
+];
+
+const TWEAKS = [
+  { id: 'formal', label: '↑ More Formal' },
+  { id: 'shorter', label: '✂ Shorter' },
+  { id: 'warmer', label: '☀ Warmer' },
+  { id: 'detail', label: '+ More Detail' },
+  { id: 'urgent', label: '⏰ More Urgent' },
+  { id: 'softer', label: '🕊 Softer' },
+];
+
+const SQL_SCHEMA = `-- Run this in your Supabase SQL Editor (one time setup)
+-- Go to: SQL Editor > New Query > paste this > Run
+
+-- Email samples table
+create table if not exists email_samples (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  text text not null,
+  word_count int default 0,
+  created_at timestamptz default now()
+);
+
+-- Rewrite history table
+create table if not exists rewrite_history (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  input text not null,
+  output text not null,
+  subject text,
+  tone text default 'professional',
+  created_at timestamptz default now()
+);
+
+-- User preferences (model, theme — NOT api key)
+create table if not exists user_preferences (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  model text default 'claude-haiku-4-5-20251001',
+  theme text default 'dark',
+  updated_at timestamptz default now()
+);
+
+-- Enable Row Level Security
+alter table email_samples enable row level security;
+alter table rewrite_history enable row level security;
+alter table user_preferences enable row level security;
+
+-- RLS Policies: users can only see/modify their own data
+create policy "Users read own samples" on email_samples for select using (auth.uid() = user_id);
+create policy "Users insert own samples" on email_samples for insert with check (auth.uid() = user_id);
+create policy "Users delete own samples" on email_samples for delete using (auth.uid() = user_id);
+
+create policy "Users read own history" on rewrite_history for select using (auth.uid() = user_id);
+create policy "Users insert own history" on rewrite_history for insert with check (auth.uid() = user_id);
+create policy "Users delete own history" on rewrite_history for delete using (auth.uid() = user_id);
+
+create policy "Users read own prefs" on user_preferences for select using (auth.uid() = user_id);
+create policy "Users upsert own prefs" on user_preferences for insert with check (auth.uid() = user_id);
+create policy "Users update own prefs" on user_preferences for update using (auth.uid() = user_id);
+`;
+
+// ─── Prompt Engineering ──────────────────────────────────────
+function buildSystemPrompt(samples, tone) {
+  const sampleBlock = samples.length > 0
+    ? samples.slice(-15).map((s, i) => \`--- SAMPLE \${i + 1} ---\n\${s.text}\`).join('\\n\\n')
+    : '';
+
+  const toneMap = {
+    professional: 'Apply a professional tone: business-appropriate language, measured phrasing, competence. Avoid slang. Use proper greetings and sign-offs.',
+    casual: 'Apply a casual tone: relaxed, conversational, like texting a friendly colleague. Contractions fine. Can be brief. Don\\'t over-formalize.',
+    direct: 'Apply a direct tone: lead with the ask or key info. Cut filler, hedging, unnecessary pleasantries. Clear and decisive.',
+    friendly: 'Apply a friendly tone: warm, approachable, genuine interest. Use their name. Personal touch where natural. Encouraging.',
+    concise: 'Apply a concise tone: absolute minimum words. Short sentences. No fluff, filler, or redundancy. Every word earns its place.',
+  };
+
+  return \`You are an expert email ghostwriter. Rewrite drafts or expand bullet points into polished emails that sound EXACTLY like the user writes.
+
+\${samples.length > 0 ? \`## THE USER'S WRITING STYLE
+
+Study these real emails carefully. Pay extremely close attention to:
+- Greeting style (Hi/Hey/Hello/none, name usage)
+- Sign-off pattern (Thanks/Best/Cheers/none, name inclusion)
+- Sentence length patterns (long flowing vs short punchy)
+- Punctuation habits (exclamation marks, dashes, ellipses, Oxford commas)
+- Vocabulary level (simple/complex, jargon, abbreviations)
+- Paragraph structure (blocks vs short paragraphs vs one-liners)
+- Formality level (contractions, slang)
+- Request style (direct asks vs soft suggestions vs questions)
+- Transition phrases they favor
+- Lists vs prose preference
+- Verbal tics, pet phrases, signature expressions
+
+\${sampleBlock}
+
+## STYLE MATCHING RULES
+1. Mirror their ACTUAL vocabulary — don't upgrade simple words to fancy or vice versa
+2. Match sentence rhythm — short sentences beget short sentences
+3. Copy greeting/closing pattern EXACTLY — if they never say "Best regards," neither do you
+4. Match contraction usage — if they use them, you use them; if not, don't
+5. Match punctuation — if they end casually with no punctuation, do the same
+6. Preserve their directness level — don't add hedging they wouldn't use
+7. If they have a signature phrase, use it naturally where appropriate
+8. Do NOT make it sound "AI-polished" — natural imperfection matching their style beats robotic perfection\` : \`## NO STYLE SAMPLES YET
+No writing samples provided. Write a natural, well-crafted email. Avoid sounding robotic or generic. Use natural language, vary sentence length, don't over-structure with bullet points unless the content requires it.\`}
+
+## TONE
+\${toneMap[tone] || toneMap.professional}
+
+## OUTPUT RULES
+- Return ONLY the email body text. No meta-commentary, no "Here's the rewrite:", no explanations.
+- If input includes subject line context, be aware of it but only output the body.
+- If input is bullet points, expand into a natural email — don't just wrap bullets in sentences.
+- If input is a draft, rewrite to be better while preserving intent and key information.
+- Preserve specific names, dates, numbers, facts exactly.
+- Output must be ready to paste into an email client.\`;
+}
+
+function buildTweakPrompt(tweak) {
+  const map = {
+    formal: 'Make this email more formal. Upgrade casual language, remove contractions, use business phrasing. Same content and intent.',
+    shorter: 'Make this significantly shorter. Cut unnecessary words, combine sentences, remove filler. Keep all essential info.',
+    warmer: 'Make this warmer and more personable. Add genuine warmth without being sycophantic. More human connection.',
+    detail: 'Add more detail and context. Flesh out key points, add specifics, more comprehensive but well-organized.',
+    urgent: 'Convey more urgency. Time-sensitivity and importance without being aggressive.',
+    softer: 'Soften the tone. More diplomatic requests, cushioning language, make recipient feel respected.',
+  };
+  return map[tweak] || '';
+}
+
+// ─── Claude API ──────────────────────────────────────────────
+async function callClaude(apiKey, model, systemPrompt, userMessage) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model, max_tokens: 2048, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || \`API error \${resp.status}\`);
+  }
+  const data = await resp.json();
+  return data.content?.[0]?.text || '';
+}
+
+// ─── Helpers ─────────────────────────────────────────────────
+const wc = s => s.trim() ? s.trim().split(/\s+/).length : 0;
+const cc = s => s.length;
+function timeAgo(ts) {
+  const d = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(d / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+// ─── Toast ───────────────────────────────────────────────────
+function Toast({ message, type, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2800); return () => clearTimeout(t); }, []);
+  return <div className={\`toast \${type === 'success' ? 'toast-success' : type === 'error' ? 'toast-error' : ''}\`}>{type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'} {message}</div>;
+}
+
+// ─── CopyBlock ───────────────────────────────────────────────
+function CopyBlock({ text, maxH }) {
+  const [copied, setCopied] = useState(false);
+  const doCopy = () => { navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); };
+  return (
+    <div className="copy-block" style={maxH ? { maxHeight: maxH } : {}}>
+      <button className="copy-btn" onClick={doCopy}>{copied ? '✓ Copied' : 'Copy'}</button>
+      {text}
+    </div>
+  );
+}
+
+// ─── Supabase Context ────────────────────────────────────────
+const SBContext = createContext(null);
+
+function useSupabase() {
+  return useContext(SBContext);
+}
+
+// ─── Main App ────────────────────────────────────────────────
+function App() {
+  // Supabase connection
+  const [sbUrl, setSbUrl] = useState(() => lsGet(LS.SB_URL, ''));
+  const [sbKey, setSbKey] = useState(() => lsGet(LS.SB_KEY, ''));
+  const [sb, setSb] = useState(null);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [cloudConnected, setCloudConnected] = useState(false);
+
+  // Core state
+  const [tab, setTab] = useState('rewrite');
+  const [theme, setTheme] = useState(() => lsGet(LS.THEME, 'dark'));
+  const [apiKey, setApiKey] = useState(() => lsGet(LS.API_KEY, ''));
+  const [model, setModel] = useState(() => lsGet(LS.MODEL, 'claude-haiku-4-5-20251001'));
+  const [samples, setSamples] = useState(() => lsGet(LS.SAMPLES, []));
+  const [history, setHistory] = useState(() => lsGet(LS.HISTORY, []));
+
+  // Rewrite
+  const [inputText, setInputText] = useState('');
+  const [subjectLine, setSubjectLine] = useState('');
+  const [tone, setTone] = useState('professional');
+  const [output, setOutput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Style
+  const [sampleInput, setSampleInput] = useState('');
+  const [bulkMode, setBulkMode] = useState(false);
+
+  // Auth
+  const [authTab, setAuthTab] = useState('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPass, setAuthPass] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authMsg, setAuthMsg] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, type = 'success') => setToast({ msg, type, k: Date.now() });
+
+  // ─── Supabase Init ─────────────────────────────────────────
+  useEffect(() => {
+    lsSet(LS.SB_URL, sbUrl);
+    lsSet(LS.SB_KEY, sbKey);
+
+    if (!sbUrl || !sbKey) {
+      setSb(null);
+      setUser(null);
+      setCloudConnected(false);
+      setAuthLoading(false);
+      return;
+    }
+
+    try {
+      const client = window.supabase.createClient(sbUrl, sbKey);
+      setSb(client);
+
+      client.auth.getSession().then(({ data }) => {
+        setUser(data?.session?.user || null);
+        setCloudConnected(!!data?.session?.user);
+        setAuthLoading(false);
+      });
+
+      const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+        setUser(session?.user || null);
+        setCloudConnected(!!session?.user);
+      });
+
+      return () => subscription?.unsubscribe();
+    } catch (e) {
+      console.error('Supabase init error:', e);
+      setSb(null);
+      setAuthLoading(false);
+    }
+  }, [sbUrl, sbKey]);
+
+  // ─── Cloud Sync: Load ──────────────────────────────────────
+  useEffect(() => {
+    if (!sb || !user) return;
+
+    // Load samples from cloud
+    sb.from('email_samples').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data) {
+          const cloudSamples = data.map(d => ({ id: d.id, text: d.text, added: new Date(d.created_at).getTime(), cloudId: d.id }));
+          setSamples(cloudSamples);
+          lsSet(LS.SAMPLES, cloudSamples);
+        }
+      });
+
+    // Load history
+    sb.from('rewrite_history').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          const cloudHist = data.map(d => ({
+            id: d.id, input: d.input, output: d.output, subject: d.subject, tone: d.tone,
+            timestamp: new Date(d.created_at).getTime(), cloudId: d.id,
+          }));
+          setHistory(cloudHist);
+          lsSet(LS.HISTORY, cloudHist);
+        }
+      });
+
+    // Load preferences
+    sb.from('user_preferences').select('*').eq('user_id', user.id).single()
+      .then(({ data }) => {
+        if (data) {
+          if (data.model) { setModel(data.model); lsSet(LS.MODEL, data.model); }
+          if (data.theme) { setTheme(data.theme); lsSet(LS.THEME, data.theme); }
+        }
+      });
+  }, [sb, user]);
+
+  // ─── Persist locally ───────────────────────────────────────
+  useEffect(() => { lsSet(LS.API_KEY, apiKey); }, [apiKey]);
+  useEffect(() => { lsSet(LS.MODEL, model); }, [model]);
+  useEffect(() => { lsSet(LS.SAMPLES, samples); }, [samples]);
+  useEffect(() => { lsSet(LS.HISTORY, history); }, [history]);
+  useEffect(() => {
+    lsSet(LS.THEME, theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // ─── Cloud Sync: Save prefs ────────────────────────────────
+  const syncPrefs = useCallback((m, t) => {
+    if (!sb || !user) return;
+    sb.from('user_preferences').upsert({ user_id: user.id, model: m, theme: t, updated_at: new Date().toISOString() });
+  }, [sb, user]);
+
+  useEffect(() => { syncPrefs(model, theme); }, [model, theme, syncPrefs]);
+
+  // ─── Keyboard shortcut ─────────────────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && tab === 'rewrite' && inputText.trim() && apiKey && !loading) {
+        e.preventDefault();
+        handleRewrite();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [tab, inputText, apiKey, loading, tone, samples, model, subjectLine]);
+
+  // ─── Auth handlers ─────────────────────────────────────────
+  const handleAuth = async (type) => {
+    if (!sb) { setAuthError('Connect Supabase first in Settings'); return; }
+    setAuthBusy(true); setAuthError(''); setAuthMsg('');
+
+    try {
+      if (type === 'magic') {
+        const { error } = await sb.auth.signInWithOtp({ email: authEmail });
+        if (error) throw error;
+        setAuthMsg('Check your email for the login link!');
+      } else if (type === 'signup') {
+        const { error } = await sb.auth.signUp({ email: authEmail, password: authPass });
+        if (error) throw error;
+        setAuthMsg('Check your email to confirm your account!');
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email: authEmail, password: authPass });
+        if (error) throw error;
+      }
+    } catch (e) {
+      setAuthError(e.message);
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (sb) await sb.auth.signOut();
+    setUser(null);
+    setCloudConnected(false);
+  };
+
+  // ─── Rewrite handler ──────────────────────────────────────
+  const handleRewrite = async () => {
+    if (!apiKey) { showToast('Add your Claude API key in Settings', 'error'); setTab('settings'); return; }
+    if (!inputText.trim()) return;
+    setLoading(true); setError(''); setOutput('');
+
+    try {
+      const sys = buildSystemPrompt(samples, tone);
+      const msg = subjectLine ? \`Subject line context: "\${subjectLine}"\n\nEmail draft/notes:\n\${inputText}\` : inputText;
+      const result = await callClaude(apiKey, model, sys, msg);
+      setOutput(result);
+
+      const entry = { id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), input: inputText.slice(0, 500), output: result, tone, subject: subjectLine, timestamp: Date.now() };
+      const newHist = [entry, ...history].slice(0, 10);
+      setHistory(newHist);
+
+      // Sync to cloud
+      if (sb && user) {
+        sb.from('rewrite_history').insert({ user_id: user.id, input: entry.input, output: result, subject: subjectLine || null, tone });
+      }
+    } catch (err) {
+      setError(err.message);
+      showToast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTweak = async (tweakId) => {
+    if (!output || loading) return;
+    setLoading(true); setError('');
+    try {
+      const sys = buildSystemPrompt(samples, tone);
+      const result = await callClaude(apiKey, model, sys, buildTweakPrompt(tweakId) + '\n\nCurrent email:\n' + output);
+      setOutput(result);
+      setHistory(prev => { const u = [...prev]; if (u[0]) u[0] = { ...u[0], output: result, timestamp: Date.now() }; return u; });
+    } catch (err) {
+      setError(err.message); showToast(err.message, 'error');
+    } finally { setLoading(false); }
+  };
+
+  const handleCopy = () => navigator.clipboard.writeText(output).then(() => showToast('Copied to clipboard'));
+
+  // ─── Sample handlers ──────────────────────────────────────
+  const addSample = () => {
+    if (!sampleInput.trim()) return;
+    let newItems;
+    if (bulkMode) {
+      const parts = sampleInput.split(/\n{3,}|^---+$/m).filter(s => s.trim());
+      newItems = parts.map(t => ({ id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2), text: t.trim(), added: Date.now() }));
+    } else {
+      newItems = [{ id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2), text: sampleInput.trim(), added: Date.now() }];
+    }
+    setSamples(prev => [...prev, ...newItems]);
+    showToast(\`Added \${newItems.length} sample\${newItems.length > 1 ? 's' : ''}\`);
+    setSampleInput('');
+
+    // Cloud sync
+    if (sb && user) {
+      newItems.forEach(item => {
+        sb.from('email_samples').insert({ user_id: user.id, text: item.text, word_count: wc(item.text) });
+      });
+    }
+  };
+
+  const deleteSample = (id) => {
+    setSamples(prev => prev.filter(s => s.id !== id));
+    if (sb && user) {
+      sb.from('email_samples').delete().eq('id', id).eq('user_id', user.id);
+    }
+  };
+
+  const clearAllSamples = () => {
+    if (!confirm('Clear all email samples?')) return;
+    setSamples([]);
+    if (sb && user) sb.from('email_samples').delete().eq('user_id', user.id);
+  };
+
+  const loadHistoryItem = (item) => {
+    setInputText(item.input);
+    setOutput(item.output);
+    setTone(item.tone);
+    if (item.subject) setSubjectLine(item.subject);
+    setTab('rewrite');
+  };
+
+  const clearAllData = () => {
+    if (!confirm('Clear ALL data? API key, samples, history, Supabase connection.')) return;
+    setApiKey(''); setSamples([]); setHistory([]); setModel('claude-haiku-4-5-20251001');
+    setSbUrl(''); setSbKey('');
+    Object.values(LS).forEach(k => localStorage.removeItem(k));
+    if (sb && user) {
+      sb.from('email_samples').delete().eq('user_id', user.id);
+      sb.from('rewrite_history').delete().eq('user_id', user.id);
+      sb.from('user_preferences').delete().eq('user_id', user.id);
+      sb.auth.signOut();
+    }
+    setUser(null); setSb(null); setCloudConnected(false);
+    showToast('All data cleared');
+  };
+
+  // ─── Render ────────────────────────────────────────────────
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div className="header">
+        <div className="header-left">
+          <div className="logo">
+            <div className="logo-icon">✉</div>
+            <div className="logo-text">EmailFlow</div>
+          </div>
+          <div className="nav">
+            {[
+              { id: 'rewrite', label: '✍ Rewrite' },
+              { id: 'style', label: '📧 My Style' },
+              { id: 'history', label: '📋 History' },
+              { id: 'settings', label: '⚙ Settings' },
+            ].map(t => (
+              <button key={t.id} className={\`nav-btn \${tab === t.id ? 'active' : ''}\`} onClick={() => setTab(t.id)}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="header-right">
+          {samples.length > 0 && <div className="sample-badge">{samples.length} sample{samples.length !== 1 ? 's' : ''}</div>}
+          {sb && (
+            <div className={\`sync-badge \${cloudConnected ? 'online' : 'offline'}\`}>
+              {cloudConnected ? '☁ Synced' : '☁ Offline'}
+            </div>
+          )}
+          <button className="icon-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title="Toggle theme">
+            {theme === 'dark' ? '☀' : '🌙'}
+          </button>
+        </div>
+      </div>
+
+      <div className="main">
+        {/* ═══ REWRITE TAB ═══ */}
+        {tab === 'rewrite' && (
+          <div className="tab-content">
+            {!apiKey && (
+              <div className="card section-gap-sm" style={{ borderColor: 'rgba(240,180,41,0.3)', background: 'rgba(240,180,41,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--gold)' }}>
+                  ⚠ Add your Claude API key in <button className="btn-ghost btn-sm" style={{ color: 'var(--gold)', textDecoration: 'underline', padding: '0 4px' }} onClick={() => setTab('settings')}>Settings</button>
+                </div>
+              </div>
+            )}
+
+            {samples.length === 0 && apiKey && (
+              <div className="card section-gap-sm" style={{ borderColor: 'rgba(99,102,241,0.2)', background: 'rgba(99,102,241,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--accent)' }}>
+                  💡 Add sent emails in <button className="btn-ghost btn-sm" style={{ color: 'var(--accent)', textDecoration: 'underline', padding: '0 4px' }} onClick={() => setTab('style')}>My Style</button> so rewrites sound like you
+                </div>
+              </div>
+            )}
+
+            <div className="section-gap">
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', marginBottom: 6, letterSpacing: '0.3px' }}>SUBJECT (optional)</div>
+              <input className="input" placeholder="Email subject line for context..." value={subjectLine} onChange={e => setSubjectLine(e.target.value)} />
+            </div>
+
+            <div className="section-gap">
+              <div className="flex-between" style={{ marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.3px' }}>YOUR DRAFT OR BULLET POINTS</div>
+                <div style={{ fontSize: 10, color: 'var(--text4)' }}>{wc(inputText)} words · {cc(inputText)} chars</div>
+              </div>
+              <textarea className="textarea" style={{ minHeight: 160 }}
+                placeholder={"Paste your draft email or write bullet points...\n\nExamples:\n• Need to follow up with John about Q3 report\n• Deadline is Friday\n• Ask if he needs help with analysis\n\nOr paste a full draft you want polished."}
+                value={inputText} onChange={e => setInputText(e.target.value)} />
+            </div>
+
+            <div className="section-gap">
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', marginBottom: 8, letterSpacing: '0.3px' }}>TONE</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {TONES.map(t => (
+                  <button key={t.id} className={\`tone-pill \${tone === t.id ? 'active' : ''}\`} onClick={() => setTone(t.id)} title={t.desc}>
+                    {t.emoji} {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="section-gap" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button className="btn btn-primary" onClick={handleRewrite} disabled={loading || !inputText.trim() || !apiKey}
+                style={{ flex: 1, padding: '12px 20px', fontSize: 13 }}>
+                {loading ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Rewriting...</> : '✍ Rewrite Email'}
+              </button>
+              <span style={{ fontSize: 10, color: 'var(--text4)', background: 'var(--bg4)', padding: '3px 7px', borderRadius: 4, fontFamily: 'monospace' }}>Ctrl+↵</span>
+            </div>
+
+            {(output || loading || error) && (
+              <div className="section-gap fade-in">
+                <div className="flex-between" style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.3px' }}>RESULT</div>
+                  {output && <div style={{ fontSize: 10, color: 'var(--text4)' }}>{wc(output)} words · {cc(output)} chars</div>}
+                </div>
+                {loading ? (
+                  <div className="output-area">
+                    <div className="loading-overlay"><div className="loading-dots"><span /><span /><span /></div><div>Rewriting in your voice...</div></div>
+                  </div>
+                ) : error ? (
+                  <div className="output-area" style={{ borderColor: 'rgba(255,59,48,0.3)' }}><div style={{ color: 'var(--red)', fontSize: 12 }}>⚠ {error}</div></div>
+                ) : (
+                  <>
+                    <div className="output-area">{output}</div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+                      <button className="btn btn-secondary btn-sm" onClick={handleCopy}>📋 Copy</button>
+                      <button className="btn btn-secondary btn-sm" onClick={handleRewrite}>🔄 Try Again</button>
+                      <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px', alignSelf: 'center' }} />
+                      {TWEAKS.map(tw => <button key={tw.id} className="tweak-pill" onClick={() => handleTweak(tw.id)} disabled={loading}>{tw.label}</button>)}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ MY STYLE TAB ═══ */}
+        {tab === 'style' && (
+          <div className="tab-content">
+            <div className="card">
+              <div className="card-title">
+                📧 Add Your Sent Emails
+                <div style={{ marginLeft: 'auto' }}>
+                  <button className={\`btn-sm \${bulkMode ? 'btn btn-secondary' : 'btn btn-ghost'}\`} style={{ fontSize: 10 }} onClick={() => setBulkMode(!bulkMode)}>
+                    {bulkMode ? '✓ Bulk Mode' : 'Bulk Mode'}
+                  </button>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12, lineHeight: 1.5 }}>
+                Paste emails you've actually sent. The more samples, the better EmailFlow learns your voice — vocabulary, punctuation, greetings, sign-offs, sentence patterns.
+                {bulkMode && <span style={{ color: 'var(--accent)', display: 'block', marginTop: 4 }}>Bulk mode: separate emails with 3+ blank lines or "---"</span>}
+              </div>
+              <textarea className="textarea" style={{ minHeight: 140 }}
+                placeholder={bulkMode ? "Paste multiple emails separated by blank lines or ---" : "Paste one of your sent emails here..."}
+                value={sampleInput} onChange={e => setSampleInput(e.target.value)} />
+              <div className="section-gap-sm">
+                <button className="btn btn-primary" onClick={addSample} disabled={!sampleInput.trim()}>+ Add Sample{bulkMode ? 's' : ''}</button>
+              </div>
+            </div>
+
+            <div className="section-gap">
+              <div className="flex-between" style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '1px' }}>Your Samples ({samples.length})</div>
+                {samples.length > 0 && <button className="btn btn-danger btn-sm" onClick={clearAllSamples}>Clear All</button>}
+              </div>
+              {samples.length === 0 ? (
+                <div className="card">
+                  <div className="empty-state">
+                    <div className="empty-icon">📭</div>
+                    <div className="empty-title">No samples yet</div>
+                    <div className="empty-desc">5-10 samples is a good start, 15+ is ideal for nailing your voice.</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="sample-list">
+                  {samples.map((s, i) => (
+                    <div key={s.id} className="sample-item">
+                      <div className="sample-num">{i + 1}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="sample-preview">{s.text}</div>
+                        <div className="sample-meta">{wc(s.text)} words · Added {timeAgo(s.added)}</div>
+                      </div>
+                      <button className="sample-delete" onClick={() => deleteSample(s.id)} title="Remove">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ HISTORY TAB ═══ */}
+        {tab === 'history' && (
+          <div className="tab-content">
+            <div className="flex-between" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '1px' }}>Recent Rewrites ({history.length})</div>
+              {history.length > 0 && <button className="btn btn-danger btn-sm" onClick={() => { if (confirm('Clear history?')) { setHistory([]); if (sb && user) sb.from('rewrite_history').delete().eq('user_id', user.id); } }}>Clear</button>}
+            </div>
+            {history.length === 0 ? (
+              <div className="card"><div className="empty-state"><div className="empty-icon">📋</div><div className="empty-title">No history yet</div><div className="empty-desc">Your rewritten emails will appear here. Last 10 are saved.</div></div></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {history.map(item => (
+                  <div key={item.id} className="history-item" onClick={() => loadHistoryItem(item)}>
+                    <div className="history-label">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {item.subject && <span style={{ color: 'var(--text2)' }}>{item.subject}</span>}
+                        <span className="tone-pill active" style={{ padding: '2px 8px', fontSize: 9, cursor: 'default' }}>{TONES.find(t => t.id === item.tone)?.emoji} {item.tone}</span>
+                      </span>
+                      <span style={{ color: 'var(--text4)', fontSize: 10, fontWeight: 400 }}>{timeAgo(item.timestamp)}</span>
+                    </div>
+                    <div className="history-preview">{item.output}</div>
+                    <div className="history-meta"><span>Input: {wc(item.input)} words</span><span>Output: {wc(item.output)} words</span></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ SETTINGS TAB ═══ */}
+        {tab === 'settings' && (
+          <div className="tab-content">
+            {/* ── Cloud Sync Section ── */}
+            <div className="card">
+              <div className="card-title">☁ Cloud Sync (Multi-Device)</div>
+              {!sbUrl ? (
+                <>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, marginBottom: 16 }}>
+                    Connect a free Supabase project to sync your email samples and history across all your devices. Your Claude API key always stays local on each device — never stored in the cloud.
+                  </div>
+
+                  <details style={{ marginBottom: 16 }}>
+                    <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', cursor: 'pointer', marginBottom: 12 }}>📖 Setup Guide (5 minutes, one time)</summary>
+                    <div style={{ marginTop: 12 }}>
+                      <div className="setup-step">
+                        <div className="step-num">1</div>
+                        <div className="step-content">
+                          Go to <a href="https://supabase.com" target="_blank">supabase.com</a> and create a free account. Click <strong>"New Project"</strong>. Name it anything (e.g. "emailflow"). Pick a password and a region close to you.
+                        </div>
+                      </div>
+                      <div className="setup-step">
+                        <div className="step-num">2</div>
+                        <div className="step-content">
+                          In your project, go to <strong>SQL Editor</strong> (left sidebar). Click <strong>"New Query"</strong>, paste the SQL below, and click <strong>"Run"</strong>.
+                          <CopyBlock text={SQL_SCHEMA} maxH="180px" />
+                        </div>
+                      </div>
+                      <div className="setup-step">
+                        <div className="step-num">3</div>
+                        <div className="step-content">
+                          Go to <strong>Settings → API</strong> (left sidebar). Copy your <strong>Project URL</strong> and <strong>anon/public key</strong> and paste them below.
+                        </div>
+                      </div>
+                      <div className="setup-step">
+                        <div className="step-num">4</div>
+                        <div className="step-content">
+                          In <strong>Authentication → URL Configuration</strong>, add the URL where you host this app to <strong>"Redirect URLs"</strong> (e.g. <code>https://yoursite.netlify.app</code> or <code>http://localhost</code> for local use). This allows magic link login to work.
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+
+                  <div className="setting-group">
+                    <div className="setting-label">Supabase Project URL</div>
+                    <input className="input" placeholder="https://abc123xyz.supabase.co" value={sbUrl} onChange={e => setSbUrl(e.target.value.trim())} />
+                  </div>
+                  <div className="setting-group">
+                    <div className="setting-label">Supabase Anon Key</div>
+                    <input className="input" type="password" style={{ fontFamily: 'monospace' }} placeholder="eyJhbGciOiJIUzI1NiIs..." value={sbKey} onChange={e => setSbKey(e.target.value.trim())} />
+                    <div className="setting-desc">The anon key is safe to use in the browser — it only allows operations permitted by your Row Level Security policies.</div>
+                  </div>
+                </>
+              ) : !user ? (
+                <>
+                  <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>✓ Supabase connected — sign in to sync</div>
+
+                  <div className="auth-tabs">
+                    <button className={\`auth-tab \${authTab === 'login' ? 'active' : ''}\`} onClick={() => setAuthTab('login')}>Sign In</button>
+                    <button className={\`auth-tab \${authTab === 'signup' ? 'active' : ''}\`} onClick={() => setAuthTab('signup')}>Sign Up</button>
+                  </div>
+
+                  <div className="setting-group">
+                    <input className="input" type="email" placeholder="your@email.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} style={{ marginBottom: 8 }} />
+                    <input className="input" type="password" placeholder="Password" value={authPass} onChange={e => setAuthPass(e.target.value)} style={{ marginBottom: 8 }} />
+                  </div>
+
+                  {authError && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>⚠ {authError}</div>}
+                  {authMsg && <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 10 }}>✓ {authMsg}</div>}
+
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {authTab === 'login' ? (
+                      <>
+                        <button className="btn btn-primary" onClick={() => handleAuth('login')} disabled={authBusy || !authEmail || !authPass}>
+                          {authBusy ? 'Signing in...' : 'Sign In'}
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => handleAuth('magic')} disabled={authBusy || !authEmail}>
+                          ✉ Magic Link (no password)
+                        </button>
+                      </>
+                    ) : (
+                      <button className="btn btn-primary" onClick={() => handleAuth('signup')} disabled={authBusy || !authEmail || !authPass}>
+                        {authBusy ? 'Creating account...' : 'Create Account'}
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setSbUrl(''); setSbKey(''); }}>← Disconnect Supabase</button>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>☁ Synced as {user.email}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 12, lineHeight: 1.5 }}>Your email samples and history sync across all devices where you sign in. API key stays local on each device.</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-secondary btn-sm" onClick={handleSignOut}>Sign Out</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { handleSignOut(); setSbUrl(''); setSbKey(''); }}>Disconnect Supabase</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── API Key ── */}
+            <div className="card section-gap">
+              <div className="card-title">🔑 Claude API Key</div>
+              <div className="setting-group">
+                <input className="input" type="password" style={{ fontFamily: 'monospace', letterSpacing: 1 }} placeholder="sk-ant-api03-..."
+                  value={apiKey} onChange={e => setApiKey(e.target.value)} autoComplete="off" />
+                <div className="setting-desc">Stored locally on THIS device only. Sent directly to Anthropic's API, never stored in any database. Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+              </div>
+            </div>
+
+            {/* ── Model ── */}
+            <div className="card section-gap">
+              <div className="card-title">🤖 Model</div>
+              <div className="setting-group">
+                {MODELS.map(m => (
+                  <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', fontSize: 13 }}>
+                    <input type="radio" name="model" checked={model === m.id} onChange={() => setModel(m.id)} style={{ accentColor: 'var(--accent)' }} />
+                    <span style={{ color: model === m.id ? 'var(--text)' : 'var(--text3)' }}>{m.label}</span>
+                  </label>
+                ))}
+                <div className="setting-desc">Haiku is fastest and cheapest. Sonnet/Opus produce higher quality rewrites.</div>
+              </div>
+            </div>
+
+            {/* ── Theme ── */}
+            <div className="card section-gap">
+              <div className="card-title">🎨 Appearance</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className={\`btn \${theme === 'dark' ? 'btn-primary' : 'btn-secondary'}\`} onClick={() => setTheme('dark')}>🌙 Dark</button>
+                <button className={\`btn \${theme === 'light' ? 'btn-primary' : 'btn-secondary'}\`} onClick={() => setTheme('light')}>☀ Light</button>
+              </div>
+            </div>
+
+            {/* ── Data ── */}
+            <div className="card section-gap">
+              <div className="card-title">📊 Data</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+                <span style={{ marginRight: 20 }}><strong style={{ color: 'var(--text2)' }}>{samples.length}</strong> samples</span>
+                <span style={{ marginRight: 20 }}><strong style={{ color: 'var(--text2)' }}>{history.length}</strong> rewrites</span>
+                <span>Model: <strong style={{ color: 'var(--text2)' }}>{MODELS.find(m => m.id === model)?.short}</strong></span>
+              </div>
+              <button className="btn btn-danger" onClick={clearAllData}>🗑 Clear All Data</button>
+              <div className="setting-desc" style={{ marginTop: 8 }}>Removes everything: API key, samples, history, and Supabase connection.</div>
+            </div>
+
+            {/* ── CORS Info ── */}
+            <div className="card section-gap" style={{ borderColor: 'rgba(99,102,241,0.15)', background: 'rgba(99,102,241,0.03)' }}>
+              <div className="card-title" style={{ color: 'var(--accent)' }}>ℹ How It Works</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
+                This app calls the Anthropic API directly from your browser using the <code>anthropic-dangerous-direct-browser-access</code> header. Your API key goes straight to Anthropic — no middleman. Cloud sync (optional) uses Supabase for email samples and history only. Your API key never leaves your device.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {toast && <Toast key={toast.k} message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

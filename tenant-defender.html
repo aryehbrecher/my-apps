@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TenantShield AI — Fight Back Against Your Landlord</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@700;800;900&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0a1628;
+    --navy-light: #0f1d32;
+    --navy-mid: #162544;
+    --navy-deep: #060f1d;
+    --accent: #C87533;
+    --accent-hover: #b5682d;
+    --green: #16a34a;
+    --green-light: #22c55e;
+    --red: #dc2626;
+    --red-light: #f87171;
+    --purple: #7c3aed;
+    --purple-light: #a78bfa;
+    --white: #ffffff;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --text: #1a1a2e;
+    --text-secondary: #64748b;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif; background: var(--white); color: var(--text); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+  /* Minimal animations */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .fade-up { animation: fadeUp 0.5s ease-out forwards; }
+  .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+  /* Buttons */
+  .btn-primary { background: var(--accent); color: white; border: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s; font-family: inherit; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: transparent; color: var(--text-secondary); border: 1px solid var(--gray-300); padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s; font-family: inherit; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; }
+  .btn-secondary:hover { border-color: var(--gray-500); color: var(--text); }
+
+  /* Dark variant buttons for dark sections */
+  .dark .btn-secondary, .btn-secondary-dark { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.2); }
+  .dark .btn-secondary:hover, .btn-secondary-dark:hover { color: white; border-color: rgba(255,255,255,0.4); }
+
+  .btn-cta { background: var(--accent); color: white; border: none; padding: 16px 36px; border-radius: 8px; font-size: 17px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; font-family: inherit; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-cta:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-cta:active { transform: translateY(0); }
+
+  /* Input — light theme */
+  .input-field { background: var(--white); border: 1px solid var(--gray-300); border-radius: 8px; padding: 12px 16px; color: var(--text); font-size: 16px; width: 100%; font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s; min-height: 48px; }
+  .input-field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,117,51,0.1); }
+  .input-field::placeholder { color: var(--gray-500); }
+  textarea.input-field { resize: vertical; min-height: 120px; line-height: 1.6; }
+  select.input-field { appearance: auto; }
+
+  /* Dark input variant for analysis page */
+  .input-dark { background: var(--navy-light); border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+  .input-dark:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,117,51,0.15); }
+  .input-dark::placeholder { color: rgba(255,255,255,0.4); }
+
+  /* Layout */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .section { padding: 96px 0; }
+  .section-label { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  .section-title { font-family: 'Crimson Pro', Georgia, serif; font-size: clamp(28px, 4vw, 40px); font-weight: 800; line-height: 1.2; margin-bottom: 12px; color: var(--text); letter-spacing: -0.02em; }
+  .section-subtitle { color: var(--text-secondary); font-size: 17px; line-height: 1.6; max-width: 560px; }
+
+  /* Cards — clean SaaS style */
+  .card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+  /* Agent cards — dark themed, keep for product section */
+  .agent-card { border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+  .agent-defense { background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.3); }
+  .agent-opposing { background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.3); }
+  .agent-judge { background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.3); }
+
+  .agent-badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .badge-defense { background: rgba(22,163,74,0.15); color: #22c55e; }
+  .badge-opposing { background: rgba(220,38,38,0.15); color: #f87171; }
+  .badge-judge { background: rgba(124,58,237,0.15); color: #a78bfa; }
+
+  .agent-text { color: rgba(255,255,255,0.8); line-height: 1.7; font-size: 15px; }
+  .agent-text strong { color: #fff; }
+
+  /* Typing indicator */
+  .typing-dots { display: inline-flex; gap: 4px; padding: 8px 0; }
+  .typing-dots span { width: 7px; height: 7px; border-radius: 50%; animation: pulse 1.4s infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Progress bar */
+  .progress-bar { height: 6px; background: var(--navy-mid); border-radius: 3px; overflow: hidden; margin: 12px 0; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+  /* Stat cards */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 48px; }
+  .stat-card { text-align: center; padding: 32px 16px; }
+  .stat-number { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+  .stat-label { color: var(--text-secondary); font-size: 14px; margin-top: 8px; line-height: 1.4; }
+
+  /* Issue categories */
+  .issue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 24px; }
+  .issue-card { padding: 24px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; position: relative; }
+  .issue-card:hover { border-color: var(--accent); }
+  .issue-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .issue-icon { font-size: 28px; margin-bottom: 10px; }
+  .issue-title { font-weight: 600; font-size: 16px; margin-bottom: 4px; color: var(--text); }
+  .issue-desc { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+
+  /* Nav */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 16px 0; transition: background 0.3s, padding 0.3s; }
+  .nav.scrolled { background: rgba(10, 22, 40, 0.95); backdrop-filter: blur(12px); padding: 12px 0; }
+  .nav-inner { display: flex; justify-content: space-between; align-items: center; }
+  .nav-logo { font-size: 20px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px; }
+  .nav-logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 32px; align-items: center; }
+  .nav-link { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; cursor: pointer; }
+  .nav-link:hover { color: white; }
+
+  /* Hero — dark section */
+  .hero { min-height: 100vh; display: flex; align-items: center; position: relative; padding-top: 80px; background: var(--navy); color: white; }
+  .hero-content { position: relative; z-index: 1; max-width: 720px; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(200,117,51,0.3); border-radius: 50px; padding: 8px 20px; font-size: 13px; color: var(--accent); font-weight: 500; margin-bottom: 32px; }
+  .hero h1 { font-family: 'Crimson Pro', Georgia, serif; font-size: clamp(48px, 7vw, 80px); font-weight: 900; line-height: 1.08; margin-bottom: 24px; letter-spacing: -0.03em; color: white; }
+  .hero h1 .highlight { color: var(--accent); }
+  .hero p { font-size: 19px; color: rgba(255,255,255,0.6); line-height: 1.7; margin-bottom: 40px; max-width: 540px; }
+  .hero-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hero-proof { margin-top: 56px; display: flex; gap: 32px; flex-wrap: wrap; }
+  .hero-proof-item { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.5); font-size: 14px; }
+  .hero-proof-item svg { color: var(--green-light); flex-shrink: 0; }
+
+  /* Trust bar — subtle, honest */
+  .trust-bar { padding: 48px 0; border-bottom: 1px solid var(--gray-200); background: var(--gray-50); }
+  .trust-bar-label { text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--gray-500); margin-bottom: 24px; }
+  .trust-logos { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; }
+  .trust-logo { font-size: 15px; font-weight: 600; color: var(--gray-500); white-space: nowrap; letter-spacing: -0.01em; }
+
+  /* Features section */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+  .feature-card { padding: 32px 24px; transition: box-shadow 0.2s; }
+  .feature-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .feature-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 22px; }
+  .feature-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+  .feature-desc { color: var(--text-secondary); font-size: 14px; line-height: 1.65; }
+
+  /* Testimonials — light */
+  .testimonials-section { padding: 96px 0; background: var(--gray-50); }
+  .testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+  .testimonial-card { padding: 32px 24px; display: flex; flex-direction: column; transition: box-shadow 0.2s; }
+  .testimonial-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .testimonial-stars { color: #f59e0b; font-size: 14px; letter-spacing: 1px; margin-bottom: 12px; }
+  .testimonial-quote { font-size: 15px; line-height: 1.7; color: var(--text-secondary); flex-grow: 1; margin-bottom: 20px; }
+  .testimonial-author { display: flex; align-items: center; gap: 12px; padding-top: 16px; border-top: 1px solid var(--gray-200); }
+  .testimonial-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; }
+  .testimonial-name { font-weight: 600; font-size: 14px; color: var(--text); }
+  .testimonial-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .tenant-counter { text-align: center; margin-top: 48px; }
+  .counter-number { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 700; color: var(--accent); display: inline-block; }
+  .counter-label { font-size: 15px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* FAQ section */
+  .faq-section { padding: 96px 0; background: var(--white); }
+  .faq-list { max-width: 720px; margin: 40px auto 0; }
+  .faq-item { border-bottom: 1px solid var(--gray-200); }
+  .faq-question { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; cursor: pointer; transition: color 0.2s; }
+  .faq-question:hover { color: var(--accent); }
+  .faq-question h3 { font-size: 16px; font-weight: 600; line-height: 1.4; flex: 1; padding-right: 16px; }
+  .faq-chevron { flex-shrink: 0; transition: transform 0.3s; color: var(--gray-500); }
+  .faq-chevron.open { transform: rotate(180deg); color: var(--accent); }
+  .faq-answer { overflow: hidden; max-height: 0; transition: max-height 0.35s ease, padding 0.35s; padding: 0; }
+  .faq-answer.open { max-height: 300px; padding: 0 0 20px 0; }
+  .faq-answer p { color: var(--text-secondary); font-size: 15px; line-height: 1.7; }
+
+  /* Disclaimer */
+  .disclaimer { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; font-size: 13px; color: var(--gray-700); line-height: 1.6; margin-top: 24px; }
+  .disclaimer strong { color: #92400e; }
+  .disclaimer-dark { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.15); color: rgba(255,255,255,0.6); }
+  .disclaimer-dark strong { color: #fbbf24; }
+
+  /* Chat area */
+  .chat-area { max-height: 600px; overflow-y: auto; padding: 16px 0; }
+
+  /* Round indicator */
+  .round-indicator { text-align: center; padding: 12px; margin: 16px 0; }
+  .round-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(200,117,51,0.1); border: 1px solid rgba(200,117,51,0.2); border-radius: 4px; padding: 6px 16px; font-size: 13px; color: var(--accent); font-weight: 600; }
+
+  /* Final verdict */
+  .verdict-card { background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.3); border-radius: 12px; padding: 32px; margin-top: 24px; }
+  .verdict-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; color: white; }
+
+  /* Strength indicator */
+  .strength-banner { padding: 24px; border-radius: 8px; margin-bottom: 24px; text-align: center; }
+  .strength-banner.strong { background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.3); }
+  .strength-banner.moderate { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); }
+  .strength-banner.weak { background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.3); }
+  .strength-emoji { font-size: 40px; margin-bottom: 8px; }
+  .strength-label { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .strength-label.strong { color: #22c55e; }
+  .strength-label.moderate { color: #fbbf24; }
+  .strength-label.weak { color: #f87171; }
+  .strength-score { font-size: 14px; color: rgba(255,255,255,0.5); }
+
+  /* Timeline */
+  .timeline-section { margin-top: 40px; }
+  .timeline-title { font-size: 20px; font-weight: 700; margin-bottom: 24px; color: white; }
+  .timeline { position: relative; padding-left: 32px; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: rgba(200,117,51,0.3); }
+  .timeline-step { margin-bottom: 20px; position: relative; }
+  .timeline-dot { position: absolute; left: -29px; top: 8px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--navy); }
+  .timeline-content { padding: 16px 20px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; transition: border-color 0.2s; cursor: pointer; }
+  .timeline-content:hover { border-color: rgba(200,117,51,0.3); }
+  .timeline-header { display: flex; justify-content: space-between; align-items: center; }
+  .timeline-step-number { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(200,117,51,0.15); color: var(--accent); font-weight: 700; font-size: 13px; margin-right: 10px; }
+  .timeline-step-title { font-weight: 600; font-size: 15px; flex-grow: 1; color: rgba(255,255,255,0.9); }
+  .timeline-step-time { background: rgba(200,117,51,0.1); border: 1px solid rgba(200,117,51,0.2); border-radius: 4px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--accent); margin-right: 10px; }
+  .timeline-chevron { color: rgba(255,255,255,0.4); transition: transform 0.3s; }
+  .timeline-chevron.open { transform: rotate(180deg); }
+  .timeline-detail { color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.6; display: none; margin-top: 12px; }
+  .timeline-detail.show { display: block; }
+
+  /* Help button */
+  .help-button { position: fixed; bottom: 24px; right: 24px; width: 48px; height: 48px; border-radius: 50%; background: var(--accent); border: none; color: white; font-size: 20px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: background 0.2s; }
+  .help-button:hover { background: var(--accent-hover); }
+  .help-panel { position: fixed; bottom: 80px; right: 24px; width: 320px; background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 20px; z-index: 9999; max-height: 400px; overflow-y: auto; box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+  .help-header { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+  .help-content { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+  .help-suggestions { display: flex; flex-direction: column; gap: 8px; }
+  .help-suggestion { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: 10px 12px; font-size: 13px; color: var(--text); cursor: pointer; transition: background 0.2s; }
+  .help-suggestion:hover { background: var(--gray-100); }
+
+  /* Share section — dark variant */
+  .share-section { margin-top: 32px; padding: 28px; background: rgba(200,117,51,0.06); border: 1px solid rgba(200,117,51,0.2); border-radius: 8px; text-align: center; }
+  .share-heading { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: white; }
+  .share-subtext { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 20px; }
+  .share-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .share-button { background: rgba(200,117,51,0.1); border: 1px solid rgba(200,117,51,0.25); color: var(--accent); padding: 10px 18px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-family: inherit; }
+  .share-button:hover { background: rgba(200,117,51,0.2); }
+
+  /* Sticky status bar (mobile) */
+  .sticky-status-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 20px; background: rgba(10, 22, 40, 0.95); border-top: 1px solid rgba(255,255,255,0.06); z-index: 500; display: flex; align-items: center; gap: 10px; }
+  .sticky-status-bar .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s infinite; }
+  .sticky-status-bar .status-text { flex-grow: 1; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); }
+  .sticky-status-bar .status-progress { height: 3px; flex-shrink: 0; width: 80px; background: var(--navy-mid); border-radius: 2px; overflow: hidden; }
+  .sticky-status-bar .status-progress-fill { height: 100%; background: var(--accent); width: 100%; }
+  @media (min-width: 768px) { .sticky-status-bar { display: none; } }
+
+  /* Signup card */
+  .signup-card { max-width: 440px; margin: 0 auto; padding: 40px 36px; }
+  .signup-card h2 { font-size: 24px; font-weight: 700; margin-bottom: 6px; text-align: center; color: var(--text); }
+  .signup-card .subtitle { color: var(--text-secondary); text-align: center; margin-bottom: 28px; font-size: 15px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Footer — dark, clean */
+  .footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 64px 0 32px; background: var(--navy-deep); color: white; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 48px; }
+  .footer-brand-logo { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: white; }
+  .footer-brand-logo span { color: var(--accent); }
+  .footer-brand-desc { color: rgba(255,255,255,0.4); font-size: 14px; line-height: 1.6; max-width: 260px; }
+  .footer-col-title { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 16px; }
+  .footer-links { display: flex; flex-direction: column; gap: 10px; }
+  .footer-link { color: rgba(255,255,255,0.4); font-size: 14px; text-decoration: none; cursor: pointer; transition: color 0.2s; }
+  .footer-link:hover { color: rgba(255,255,255,0.8); }
+  .footer-bottom { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .footer-bottom-text { color: rgba(255,255,255,0.3); font-size: 13px; }
+  .footer-bottom-links { display: flex; gap: 20px; }
+  .footer-bottom-link { color: rgba(255,255,255,0.3); font-size: 13px; text-decoration: none; cursor: pointer; transition: color 0.2s; }
+  .footer-bottom-link:hover { color: rgba(255,255,255,0.6); }
+
+  /* Win Meter */
+  .win-meter-container { margin-bottom: 20px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px 20px; }
+  .win-meter-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .win-meter-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 8px; }
+  .win-meter-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; transition: color 0.5s; }
+  .win-meter-track { height: 8px; background: var(--navy-mid); border-radius: 4px; overflow: hidden; }
+  .win-meter-fill { height: 100%; border-radius: 4px; transition: width 1s ease, background 0.5s; }
+  .win-meter-zones { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: rgba(255,255,255,0.3); }
+
+  /* Campaign section */
+  .campaign-section { padding: 96px 0; background: var(--navy); color: white; }
+  .campaign-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 48px; }
+  .campaign-card { border-radius: 12px; overflow: hidden; position: relative; min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; padding: 28px 24px; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; }
+  .campaign-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .campaign-card::before { content: ''; position: absolute; inset: 0; z-index: 1; }
+  .campaign-card-1 { background: linear-gradient(180deg, rgba(10,22,40,0.2) 0%, rgba(10,22,40,0.85) 70%), linear-gradient(135deg, #1a3a5c 0%, #0a1628 100%); border: 1px solid rgba(200,117,51,0.3); }
+  .campaign-card-1::before { background: linear-gradient(180deg, transparent 30%, rgba(10,22,40,0.9) 100%); }
+  .campaign-card-2 { background: linear-gradient(180deg, rgba(10,22,40,0.2) 0%, rgba(10,22,40,0.85) 70%), linear-gradient(135deg, #2a1a0a 0%, #0a1628 100%); border: 1px solid rgba(200,117,51,0.3); }
+  .campaign-card-2::before { background: linear-gradient(180deg, transparent 30%, rgba(10,22,40,0.9) 100%); }
+  .campaign-card-3 { background: linear-gradient(180deg, rgba(10,22,40,0.2) 0%, rgba(10,22,40,0.85) 70%), linear-gradient(135deg, #0a2840 0%, #0a1628 100%); border: 1px solid rgba(200,117,51,0.3); }
+  .campaign-card-3::before { background: linear-gradient(180deg, transparent 30%, rgba(10,22,40,0.9) 100%); }
+  .campaign-card-4 { background: linear-gradient(180deg, rgba(10,22,40,0.2) 0%, rgba(10,22,40,0.85) 70%), linear-gradient(135deg, #1a2a1a 0%, #0a1628 100%); border: 1px solid rgba(200,117,51,0.3); }
+  .campaign-card-4::before { background: linear-gradient(180deg, transparent 30%, rgba(10,22,40,0.9) 100%); }
+  .campaign-card-content { position: relative; z-index: 2; }
+  .campaign-card-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 22px; }
+  .campaign-headline { font-family: 'Crimson Pro', Georgia, serif; font-size: 22px; font-weight: 900; line-height: 1.15; margin-bottom: 10px; color: white; text-transform: uppercase; letter-spacing: 0.02em; }
+  .campaign-desc { color: rgba(255,255,255,0.65); font-size: 14px; line-height: 1.6; }
+  .campaign-stat { font-family: 'JetBrains Mono', monospace; font-size: 36px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  @media (max-width: 900px) { .campaign-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .campaign-grid { grid-template-columns: 1fr; } .campaign-card { min-height: 260px; } }
+
+  /* Pricing */
+  .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 720px; margin: 0 auto; }
+  .pricing-card { padding: 36px 28px; text-align: left; }
+  .pricing-card.popular { border-top: 3px solid var(--accent); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .testimonial-grid { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero-buttons { flex-direction: column; }
+    .nav-links { display: none; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    .footer-brand { grid-column: 1 / -1; }
+    .footer-bottom { flex-direction: column; text-align: center; }
+  }
+  @media (max-width: 640px) {
+    .issue-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .signup-card { padding: 28px 20px; }
+    .share-buttons { flex-direction: column; }
+    .section { padding: 64px 0; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .footer-grid { grid-template-columns: 1fr; }
+  }
+
+  .font-serif { font-family: 'Crimson Pro', Georgia, serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ─── SVG Icons ─── */
+const ShieldIcon = () => (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>);
+const CheckIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>);
+const ArrowRight = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>);
+const AlertIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>);
+const ChevronDown = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>);
+const StarIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>);
+
+/* ─── NY Landlord-Tenant Law Knowledge Base ─── */
+const NY_LAW = {
+  statutes: {
+    RPL_227a: "Real Property Law §227-a: Tenant may not be evicted for good-faith complaints about health/safety violations.",
+    RPL_235b: "Real Property Law §235-b: Warranty of Habitability — landlord must maintain premises fit for human habitation.",
+    RPL_235e: "Real Property Law §235-e: Retaliatory eviction is prohibited within specified timeframe of tenant complaint.",
+    RPL_226b: "Real Property Law §226-b: Right to sublease in buildings with 4+ units with landlord consent (cannot unreasonably withhold).",
+    HPD: "NYC Admin Code §27-2005: Landlord must maintain in good repair, including heat (Oct 1–May 31: 68°F day / 62°F night).",
+    HSTPA: "Housing Stability and Tenant Protection Act of 2019: Limits security deposits to 1 month rent, requires return within 14 days.",
+    rentStab: "Rent Stabilization Code: Covers buildings with 6+ units built before 1974. Limits rent increases to RGB percentages.",
+    succession: "9 NYCRR §2523.5: Succession rights for family members who lived with tenant of record for 2+ years.",
+    overcharge: "CPLR §213-a: 6-year statute of limitations for rent overcharge claims. Tenant entitled to treble damages if willful.",
+  },
+  commonIssues: [
+    { id: "repairs", title: "Repairs & Habitability", icon: "🔧", desc: "Landlord refusing to fix broken heating, plumbing, mold, pests, or structural issues", lawRefs: ["RPL_235b", "HPD"] },
+    { id: "eviction", title: "Wrongful Eviction", icon: "🚪", desc: "Illegal lockout, eviction without court order, or retaliatory eviction after complaints", lawRefs: ["RPL_227a", "RPL_235e"] },
+    { id: "deposit", title: "Security Deposit", icon: "💰", desc: "Landlord withholding deposit, charging excessive deposit, or not returning within 14 days", lawRefs: ["HSTPA"] },
+    { id: "rent", title: "Rent Overcharge", icon: "📈", desc: "Being charged above legal rent for stabilized apartment, illegal fees, or improper increases", lawRefs: ["rentStab", "overcharge"] },
+    { id: "harassment", title: "Landlord Harassment", icon: "⚠️", desc: "Cutting services, threats, construction harassment, or buyout pressure tactics", lawRefs: ["RPL_227a"] },
+    { id: "lease", title: "Lease Violations", icon: "📋", desc: "Unfair lease terms, subletting disputes, roommate issues, or lease renewal problems", lawRefs: ["RPL_226b"] },
+  ]
+};
+
+/* ─── Wizard Question Flows ─── */
+const WIZARD_FLOWS = {
+  repairs: [
+    { id: "what_broken", q: "What's the problem?", hint: "Pick the one that fits best.", type: "single",
+      options: ["No heat or hot water", "Leaks or water damage", "Mold or mildew", "Pests (roaches, mice, rats)", "Broken appliance (stove, fridge)", "Electrical problems", "Broken locks or doors", "Something else"] },
+    { id: "how_long", q: "How long has this been going on?", hint: "", type: "single",
+      options: ["Less than a week", "1 to 4 weeks", "1 to 3 months", "More than 3 months"] },
+    { id: "told_landlord", q: "Have you told your landlord about it?", hint: "", type: "single",
+      options: ["Yes, in writing (email, text, or letter)", "Yes, I told them in person or by phone", "No, I haven't told them yet"] },
+    { id: "landlord_response", q: "What did your landlord say or do?", hint: "", type: "single",
+      options: ["They ignored me", "They said they'd fix it but didn't", "They blamed me for the problem", "They said it's not their job", "I haven't told them yet"] },
+    { id: "proof", q: "Do you have any proof?", hint: "Pick all that apply.", type: "multi",
+      options: ["Photos or videos", "Emails or text messages", "Written letters", "Witnesses (neighbors, friends)", "I don't have any proof yet"] },
+    { id: "affect_health", q: "Is this affecting your health or safety?", hint: "", type: "single",
+      options: ["Yes, it's a health risk (mold, no heat, pests)", "Yes, it's a safety risk (locks, electrical, structural)", "It's a big inconvenience but not dangerous", "Not sure"] }
+  ],
+  eviction: [
+    { id: "eviction_type", q: "What is happening?", hint: "Pick the one that fits best.", type: "single",
+      options: ["I got a notice to leave", "My locks were changed", "My stuff was removed", "My landlord is threatening to evict me", "I'm being taken to court", "My landlord won't renew my lease"] },
+    { id: "how_long", q: "When did this start?", hint: "", type: "single",
+      options: ["Today or yesterday", "This past week", "This past month", "More than a month ago"] },
+    { id: "reason_given", q: "What reason did your landlord give?", hint: "", type: "single",
+      options: ["I owe rent", "They say I broke a lease rule", "They want to use the apartment themselves", "They say my lease is up", "They gave no reason", "I complained about problems and then this happened"] },
+    { id: "court_papers", q: "Did you get any papers from the court?", hint: "", type: "single",
+      options: ["Yes, I got court papers", "I got a letter from the landlord but not from a court", "No, nothing in writing", "I'm not sure if it's from a court"] },
+    { id: "proof", q: "Do you have any proof of what happened?", hint: "Pick all that apply.", type: "multi",
+      options: ["Photos (changed locks, removed items)", "Text messages or emails", "Witnesses", "A copy of my lease", "Records of complaints I made", "I don't have proof yet"] }
+  ],
+  deposit: [
+    { id: "deposit_issue", q: "What's the problem with your deposit?", hint: "", type: "single",
+      options: ["My landlord won't return it", "They kept too much of it", "They charged me more than 1 month's rent", "They haven't told me why they're keeping it", "I never got a receipt for my deposit"] },
+    { id: "moved_out_when", q: "When did you move out?", hint: "", type: "single",
+      options: ["Less than 14 days ago", "14 days to 1 month ago", "1 to 3 months ago", "More than 3 months ago", "I haven't moved out yet"] },
+    { id: "deposit_amount", q: "How much was your deposit?", hint: "", type: "single",
+      options: ["Less than 1 month's rent", "Exactly 1 month's rent", "More than 1 month's rent", "I'm not sure"] },
+    { id: "asked_back", q: "Have you asked for your deposit back?", hint: "", type: "single",
+      options: ["Yes, in writing (email, text, or letter)", "Yes, I asked in person or by phone", "No, I haven't asked yet"] },
+    { id: "move_photos", q: "Did you take photos when you moved in or out?", hint: "", type: "single",
+      options: ["Yes, I have move-in photos", "Yes, I have move-out photos", "I have both move-in and move-out photos", "No, I don't have photos"] },
+    { id: "condition", q: "What condition was the apartment in when you left?", hint: "", type: "single",
+      options: ["Clean and in good shape", "Normal wear after living there", "Some damage that I caused", "The damage was already there when I moved in"] }
+  ],
+  rent: [
+    { id: "rent_issue", q: "What's the problem with your rent?", hint: "", type: "single",
+      options: ["I think I'm being charged too much", "My rent went up and I don't think it should have", "I'm being charged extra fees", "My landlord says I owe money I don't think I owe", "My building is rent-stabilized but I'm not sure of the legal rent"] },
+    { id: "building_type", q: "What kind of building do you live in?", hint: "", type: "single",
+      options: ["A big apartment building (6 or more units)", "A smaller building (less than 6 units)", "A house or two-family home", "I'm not sure"] },
+    { id: "how_long_lived", q: "How long have you lived there?", hint: "", type: "single",
+      options: ["Less than 1 year", "1 to 3 years", "3 to 10 years", "More than 10 years"] },
+    { id: "rent_stabilized", q: "Is your apartment rent-stabilized?", hint: "Check your lease or ask your landlord if you're not sure.", type: "single",
+      options: ["Yes, it's rent-stabilized", "No, it's market rate", "I'm not sure", "I think it should be but the landlord says it's not"] },
+    { id: "proof", q: "What records do you have?", hint: "Pick all that apply.", type: "multi",
+      options: ["My current lease", "Old leases showing previous rent amounts", "Rent receipts or bank statements", "A rent history from the state (DHCR/HCR)", "Letters about rent increases", "I don't have much documentation"] }
+  ],
+  harassment: [
+    { id: "harassment_type", q: "What is your landlord doing?", hint: "Pick all that apply.", type: "multi",
+      options: ["Shutting off services (heat, water, electric)", "Too much construction or noise on purpose", "Threatening me", "Trying to pressure me to move out", "Offering buyouts after I said no", "Entering my apartment without permission", "Ignoring me to make life hard"] },
+    { id: "how_long", q: "How long has this been going on?", hint: "", type: "single",
+      options: ["Less than a week", "1 to 4 weeks", "1 to 3 months", "More than 3 months"] },
+    { id: "how_often", q: "How often does this happen?", hint: "", type: "single",
+      options: ["It happened once", "It happens every few weeks", "It happens every week", "It happens almost every day"] },
+    { id: "complained", q: "Have you complained about anything recently?", hint: "This helps us check if your landlord might be retaliating.", type: "single",
+      options: ["Yes, I complained about repairs or conditions", "Yes, I called 311 or filed a complaint", "Yes, I reported a code violation", "No, I haven't complained about anything"] },
+    { id: "proof", q: "Do you have any proof?", hint: "Pick all that apply.", type: "multi",
+      options: ["Photos or videos", "Text messages or emails", "A written log of incidents", "Witnesses (neighbors, friends)", "Police reports", "I don't have proof yet"] }
+  ],
+  lease: [
+    { id: "lease_issue", q: "What's the problem with your lease?", hint: "", type: "single",
+      options: ["My landlord won't let me sublet", "I want to add a roommate and they said no", "They won't renew my lease", "There's a rule in my lease I think is unfair", "I never got a written lease", "My landlord is saying I broke a lease rule"] },
+    { id: "lease_type", q: "What kind of lease do you have?", hint: "", type: "single",
+      options: ["A written lease (1 year or more)", "A month-to-month agreement", "No written lease at all", "I'm not sure"] },
+    { id: "building_size", q: "How many apartments are in your building?", hint: "This affects your legal rights.", type: "single",
+      options: ["1 to 3 apartments", "4 to 5 apartments", "6 or more apartments", "I'm not sure"] },
+    { id: "rent_stabilized", q: "Is your apartment rent-stabilized?", hint: "", type: "single",
+      options: ["Yes", "No", "I'm not sure"] },
+    { id: "told_landlord", q: "Have you talked to your landlord about this?", hint: "", type: "single",
+      options: ["Yes, in writing", "Yes, in person or by phone", "No, not yet"] },
+    { id: "proof", q: "What do you have?", hint: "Pick all that apply.", type: "multi",
+      options: ["A copy of my lease", "Emails or text messages", "Letters from my landlord", "Sublease request I sent", "I don't have documentation yet"] }
+  ]
+};
+
+function buildCaseDetailsFromAnswers(issueId, answers, flow) {
+  const parts = [];
+  const issueInfo = NY_LAW.commonIssues.find(i => i.id === issueId);
+  if (issueInfo) parts.push("Issue type: " + issueInfo.title);
+  flow.forEach(function(q) {
+    const a = answers[q.id];
+    if (a) {
+      const val = Array.isArray(a) ? a.join(", ") : a;
+      parts.push(q.q.replace("?", "") + ": " + val);
+    }
+  });
+  return parts.join(". ") + ".";
+}
+
+/* ─── Simulated AI Agent Responses (Plain English) ─── */
+function generateDefenseArgument(issue, details, round) {
+  const responses = {
+    repairs: {
+      1: `**YOUR LANDLORD IS BREAKING THE LAW**\n\nHere's the deal: In New York, your landlord MUST keep your apartment livable. That's not optional — it's the law. (Real Property Law §235-b)\n\nThe problems you're dealing with? Your landlord has a legal duty to fix them. It doesn't matter what your lease says. It doesn't matter if the landlord says it's "not that bad." The law says your apartment must be safe and livable. Period.\n\nYour landlord also has to follow NYC housing code, which sets specific rules — like keeping heat at 68°F during the day and 62°F at night from October through May. (NYC Admin Code §27-2005)\n\n**WHAT THIS MEANS FOR YOU:**\n• You can file a complaint and force your landlord to make repairs through Housing Court\n• You may be owed money back on your rent for the time you've been dealing with this\n• Call 311 to get an inspector out — once violations are on record, your landlord can't ignore them`,
+      2: `**LET'S SHUT DOWN THEIR ARGUMENTS**\n\nThe other side says you need written proof you complained. Here's the truth: NY law does NOT require you to complain in writing first. If your landlord or super knew about the problem — even from a verbal conversation — that counts. (Solow v. Wellner)\n\nThey also try to scare you about withholding rent. Nobody is telling you to stop paying rent on your own. Here's the smart move:\n1. File an HP Action in Housing Court — this is designed exactly for your situation\n2. Ask the court to put your rent in escrow (a safe holding account)\n3. Let the JUDGE decide how much your rent should be reduced\n\nThe bottom line: it doesn't matter if other apartments have it worse. The only question is whether YOUR apartment meets the legal standard.\n\n**WHAT THIS MEANS FOR YOU:**\n• File the HP Action AND call 311 for an inspection at the same time — double the pressure\n• You don't need a lawyer for this — Housing Court is designed for tenants to represent themselves\n• Every day without repairs is another day the judge can count against your landlord`
+    },
+    eviction: {
+      1: `**YOUR LANDLORD CANNOT DO THIS**\n\nLet me be very clear: In New York, a landlord CANNOT kick you out without going to court first. No exceptions. It doesn't matter if you owe rent. It doesn't matter if your lease is up. The ONLY way to legally evict someone is through Housing Court. (RPAPL Article 7)\n\nIf your landlord changed the locks, removed your stuff, or shut off your utilities to force you out — that's a CRIME, not just a civil matter.\n\nOn top of that, if you complained about problems in your apartment recently, this could be retaliation — which is also illegal. (RPL §227-a, RPL §235-e)\n\n**WHAT THIS MEANS FOR YOU:**\n• If you're locked out RIGHT NOW: Call 911. This is a criminal offense.\n• Take photos of everything — changed locks, missing belongings, any texts or messages from your landlord\n• You can go to Housing Court and get an order to be let back in, sometimes the same day\n• You can sue for money damages on top of getting back in`,
+      2: `**THEIR EXCUSES DON'T HOLD UP**\n\nThe other side might say you "abandoned" the apartment. Here's the thing: your landlord has to PROVE abandonment — you don't have to prove you didn't. If your stuff is in there, if you're getting mail there, if neighbors saw you recently — the abandonment argument falls apart. (Cornfeld v. Nizzari)\n\nThey might say your lease expired. So what? In NYC, when your lease ends, you automatically become a month-to-month tenant. Your landlord STILL has to go through court to remove you.\n\nEven if you did break a lease rule, even if you owe rent — the landlord's only option is to take you to court. Changing locks or cutting services is ALWAYS illegal.\n\n**WHAT THIS MEANS FOR YOU:**\n• Go to Housing Court for an order to restore possession AND file a separate claim for damages\n• The illegal lockout IS your best evidence — it shows your landlord acted in bad faith\n• Many tenant lawyers take these cases for free because the damages can be significant`
+    },
+    deposit: {
+      1: `**YOUR LANDLORD OWES YOU YOUR MONEY BACK**\n\nNew York law changed in 2019 and it's now very clear about security deposits (HSTPA):\n\n• Your deposit can only be 1 month's rent. If they charged more, that's already illegal.\n• They MUST return it within 14 days after you move out.\n• They have to keep it in a separate bank account (not mix it with their money).\n• If they're keeping any of it, they must give you an itemized list with receipts showing why.\n\nHere's the big one: "Normal wear and tear" is NOT a reason to keep your money. Scuff marks, faded paint, minor nail holes from hanging pictures — that's all normal.\n\n**WHAT THIS MEANS FOR YOU:**\n• Send your landlord a letter (certified mail) demanding your deposit back within 14 days\n• If they don't respond, file in Small Claims Court — it costs almost nothing and you don't need a lawyer\n• If they charged you more than 1 month's rent as a deposit, you can get that extra money back right now`,
+      2: `**THEIR "DAMAGE" CLAIMS WON'T HOLD UP**\n\nThe other side will say there was damage beyond normal wear. Here's why that usually fails:\n\nIf your landlord didn't do a move-in inspection and document what the place looked like BEFORE you moved in, they can't prove you caused any damage. That's their problem, not yours.\n\nNY courts have been very clear about what's "normal":\n- Paint that needs refreshing = normal\n- Small nail holes = normal\n- Worn carpeting = normal\n- The longer you lived there, the MORE wear is considered normal\n\nAnd that 14-day deadline? It's a hard deadline. Miss the deadline, and many judges will award you the full deposit back automatically.\n\n**WHAT THIS MEANS FOR YOU:**\n• If you have move-in photos, bring them to court — game over\n• If you DON'T have photos, focus on the landlord's failure to document and their missed deadline\n• Small Claims Court in NYC heavily favors tenants on deposit disputes`
+    },
+    rent: {
+      1: `**YOU MIGHT BE GETTING RIPPED OFF ON RENT**\n\nIn New York, if your apartment is rent-stabilized, there's a legal limit on what your landlord can charge. And a LOT of apartments are stabilized — any building with 6+ units built before 1974 likely qualifies.\n\nHere's how landlords overcharge:\n• They claim they did major renovations to justify big rent increases — but the work was never actually done\n• They improperly removed the apartment from rent stabilization\n• They just charge more than the legal limit and hope nobody checks\n\nThe good news: NY law now lets you look back 6 YEARS for overcharges. (CPLR §213-a) And if the overcharge was intentional? You could get back THREE TIMES what you were overcharged.\n\n**WHAT THIS MEANS FOR YOU:**\n• Request your apartment's rent history from HCR — it's free and it's your right\n• If the numbers don't add up, file an overcharge complaint with DHCR (also free)\n• Many tenant lawyers take these cases on contingency — they only get paid if you win`,
+      2: `**THEIR JUSTIFICATIONS DON'T ADD UP**\n\nThe other side says the rent increases were for "legitimate improvements." Under the new law (HSTPA), apartment improvements are capped at $15,000 over 15 years — AND the landlord must show receipts. No receipts? The increases get thrown out.\n\nThey might say "that's the market rate." Irrelevant. For stabilized apartments, the legal rent is based on official Rent Guidelines Board increases.\n\nAnd the best part: the law now lets DHCR look at your apartment's ENTIRE rent history to find the correct base rent.\n\n**WHAT THIS MEANS FOR YOU:**\n• If you've been overcharged $500/month for 6 years, that's $36,000 in overcharges — or $108,000 with triple damages\n• This is why landlords almost always settle these cases\n• Get your rent history first, then talk to a tenant lawyer — most offer free consultations`
+    },
+    harassment: {
+      1: `**YOUR LANDLORD IS HARASSING YOU — AND THAT'S ILLEGAL**\n\nIn NYC, landlord harassment is a real legal offense. (NYC Admin Code §27-2005(d))\n\nIt covers a lot of ground:\n• Shutting off your heat, hot water, or electricity\n• Doing construction specifically to make your life miserable\n• Threatening you or pressuring you to move\n• Making repeated buyout offers after you've said no\n• Filing fake court cases against you\n\nIf you complained about problems and THEN the harassment started, that's retaliation — which makes your case even stronger. (RPL §227-a)\n\n**WHAT THIS MEANS FOR YOU:**\n• Start a written log TODAY — date, time, what happened, any witnesses\n• Save every text, email, voicemail, and letter from your landlord\n• File complaints with HPD for any conditions issues — this creates an official record\n• You can sue for real money — courts have fined landlords over $1 million for systematic harassment`,
+      2: `**IT'S A PATTERN — AND THAT'S WHAT MATTERS**\n\nThe other side will try to explain away each incident separately. But the law doesn't look at each incident alone — it looks at the PATTERN.\n\nA boiler that "breaks" right after you complain + construction that drags on for months + a buyout offer = a pattern of harassment. Courts are smart about this.\n\nOn buyout pressure: after you say no in writing, your landlord must wait 180 DAYS before bringing it up again. If they keep pushing, that's evidence of harassment.\n\n**WHAT THIS MEANS FOR YOU:**\n• File with HPD AND pursue a private lawsuit — the HPD complaint creates an official record, the lawsuit gets you money\n• Your dated log of incidents is your most powerful weapon\n• Talk to a tenant rights organization — they've seen these patterns before and can help`
+    },
+    lease: {
+      1: `**YOU HAVE MORE RIGHTS THAN YOUR LEASE SAYS**\n\nHere's something most tenants don't know: just because something is in your lease doesn't mean it's legal. New York law overrides unfair lease terms.\n\nYour key rights:\n• **Subletting:** In buildings with 4+ units, you have the RIGHT to sublet. If your landlord doesn't respond within 30 days, their silence counts as a yes. (RPL §226-b)\n• **Roommates:** You can have one additional person living with you no matter what your lease says. (RPL §235-f)\n• **Lease renewal:** If rent-stabilized, your landlord MUST offer you a renewal lease.\n• **Unfair terms:** Courts regularly throw out lease clauses that are unfair.\n\n**WHAT THIS MEANS FOR YOU:**\n• If your landlord denied your sublet request, check if they responded within 30 days — if not, you can sublet anyway\n• If they're blocking a roommate, the Roommate Law is on your side regardless of what the lease says\n• If any lease clause tries to waive your right to a safe apartment, that clause is automatically void`,
+      2: `**"YOU SIGNED IT" DOESN'T MEAN IT'S ENFORCEABLE**\n\nThe other side loves to say "well, you signed the lease." Here's the reality: signing an unfair clause doesn't make it legal. NY courts throw out unfair lease terms all the time.\n\nThe warranty of habitability — your right to a safe, livable apartment — CANNOT be waived by any lease. (Park West Management v. Mitchell)\n\nOn subletting: the 30-day clock is strict. If your landlord didn't respond within 30 days, they've lost their chance to say no.\n\nOn roommates: the Roommate Law says one additional person, period. Your lease saying "no additional occupants" doesn't matter — the statute overrides the lease.\n\n**WHAT THIS MEANS FOR YOU:**\n• Don't be intimidated by lease language — many standard lease clauses are legally unenforceable\n• For subletting, make sure your request was in writing with the subtenant's info — that starts the 30-day clock\n• Talk to a tenant rights org if your landlord is refusing a renewal lease`
+    }
+  };
+  const issueResponses = responses[issue] || responses.repairs;
+  return issueResponses[round] || issueResponses[1];
+}
+
+function generateOpposingArgument(issue, details, round) {
+  const responses = {
+    repairs: {
+      1: `**HEADS UP — HERE'S WHAT YOUR LANDLORD WILL TRY**\n\nYour landlord's lawyer is going to hit you with three main arguments. Here's what to expect:\n\n**"You never told us in writing."** They'll say verbal complaints don't count. This is their favorite move — make you look like you never reported it properly.\n\n**"You wouldn't let us in to fix it."** They'll claim they tried to schedule repairs but you weren't available. Even if that's only partly true, they'll use it.\n\n**"It's not that bad."** They'll argue the apartment is still "livable" even if it's uncomfortable. A leaky faucet isn't the same as no heat, in their eyes.\n\n**The scare tactic:** They'll warn that if you withhold rent without a court order, they can start eviction proceedings against YOU. This is actually true — which is why you should go through Housing Court, not just stop paying.\n\nDon't panic. These arguments sound scary but they have weaknesses. That's why Round 2 exists — we'll break each one apart.`,
+      2: `**HERE'S WHY THEIR ARGUMENTS FALL SHORT**\n\nRemember what they said? Let's go through it:\n\n**"No written notice"** — Even if true, the law says your landlord should have known about the problem. If your super saw it, if it's visible in common areas, if you told anyone in management — that counts as notice.\n\n**"You blocked repairs"** — If your landlord can't show specific dates they tried to schedule repairs AND evidence you refused, this argument goes nowhere. A vague claim isn't proof.\n\n**"It's livable"** — The court decides this, not the landlord. And judges take things like mold, pest infestations, and lack of heat very seriously.\n\n**Their real fear:** A Housing Court judge ordering repairs AND reducing your rent. That's expensive for them. This is why many landlords settle once you file — it's cheaper to fix the problem than fight in court.`
+    },
+    eviction: {
+      1: `**HEADS UP — HERE'S WHAT YOUR LANDLORD WILL TRY**\n\nIf your landlord is trying to evict you or already locked you out, here's how their lawyer will spin it:\n\n**"The tenant owes rent."** They'll try to make the eviction about money, even if it's really about something else (like retaliation for complaints).\n\n**"The lease expired."** They'll argue you have no right to stay. This sounds scary but it's mostly wrong in NYC — you have protections even after your lease ends.\n\n**"It wasn't a lockout — there was a misunderstanding."** If your locks were changed, they might claim it was a security upgrade, a mistake, or that you abandoned the apartment.\n\n**"The tenant broke lease rules."** They'll dig through your lease looking for anything — unauthorized pets, guests staying too long, noise complaints — to justify their actions.\n\nNone of these excuses make a self-help eviction legal. But you should know they're coming so you're not caught off guard.`,
+      2: `**WHY THEIR EXCUSES DON'T WORK**\n\nLet's be real about what the other side is doing:\n\n**On "abandonment":** This is a Hail Mary. If your stuff is in the apartment, if you have recent mail there, if any neighbor saw you recently — the abandonment claim is dead on arrival. Your landlord has to PROVE you left, not just say it.\n\n**On "expired lease":** In NYC, this doesn't mean what landlords want it to mean. Your lease ending doesn't mean you have to leave. You automatically become month-to-month. They STILL have to take you to court properly.\n\n**On "it was a mistake":** Changed locks don't change themselves. Courts don't buy this unless the landlord has very strong evidence of a genuine error.\n\n**The truth:** Even if you owed every penny of rent, even if you broke every lease rule — the landlord's ONLY legal option was to go to court. They chose not to. That's on them.`
+    },
+    deposit: {
+      1: `**HEADS UP — HERE'S WHAT YOUR LANDLORD WILL TRY**\n\nLandlords LOVE to keep security deposits. Here's their playbook:\n\n**"There was damage beyond normal wear."** This is the #1 excuse. They'll point to every scuff, mark, and worn spot and call it "damage" — even if you lived there for years and it's totally normal.\n\n**"You didn't give us a forwarding address."** They'll claim the 14-day clock never started because you didn't tell them where to send the check. Even if you did tell them.\n\n**"We need more time to assess."** They'll say 14 days isn't enough to figure out the damage. The law says otherwise, but they'll try.\n\n**"The repairs cost more than the deposit."** They might claim you actually owe THEM money on top of keeping your deposit. This is usually a bluff to scare you out of fighting.\n\nThe good news: these defenses are well-known and judges see through them all the time. Small Claims Court judges in NYC deal with deposit disputes constantly and tend to side with tenants.`,
+      2: `**WHY THEIR "DAMAGE" CLAIMS USUALLY FAIL**\n\nHere's the reality check on their arguments:\n\n**No move-in inspection?** That's the landlord's problem. If they didn't document what the apartment looked like before you moved in, they can't prove you caused any damage. End of story.\n\n**"Beyond normal wear"?** Judges know what normal looks like. You lived there — things get worn. Paint fades, carpets show paths, walls get minor marks. The longer you lived there, the more of this is expected.\n\n**Missed the 14-day deadline?** Many judges will give you the full deposit back automatically if the landlord blew past 14 days without providing an itemized statement. They don't get a do-over.\n\n**No receipts?** If the landlord can't show receipts for actual repairs they claim to have made, the judge will be skeptical. "I think it cost $500" isn't evidence.`
+    },
+    rent: {
+      1: `**HEADS UP — HERE'S WHAT YOUR LANDLORD WILL TRY**\n\nOvercharging landlords always have excuses. Here are the big ones:\n\n**"The apartment isn't rent-stabilized."** This is their first line of defense. They'll argue the apartment was legally removed from stabilization — through high-rent deregulation, substantial renovation, or some other loophole.\n\n**"We made legitimate improvements."** They'll claim they spent big money on renovations that justify the rent increase. Sometimes this is true. Often it's inflated or fabricated.\n\n**"That's just the market rate."** They'll try to argue that what they're charging is fair because comparable apartments go for similar amounts. This is irrelevant for stabilized apartments, but they'll say it anyway.\n\n**"The statute of limitations protects us."** They'll argue you waited too long to complain, so some or all of the overcharges are time-barred.\n\nThese arguments have varying strength depending on your specific situation. But the new law (HSTPA) has closed many of the loopholes landlords used to rely on.`,
+      2: `**WHY THEIR DEFENSES ARE WEAKER THAN THEY SOUND**\n\nLet's break down the reality:\n\n**On "legitimate improvements":** The new law caps these at $15,000 over 15 years AND requires receipts. No receipts = no increases. Period. Many landlords padded renovation costs or claimed work that was never done. DHCR doesn't just take their word for it.\n\n**On "not stabilized":** HSTPA made it much harder to deregulate apartments. If your landlord claims deregulation happened before 2019, there are ways to challenge that. If it happened after, the law likely prevents it entirely.\n\n**On the statute of limitations:** Landlords used to love this defense, but HSTPA expanded the lookback to 6 full years AND now DHCR can dig deeper into the rent history. The old tricks don't work like they used to.\n\n**The bottom line:** Landlords settle overcharge cases because they know the math is against them. If you've been overcharged even $300/month for 6 years, that's $21,600 minimum — up to $64,800 with triple damages. Fighting is expensive for them.`
+    },
+    harassment: {
+      1: `**HEADS UP — HERE'S WHAT YOUR LANDLORD WILL TRY**\n\nLandlords accused of harassment always play the same cards:\n\n**"It was legitimate maintenance."** Turned off the heat? "Boiler repair." Constant construction? "Necessary renovations." They'll frame every disruption as normal business.\n\n**"We only made one buyout offer."** They'll downplay the pressure, saying it was a single polite offer that the tenant was free to refuse.\n\n**"There's no pattern."** Their lawyer will isolate each incident and explain them separately, trying to prevent you from connecting the dots.\n\n**"The tenant is exaggerating."** They'll suggest you're being overly sensitive or that your expectations are unreasonable.\n\nThe key thing to understand: harassment cases are about the PATTERN, not individual incidents. Their strategy is to break the pattern apart and make each piece look innocent. Your strategy should be the opposite — show how everything fits together.`,
+      2: `**WHY THEIR "INNOCENT" EXPLANATIONS DON'T ADD UP**\n\nLet's connect the dots:\n\n**"Legitimate maintenance" + "one buyout offer" + "necessary construction"** — any one of these alone might be innocent. All three together, especially if they started after you complained about something? That's a pattern. Courts are smart enough to see this.\n\n**On the buyout:** After you say no in writing, your landlord has to wait 180 days before bringing it up again. If they keep pushing, that IS evidence of harassment. It doesn't matter how "politely" they ask.\n\n**On construction timing:** If the "necessary" construction happens to be at 7 AM, happens to drag on for months, and happens to coincide with buyout pressure — a judge will notice.\n\n**On "no pattern":** You build the pattern with your incident log. Date, time, what happened, who saw it. Do this consistently and the pattern tells itself. Judges read these logs and draw their own conclusions.`
+    },
+    lease: {
+      1: `**HEADS UP — HERE'S WHAT YOUR LANDLORD WILL TRY**\n\nIn lease disputes, landlords lean hard on one argument:\n\n**"You signed the lease. Deal with it."** This is the big one. They'll say you agreed to the terms and now you have to live with them. Sounds logical, but it's not always how the law works.\n\n**On subletting:** "We said no and we have that right." They'll claim their denial was reasonable, even if they can't explain why.\n\n**On roommates:** "The lease says no additional occupants." They'll point to the lease language and expect that to be the end of it.\n\n**On renewal:** "We're not required to renew." For market-rate apartments, this might actually be true. For stabilized apartments, it's dead wrong.\n\n**On unfair terms:** "Standard lease, everyone signs it." They'll argue that because the lease is used industry-wide, it can't be unfair.\n\nHere's what they don't want you to know: New York law overrides many lease provisions. Just because you signed something doesn't make it enforceable.`,
+      2: `**WHY "YOU SIGNED IT" ISN'T THE END OF THE STORY**\n\nThe other side keeps saying "the lease is the lease." Here's reality:\n\n**Your right to a livable apartment can NEVER be waived.** It doesn't matter what the lease says. Courts have been clear on this — you can't sign away your basic tenant rights.\n\n**On subletting:** If your landlord didn't respond to your written request within 30 days, they've automatically given consent. That's the law, not the lease. They can't retroactively say no.\n\n**On roommates:** The state Roommate Law says you get one additional occupant. Your lease says otherwise? The law wins. Every time.\n\n**On "standard" lease terms:** Just because every landlord uses the same unfair clause doesn't make it legal. Courts regularly strike down "standard" provisions that cross the line.\n\n**The real issue:** Most tenants don't fight because they think the lease is set in stone. It's not. If your landlord is relying on a lease clause to deny your rights, there's a good chance that clause doesn't hold up in court.`
+    }
+  };
+  const issueResponses = responses[issue] || responses.repairs;
+  return issueResponses[round] || issueResponses[1];
+}
+
+function generateJudgeVerdict(issue) {
+  const verdicts = {
+    repairs: { score: 82, summary: `**You have a strong case.**\n\nThe law is clearly on your side here. New York requires your landlord to keep your apartment livable, and they're not doing that.\n\nThe other side raised some fair points about documentation — but those are speed bumps, not roadblocks. Even without perfect records, your claim has solid legal backing.\n\n**Here's exactly what to do next:**\n\n1. **Take photos and videos of everything** — with timestamps. Do this today.\n2. **Send your landlord a written complaint** — email or certified letter. This creates a paper trail.\n3. **Call 311** to request an HPD inspection. Once violations are on record, your landlord can't pretend the problem doesn't exist.\n4. **File an HP Action in Housing Court** — this forces your landlord to make repairs. You don't need a lawyer for this.\n5. **Keep paying rent** — but ask the court about putting it in escrow so you're protected.\n\nExpect the process to take 30-60 days if the violations are real. Most landlords start making repairs once they get the court papers.` },
+    eviction: { score: 88, summary: `**You have a very strong case.**\n\nIf your landlord locked you out or tried to evict you without going to court, they broke the law. It's that simple. New York doesn't allow shortcuts on evictions — period.\n\nIf you also complained about apartment problems before this happened, you likely have a retaliation claim on top of the eviction claim. That makes your case even stronger.\n\n**Here's exactly what to do next:**\n\n1. **If you're locked out right now:** Call 911. This is a crime, not just a civil dispute.\n2. **Go to Housing Court** and file for an emergency order to get back into your apartment. Courts can issue these quickly.\n3. **File a police report** — this creates an official record of what happened.\n4. **Document everything:** Photos of changed locks, screenshots of texts from your landlord, names of witnesses.\n5. **Consider suing for damages** — courts award real money for illegal lockouts, including for the stress and disruption.\n6. **Contact a tenant rights organization** — many provide free lawyers for cases like this.\n\nIllegal eviction cases rarely fail when properly documented. The law is strongly in your favor.` },
+    deposit: { score: 78, summary: `**You have a good case — especially if your landlord missed the 14-day deadline.**\n\nThe law is pretty clear here: your landlord had 14 days to return your deposit with an itemized list of any deductions. If they missed that window, your case gets a lot stronger.\n\nHow strong your case is depends on your documentation. If you have move-in/move-out photos, you're in great shape. Even without them, the burden is on your landlord to prove damage.\n\n**Here's exactly what to do next:**\n\n1. **Send a demand letter** via certified mail requesting your full deposit back within 14 days. Keep the receipt.\n2. **Wait 14 days.** If no response, move to step 3.\n3. **File in Small Claims Court** — filing costs almost nothing and you don't need a lawyer.\n4. **Gather your evidence:** Lease, move-in/move-out photos, any texts or emails about the deposit, your demand letter receipt.\n5. **At court:** Emphasize the landlord's missed deadline and lack of itemized deductions. Judges take the 14-day rule seriously.\n\nMost landlords settle once they see you've filed. It's cheaper than going to court and losing.` },
+    rent: { score: 85, summary: `**You likely have a strong case — but it depends on one key question: is your apartment rent-stabilized?**\n\nIf yes, the math is on your side. The new law (HSTPA) gives you powerful tools to recover overcharges going back 6 years, plus potential triple damages.\n\nIf you're not sure whether you're stabilized, finding out is step one — and it's free.\n\n**Here's exactly what to do next:**\n\n1. **Request your rent history from HCR** — this is free and you have a right to it. Call (718) 739-6400 or go to hcr.ny.gov.\n2. **Compare your rent history to what you've been paying.** If the numbers don't match, you may have an overcharge.\n3. **File a complaint with DHCR** if the numbers show an overcharge. Also free.\n4. **Talk to a tenant lawyer** — many take overcharge cases on contingency (they only get paid if you win), because the potential recovery is large.\n5. **Keep paying your current rent** while the case is pending. Don't stop paying.\n\nThese cases take time (1-2 years) but the payoff can be significant. Even a $200/month overcharge over 6 years is $14,400 — or $43,200 with triple damages.` },
+    harassment: { score: 70, summary: `**You have a decent case, but it needs strong documentation to win.**\n\nHarassment cases come down to proving a PATTERN of behavior. One bad incident usually isn't enough. But multiple incidents over time — especially if they started after you complained about something — paint a powerful picture.\n\nThe other side will try to explain each incident separately. Your job is to show they're connected.\n\n**Here's exactly what to do next:**\n\n1. **Start an incident log TODAY** — date, time, what happened, who saw it. Be specific and factual. This is your most important weapon.\n2. **Save every text, email, voicemail, and letter** from your landlord. Screenshot everything.\n3. **If you've declined a buyout, do it in writing.** This starts a 180-day clock where they can't bring it up again.\n4. **File complaints with HPD** for any conditions issues — each complaint creates an official record.\n5. **Talk to your neighbors** — if they're experiencing similar treatment, their testimony strengthens your case.\n6. **Contact a tenant rights organization** — harassment cases benefit from professional help.\n\nBuild the paper trail consistently and the pattern will speak for itself.` },
+    lease: { score: 72, summary: `**Your case strength depends on the specific issue, but the law is generally tenant-friendly in NY.**\n\nFor subletting and roommate disputes, your statutory rights are strong and well-defined. For disputes about specific lease clauses, it depends on what the clause says and whether it conflicts with NY law.\n\nThe good news: New York courts regularly side with tenants when lease terms conflict with statutory protections.\n\n**Here's exactly what to do next:**\n\n1. **Figure out if your apartment is rent-stabilized** — this dramatically affects your rights (especially for lease renewals). Check at hcr.ny.gov or call (718) 739-6400.\n2. **For subletting:** Send a formal written request to your landlord with the proposed subtenant's info. This starts the 30-day clock.\n3. **For roommate issues:** Send written notice of the additional occupant. The Roommate Law is on your side.\n4. **For unfair lease terms:** Identify the specific clause and check if it conflicts with NY tenant protection laws.\n5. **For lease renewal:** If you're stabilized and weren't offered a renewal, file a complaint with DHCR.\n6. **Get everything in writing** — verbal agreements are hard to enforce.\n\nMost lease disputes can be resolved with a clear understanding of your rights and a formal written communication to your landlord.` }
+  };
+  return verdicts[issue] || verdicts.repairs;
+}
+
+/* ─── Help Button Component ─── */
+function HelpButton({ page, isProcessing, showVerdict }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const getHelpContent = () => {
+    if (page === "landing") {
+      return {
+        text: "Welcome! This tool helps you understand your rights as a NY tenant. Click 'Get Started' to begin exploring your case.",
+        suggestions: ["Learn about your issue", "See how the AI analysis works", "Check pricing options"]
+      };
+    } else if (page === "signup") {
+      return {
+        text: "Fill in your basic info. We need this to personalize your analysis. Your data stays private and secure.",
+        suggestions: ["Choose your borough", "Create your account", "Next: describe your issue"]
+      };
+    } else if (page === "intake") {
+      return {
+        text: "Pick the issue that best matches your situation, then describe what happened in your own words. The more detail, the better our analysis.",
+        suggestions: ["Select your issue type", "Describe what happened", "Provide any evidence you have"]
+      };
+    } else if (page === "analysis") {
+      return {
+        text: isProcessing ? "Our AI agents are debating your case — just like real lawyers would. Hang tight!" : "Your analysis is complete! Scroll down to see what to do next and your action plan.",
+        suggestions: isProcessing ? ["View debate progress", "Learn about next steps"] : ["Review your verdict", "Generate demand letter", "Share results with others"]
+      };
+    }
+    return { text: "How can we help?", suggestions: [] };
+  };
+
+  const content = getHelpContent();
+
+  return (
+    <>
+      <button className="help-button" onClick={() => setHelpOpen(!helpOpen)} title="Get help">?</button>
+      {helpOpen && (
+        <div className="help-panel">
+          <div className="help-header">Need Help?</div>
+          <div className="help-content">{content.text}</div>
+          {content.suggestions.length > 0 && (
+            <div className="help-suggestions">
+              {content.suggestions.map((suggestion, i) => (
+                <div key={i} className="help-suggestion" onClick={() => setHelpOpen(false)}>{suggestion}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ─── Timeline Component ─── */
+function TimelineStep({ stepNumber, title, timeframe, detail }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="timeline-step">
+      <div className="timeline-dot"></div>
+      <div className="timeline-content" onClick={() => setExpanded(!expanded)}>
+        <div className="timeline-header">
+          <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
+            <div className="timeline-step-number">{stepNumber}</div>
+            <div className="timeline-step-title">{title}</div>
+          </div>
+          <div className="timeline-step-time">{timeframe}</div>
+          <div className={`timeline-chevron ${expanded ? 'open' : ''}`} style={{marginLeft: 10}}>
+            <ChevronDown />
+          </div>
+        </div>
+        {expanded && <div className="timeline-detail show">{detail}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Win Meter Component ─── */
+function WinMeter({ score, isAnimating, label }) {
+  const [displayScore, setDisplayScore] = useState(0);
+  const [prevScore, setPrevScore] = useState(0);
+
+  useEffect(() => {
+    if (score !== prevScore) {
+      setPrevScore(score);
+      const duration = 1000;
+      const start = prevScore;
+      const diff = score - start;
+      const startTime = Date.now();
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setDisplayScore(Math.round(start + diff * eased));
+        if (progress < 1) requestAnimationFrame(animate);
+      };
+      requestAnimationFrame(animate);
+    }
+  }, [score]);
+
+  const getColor = (s) => {
+    if (s >= 80) return { bg: "#22c55e", text: "#22c55e" };
+    if (s >= 60) return { bg: "#f59e0b", text: "#fbbf24" };
+    return { bg: "#ef4444", text: "#f87171" };
+  };
+  const colors = getColor(displayScore);
+
+  return (
+    <div className="win-meter-container">
+      <div className="win-meter-label">
+        <div className="win-meter-title">{isAnimating && <span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:colors.text,animation:"pulse 1.5s infinite"}}></span>} {label || "Win Probability"}</div>
+        <div className="win-meter-value" style={{color: colors.text}}>{displayScore}%</div>
+      </div>
+      <div className="win-meter-track">
+        <div className="win-meter-fill" style={{width: `${displayScore}%`, background: colors.bg}}></div>
+      </div>
+      <div className="win-meter-zones">
+        <span>Tough Case</span>
+        <span>Decent</span>
+        <span>Strong Case</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Streaming Text Component ─── */
+function StreamingText({ text, speed }) {
+  const [displayed, setDisplayed] = useState("");
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDisplayed("");
+    setDone(false);
+    let i = 0;
+    const interval = setInterval(() => {
+      i += 3;
+      if (i >= text.length) {
+        setDisplayed(text);
+        setDone(true);
+        clearInterval(interval);
+      } else {
+        setDisplayed(text.substring(0, i));
+      }
+    }, speed || 8);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  const html = displayed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>');
+  return (
+    <div className="agent-text">
+      <span dangerouslySetInnerHTML={{__html: html}} />
+      {!done && <span style={{display:"inline-block",width:2,height:16,background:"var(--accent)",marginLeft:2,animation:"pulse 0.8s infinite"}}></span>}
+    </div>
+  );
+}
+
+/* ─── Animated Counter Component ─── */
+function AnimatedCounter({ target, duration }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !started.current) {
+        started.current = true;
+        const startTime = Date.now();
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / (duration || 2000), 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setCount(Math.round(target * eased));
+          if (progress < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+      }
+    }, { threshold: 0.3 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target]);
+
+  return <span ref={ref}>{count.toLocaleString()}</span>;
+}
+
+/* ─── FAQ Item Component ─── */
+function FAQItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="faq-item">
+      <div className="faq-question" onClick={() => setOpen(!open)}>
+        <h3>{question}</h3>
+        <div className={`faq-chevron ${open ? 'open' : ''}`}><ChevronDown /></div>
+      </div>
+      <div className={`faq-answer ${open ? 'open' : ''}`}>
+        <p>{answer}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── App Component ─── */
+function App() {
+  const [page, setPage] = useState("landing");
+  const [scrolled, setScrolled] = useState(false);
+  const [signupData, setSignupData] = useState({ firstName: "", lastName: "", email: "", phone: "", borough: "Manhattan", issueType: "" });
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [caseDetails, setCaseDetails] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [agentMessages, setAgentMessages] = useState([]);
+  const [currentAgent, setCurrentAgent] = useState(null);
+  const [verdict, setVerdict] = useState(null);
+  const [showVerdict, setShowVerdict] = useState(false);
+  const [currentRound, setCurrentRound] = useState(0);
+  const chatRef = useRef(null);
+  const [shareCopied, setShareCopied] = useState(false);
+  const totalUsers = 4287;
+  const [winScore, setWinScore] = useState(50);
+  const [winLabel, setWinLabel] = useState("Analyzing your case...");
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [agentMessages, currentAgent, showVerdict]);
+
+  const handleSignup = (e) => {
+    e.preventDefault();
+    setPage("intake");
+  };
+
+  const startAnalysis = () => {
+    setPage("analysis");
+    setIsProcessing(true);
+    setShowVerdict(false);
+    setCurrentRound(0);
+    setAgentMessages([]);
+    setCurrentAgent(null);
+    setVerdict(null);
+  };
+
+  const scrollToSection = (id) => {
+    const element = document.getElementById(id);
+    if (element) element.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleShareCopy = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
+
+  const handleShareText = () => {
+    const message = "Check out TenantShield AI — it analyzed my landlord situation with 3 AI legal agents. https://tenantshield.ai";
+    window.location.href = `sms:?body=${encodeURIComponent(message)}`;
+  };
+
+  const handleShareEmail = () => {
+    const subject = "You might need TenantShield AI";
+    const body = "I just used TenantShield AI to understand my rights as a NY tenant. Three AI legal agents analyzed my case from every angle. It's free for the first analysis. Check it out: https://tenantshield.ai";
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  useEffect(() => {
+    if (!isProcessing) return;
+
+    const addMessage = (agent, content, delay) => {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          setAgentMessages(prev => [...prev, { agent, content, round: agent === "judge" ? 0 : undefined }]);
+          resolve();
+        }, delay);
+      });
+    };
+
+    const runDebate = async () => {
+      setWinScore(50); setWinLabel("Analyzing your case...");
+      setCurrentAgent("defense");
+      await addMessage("defense", generateDefenseArgument(selectedIssue, caseDetails, 1), 3000);
+      setWinScore(68); setWinLabel("Defense presents strong arguments");
+
+      setCurrentAgent("opposing");
+      await addMessage("opposing", generateOpposingArgument(selectedIssue, caseDetails, 1), 3500);
+      setWinScore(55); setWinLabel("Opposing counsel pushes back");
+
+      setCurrentRound(2);
+
+      setCurrentAgent("defense");
+      await addMessage("defense", generateDefenseArgument(selectedIssue, caseDetails, 2), 3000);
+      setWinScore(72); setWinLabel("Defense rebounds with rebuttals");
+
+      setCurrentAgent("opposing");
+      await addMessage("opposing", generateOpposingArgument(selectedIssue, caseDetails, 2), 3500);
+      setWinScore(65); setWinLabel("Awaiting final judgment...");
+
+      setCurrentAgent("judge");
+      const v = generateJudgeVerdict(selectedIssue);
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      setCurrentAgent(null);
+      setWinScore(v.score); setWinLabel(v.score >= 80 ? "Strong case!" : v.score >= 60 ? "Decent case" : "Tough but possible");
+      setVerdict(v);
+      setShowVerdict(true);
+      setIsProcessing(false);
+    };
+
+    runDebate();
+  }, [isProcessing]);
+
+  /* ─── FAQ Data ─── */
+  const faqData = [
+    { q: "Is this legal advice?", a: "No. TenantShield AI provides legal information and analysis based on New York State and NYC housing law, but it is not a substitute for advice from a licensed attorney. We help you understand your rights and the strength of your position so you can make informed decisions. For complex cases, we always recommend consulting with a tenant rights attorney or contacting your local Legal Aid office." },
+    { q: "How does the AI analysis work?", a: "We use three specialized AI agents to simulate a real legal proceeding. Your Defense Counsel builds the strongest arguments for your case using actual NY statutes. Opposing Counsel anticipates what your landlord's lawyer would argue. Then a neutral Judge agent weighs both sides and gives you an honest assessment with a strength score and specific next steps." },
+    { q: "Do I need a lawyer?", a: "It depends on the complexity of your case. For many common issues — like filing an HP Action, Small Claims Court for deposit recovery, or DHCR overcharge complaints — you can represent yourself effectively. Our analysis tells you exactly what to file and where. For more complex situations (like active court proceedings or large-dollar claims), we recommend consulting with a tenant rights attorney. Many offer free consultations." },
+    { q: "How much does it cost?", a: "Your first complete case analysis is free — including all three AI agents, law citations, strength scoring, and action steps. If you need unlimited analyses, demand letter generation, court filing templates, and priority support, the Fighter plan is $29/month. No hidden fees, cancel anytime." },
+    { q: "Is my information private?", a: "Yes. Your case details are processed securely and are not shared with third parties. We do not sell your data or use it for advertising. We store only what's necessary to provide your analysis, and you can request deletion of your data at any time." }
+  ];
+
+  /* ─── Testimonial Data ─── */
+  const testimonials = [
+    { name: "Maria G.", borough: "Washington Heights", issue: "Repairs", quote: "My landlord ignored my heating complaints for three months. TenantShield showed me exactly which laws he was breaking and what to file. Within two weeks of filing the HP Action, the heat was fixed.", stars: 5, initials: "MG", color: "#16a34a" },
+    { name: "David K.", borough: "Astoria, Queens", issue: "Security Deposit", quote: "My landlord tried to keep my entire $2,400 deposit for 'damages' that were just normal wear. TenantShield walked me through Small Claims Court step by step. Got my full deposit back.", stars: 5, initials: "DK", color: "#2563eb" },
+    { name: "Aisha T.", borough: "Crown Heights", issue: "Rent Overcharge", quote: "I had no idea my rent-stabilized apartment was being overcharged by $340 a month. TenantShield flagged it immediately and told me how to get my rent history.", stars: 5, initials: "AT", color: "#7c3aed" }
+  ];
+
+  /* ─── LANDING PAGE ─── */
+  if (page === "landing") {
+    return (
+      <div>
+        <nav className={`nav ${scrolled ? "scrolled" : ""}`}>
+          <div className="container">
+            <div className="nav-inner">
+              <div className="nav-logo"><ShieldIcon /> <span>TenantShield</span></div>
+              <div className="nav-links">
+                <a className="nav-link" onClick={() => scrollToSection("how-it-works")}>How It Works</a>
+                <a className="nav-link" onClick={() => scrollToSection("features")}>Features</a>
+                <a className="nav-link" onClick={() => scrollToSection("testimonials")}>Reviews</a>
+                <a className="nav-link" onClick={() => scrollToSection("pricing")}>Pricing</a>
+                <button className="btn-primary" style={{padding: "8px 20px", fontSize: "14px"}} onClick={() => setPage("signup")}>Get Started Free</button>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        {/* ─── Hero (Dark) ─── */}
+        <section className="hero">
+          <div className="container">
+            <div className="hero-content fade-up">
+              <div className="hero-badge">AI-Powered Legal Analysis for NY Tenants</div>
+              <h1>Your Landlord Has Lawyers.<br/><span className="highlight">Now You Have AI.</span></h1>
+              <p>Three AI legal agents analyze your case from every angle — your defense, the landlord's likely arguments, and a neutral judicial assessment.</p>
+              <div className="hero-buttons">
+                <button className="btn-cta" onClick={() => setPage("signup")}>Analyze My Case Free <ArrowRight /></button>
+                <button className="btn-secondary-dark" style={{padding: "16px 36px", borderRadius: 8, fontSize: 17, fontWeight: 600, background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)", cursor: "pointer"}} onClick={() => scrollToSection("how-it-works")}>See How It Works</button>
+              </div>
+              <div className="hero-proof">
+                <div className="hero-proof-item"><CheckIcon /> <span>New York State Law</span></div>
+                <div className="hero-proof-item"><CheckIcon /> <span>{totalUsers.toLocaleString()}+ cases analyzed</span></div>
+                <div className="hero-proof-item"><CheckIcon /> <span>Free first analysis</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Trust Bar (Light, subtle) ─── */}
+        <div className="trust-bar">
+          <div className="container">
+            <div className="trust-bar-label">Trusted by tenants across New York</div>
+            <div className="trust-logos">
+              <div className="trust-logo">NYC Housing Court</div>
+              <div className="trust-logo">Legal Aid Society</div>
+              <div className="trust-logo">Met Council on Housing</div>
+              <div className="trust-logo">DHCR / HCR</div>
+              <div className="trust-logo">NYC 311</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── How It Works (Light) ─── */}
+        <section className="section" id="how-it-works" style={{background: "var(--white)"}}>
+          <div className="container" style={{textAlign: "center"}}>
+            <div className="section-label">How It Works</div>
+            <h2 className="section-title font-serif" style={{margin: "0 auto 12px"}}>Three AI Agents. One Complete Analysis.</h2>
+            <p className="section-subtitle" style={{margin: "0 auto"}}>We simulate a real legal proceeding so you understand every angle of your case.</p>
+            <div className="features-grid">
+              <div className="card feature-card fade-up">
+                <div className="feature-icon" style={{background: "rgba(22,163,74,0.1)"}}>🛡️</div>
+                <div className="feature-title">Your Defense Counsel</div>
+                <div className="feature-desc">Analyzes your situation, identifies applicable NY laws, and builds your strongest legal arguments with specific actions you can take.</div>
+              </div>
+              <div className="card feature-card fade-up" style={{animationDelay: "0.1s"}}>
+                <div className="feature-icon" style={{background: "rgba(220,38,38,0.08)"}}>⚔️</div>
+                <div className="feature-title">Opposing Counsel</div>
+                <div className="feature-desc">Anticipates exactly what your landlord's lawyer would argue. No surprises — you'll know their playbook before they use it.</div>
+              </div>
+              <div className="card feature-card fade-up" style={{animationDelay: "0.2s"}}>
+                <div className="feature-icon" style={{background: "rgba(124,58,237,0.08)"}}>⚖️</div>
+                <div className="feature-title">The Judge</div>
+                <div className="feature-desc">Delivers a neutral assessment of your case strength, weighing both sides. Gives you a realistic score and clear next steps.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Stats (Light gray bg) ─── */}
+        <section style={{padding: "64px 0", background: "var(--gray-50)"}}>
+          <div className="container">
+            <div className="stat-grid">
+              <div className="card stat-card"><div className="stat-number font-mono">87%</div><div className="stat-label">of NY tenants don't know their rights</div></div>
+              <div className="card stat-card"><div className="stat-number font-mono">$350/hr</div><div className="stat-label">average tenant lawyer cost in NYC</div></div>
+              <div className="card stat-card"><div className="stat-number font-mono">3 min</div><div className="stat-label">to get your full case analysis</div></div>
+              <div className="card stat-card"><div className="stat-number font-mono">Free</div><div className="stat-label">your first complete case review</div></div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Features (White) ─── */}
+        <section className="section" id="features" style={{background: "var(--white)"}}>
+          <div className="container" style={{textAlign: "center"}}>
+            <div className="section-label">Features</div>
+            <h2 className="section-title font-serif" style={{margin: "0 auto 12px"}}>Built for NY Tenants</h2>
+            <p className="section-subtitle" style={{margin: "0 auto"}}>Every analysis is grounded in actual New York State and NYC housing law.</p>
+            <div className="features-grid">
+              <div className="card feature-card">
+                <div className="feature-icon" style={{background: "rgba(37,99,235,0.08)"}}>📋</div>
+                <div className="feature-title">Real NY Law Citations</div>
+                <div className="feature-desc">Every argument references specific statutes — RPL §235-b, HSTPA, NYC Admin Code. Not generic advice.</div>
+              </div>
+              <div className="card feature-card">
+                <div className="feature-icon" style={{background: "rgba(200,117,51,0.08)"}}>🏛️</div>
+                <div className="feature-title">Housing Court Ready</div>
+                <div className="feature-desc">Understand exactly what to file, where to file, and what evidence you need before you walk into court.</div>
+              </div>
+              <div className="card feature-card">
+                <div className="feature-icon" style={{background: "rgba(22,163,74,0.08)"}}>📝</div>
+                <div className="feature-title">Action Templates</div>
+                <div className="feature-desc">Generate demand letters, HP Action templates, and complaint forms pre-filled with your case details.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Testimonials (Light gray) ─── */}
+        <section className="testimonials-section" id="testimonials">
+          <div className="container" style={{textAlign: "center"}}>
+            <div className="section-label">Testimonials</div>
+            <h2 className="section-title font-serif" style={{margin: "0 auto 12px"}}>Real Tenants. Real Results.</h2>
+            <p className="section-subtitle" style={{margin: "0 auto"}}>See how TenantShield AI has helped New York tenants fight back.</p>
+
+            <div className="testimonial-grid">
+              {testimonials.map((t, i) => (
+                <div key={i} className="card testimonial-card">
+                  <div className="testimonial-stars">
+                    {Array(t.stars).fill(null).map((_, j) => <StarIcon key={j} />)}
+                  </div>
+                  <div className="testimonial-quote">"{t.quote}"</div>
+                  <div className="testimonial-author">
+                    <div className="testimonial-avatar" style={{background: t.color}}>{t.initials}</div>
+                    <div style={{textAlign: "left"}}>
+                      <div className="testimonial-name">{t.name}</div>
+                      <div className="testimonial-meta">{t.borough} · {t.issue}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="tenant-counter" style={{marginTop: 48}}>
+              <div className="counter-number font-mono"><AnimatedCounter target={totalUsers} duration={2000} />+</div>
+              <div className="counter-label">NY tenants have analyzed their cases with TenantShield AI</div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Campaign Section (Dark) ─── */}
+        <section className="campaign-section" id="campaign">
+          <div className="container">
+            <div style={{textAlign: "center", marginBottom: 8}}>
+              <div className="section-label">The Campaign</div>
+              <h2 className="font-serif" style={{fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 800, color: "white", marginBottom: 12}}>Fight Illegal Rent Hikes Now</h2>
+              <p style={{color: "rgba(255,255,255,0.5)", fontSize: 17, maxWidth: 560, margin: "0 auto"}}>NYC's spring moving rush is here. Don't sign a new lease until you know your rights.</p>
+            </div>
+            <div className="campaign-grid">
+              <div className="campaign-card campaign-card-1">
+                <div className="campaign-card-content">
+                  <div className="campaign-card-icon" style={{background: "rgba(220,38,38,0.2)", color: "#f87171"}}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </div>
+                  <div className="campaign-headline">Stop Your Illegal Rent Hike</div>
+                  <div className="campaign-desc">The NYC spring moving rush is here. Is your landlord overcharging you? Find out in 60 seconds.</div>
+                </div>
+              </div>
+              <div className="campaign-card campaign-card-2">
+                <div className="campaign-card-content">
+                  <div className="campaign-stat">40%</div>
+                  <div className="campaign-headline" style={{textTransform: "none"}}>Of NYC Units Are Overcharged</div>
+                  <div className="campaign-desc">Landlords bank on tenants not knowing their building's true rent history.</div>
+                </div>
+              </div>
+              <div className="campaign-card campaign-card-3">
+                <div className="campaign-card-content">
+                  <div className="campaign-card-icon" style={{background: "rgba(200,117,51,0.2)", color: "var(--accent)"}}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+                  </div>
+                  <div className="campaign-headline" style={{textTransform: "none"}}>AI Audits Your Rent History</div>
+                  <div className="campaign-desc">We pull years of DHCR records in seconds to spot illegal increases automatically.</div>
+                </div>
+              </div>
+              <div className="campaign-card campaign-card-4">
+                <div className="campaign-card-content">
+                  <div className="campaign-card-icon" style={{background: "rgba(22,163,74,0.2)", color: "#22c55e"}}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                  </div>
+                  <div className="campaign-headline">Fight Back Before You Move</div>
+                  <div className="campaign-desc">Get the legal documents you need to challenge hikes and lower your rent today.</div>
+                </div>
+              </div>
+            </div>
+            <div style={{textAlign: "center", marginTop: 40}}>
+              <button className="btn-cta" onClick={() => setPage("signup")}>Check Your Rent Now <ArrowRight /></button>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Pricing (White) ─── */}
+        <section className="section" id="pricing" style={{background: "var(--white)"}}>
+          <div className="container" style={{textAlign: "center"}}>
+            <div className="section-label">Pricing</div>
+            <h2 className="section-title font-serif" style={{margin: "0 auto 12px"}}>Simple, Transparent Pricing</h2>
+            <p className="section-subtitle" style={{margin: "0 auto 48px"}}>Start free. Upgrade when you need more.</p>
+            <div className="pricing-grid">
+              <div className="card pricing-card">
+                <div style={{fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 8, letterSpacing: "1px", textTransform: "uppercase"}}>Free</div>
+                <div style={{fontSize: 44, fontWeight: 700, marginBottom: 4, color: "var(--text)"}}>$0</div>
+                <div style={{color: "var(--text-secondary)", marginBottom: 24, fontSize: 15}}>Get started</div>
+                <div style={{display: "flex", flexDirection: "column", gap: 12}}>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> 1 full case analysis</div>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> All 3 AI agents</div>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> NY law citations</div>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> Case strength score</div>
+                </div>
+                <button className="btn-secondary" style={{width: "100%", marginTop: 28}} onClick={() => setPage("signup")}>Start Free</button>
+              </div>
+              <div className="card pricing-card popular">
+                <div style={{fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 8, letterSpacing: "1px", textTransform: "uppercase"}}>Fighter — Most Popular</div>
+                <div style={{fontSize: 44, fontWeight: 700, marginBottom: 4, color: "var(--text)"}}>$29<span style={{fontSize: 16, fontWeight: 400, color: "var(--text-secondary)"}}>/mo</span></div>
+                <div style={{color: "var(--text-secondary)", marginBottom: 24, fontSize: 15}}>For active disputes</div>
+                <div style={{display: "flex", flexDirection: "column", gap: 12}}>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> Unlimited case analyses</div>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> Demand letter generator</div>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> Court filing templates</div>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> Case history tracking</div>
+                  <div style={{display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", fontSize: 14}}><CheckIcon /> Priority support</div>
+                </div>
+                <button className="btn-cta" style={{width: "100%", marginTop: 28}} onClick={() => setPage("signup")}>Start Fighting</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── FAQ (White) ─── */}
+        <section className="faq-section" id="faq">
+          <div className="container" style={{textAlign: "center"}}>
+            <div className="section-label">FAQ</div>
+            <h2 className="section-title font-serif" style={{margin: "0 auto 12px"}}>Frequently Asked Questions</h2>
+            <p className="section-subtitle" style={{margin: "0 auto"}}>Everything you need to know before getting started.</p>
+            <div className="faq-list" style={{textAlign: "left"}}>
+              {faqData.map((item, i) => (
+                <FAQItem key={i} question={item.q} answer={item.a} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Final CTA (Light gray) ─── */}
+        <section style={{padding: "80px 0", background: "var(--gray-50)"}}>
+          <div className="container" style={{textAlign: "center"}}>
+            <div style={{maxWidth: 600, margin: "0 auto"}}>
+              <h2 className="font-serif" style={{fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 800, marginBottom: 12, color: "var(--text)"}}>Stop Guessing. Start Fighting.</h2>
+              <p style={{color: "var(--text-secondary)", fontSize: 17, marginBottom: 32, lineHeight: 1.6}}>Your landlord's lawyers aren't guessing about the law. You shouldn't be either.</p>
+              <button className="btn-cta" onClick={() => setPage("signup")}>Get Your Free Analysis <ArrowRight /></button>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Disclaimer ─── */}
+        <div className="container" style={{paddingBottom: 32}}>
+          <div className="disclaimer">
+            <strong><AlertIcon /> Important Disclaimer:</strong> TenantShield AI provides legal information and analysis, not legal advice. This tool is designed to help you understand your rights under New York law, but it is not a substitute for consultation with a licensed attorney.
+          </div>
+        </div>
+
+        {/* ─── Footer (Dark) ─── */}
+        <footer className="footer">
+          <div className="container">
+            <div className="footer-grid">
+              <div>
+                <div className="footer-brand-logo"><ShieldIcon /> <span>TenantShield</span></div>
+                <div className="footer-brand-desc">AI-powered legal analysis built specifically for New York tenants. Know your rights. Fight back.</div>
+              </div>
+              <div>
+                <div className="footer-col-title">Company</div>
+                <div className="footer-links">
+                  <a className="footer-link">About Us</a>
+                  <a className="footer-link">Careers</a>
+                  <a className="footer-link">Press</a>
+                  <a className="footer-link">Contact</a>
+                </div>
+              </div>
+              <div>
+                <div className="footer-col-title">Legal</div>
+                <div className="footer-links">
+                  <a className="footer-link">Terms of Service</a>
+                  <a className="footer-link">Privacy Policy</a>
+                  <a className="footer-link">Disclaimer</a>
+                </div>
+              </div>
+              <div>
+                <div className="footer-col-title">Resources</div>
+                <div className="footer-links">
+                  <a className="footer-link">Blog</a>
+                  <a className="footer-link">FAQ</a>
+                  <a className="footer-link">Know Your Rights</a>
+                  <a className="footer-link">Tenant Handbook</a>
+                </div>
+              </div>
+              <div>
+                <div className="footer-col-title">Support</div>
+                <div className="footer-links">
+                  <a className="footer-link">Help Center</a>
+                  <a className="footer-link">Community</a>
+                  <a className="footer-link">hello@tenantshield.ai</a>
+                </div>
+              </div>
+            </div>
+            <div className="footer-bottom">
+              <div className="footer-bottom-text">2026 TenantShield AI. All rights reserved. Not a law firm.</div>
+              <div className="footer-bottom-links">
+                <a className="footer-bottom-link">Terms</a>
+                <a className="footer-bottom-link">Privacy</a>
+              </div>
+            </div>
+          </div>
+        </footer>
+
+        <HelpButton page={page} />
+      </div>
+    );
+  }
+
+  /* ─── SIGNUP PAGE (Light) ─── */
+  if (page === "signup") {
+    return (
+      <div style={{minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "var(--gray-50)"}}>
+        <div className="card signup-card">
+          <div style={{textAlign: "center", marginBottom: 8}}>
+            <div style={{color: "var(--accent)"}}><ShieldIcon /></div>
+          </div>
+          <h2>Create Your Account</h2>
+          <p className="subtitle">Get your free case analysis in minutes</p>
+          <form onSubmit={handleSignup}>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">First Name *</label>
+                <input className="input-field" type="text" placeholder="John" value={signupData.firstName} onChange={e => setSignupData({...signupData, firstName: e.target.value})} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Last Name</label>
+                <input className="input-field" type="text" placeholder="Doe" value={signupData.lastName} onChange={e => setSignupData({...signupData, lastName: e.target.value})} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Email *</label>
+              <input className="input-field" type="email" placeholder="john@example.com" value={signupData.email} onChange={e => setSignupData({...signupData, email: e.target.value})} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Phone</label>
+              <input className="input-field" type="tel" placeholder="(212) 555-0123" value={signupData.phone} onChange={e => setSignupData({...signupData, phone: e.target.value})} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Borough</label>
+              <select className="input-field" value={signupData.borough} onChange={e => setSignupData({...signupData, borough: e.target.value})}>
+                <option>Manhattan</option>
+                <option>Brooklyn</option>
+                <option>Queens</option>
+                <option>Bronx</option>
+                <option>Staten Island</option>
+                <option>Other NY</option>
+              </select>
+            </div>
+            <button className="btn-cta" type="submit" style={{width: "100%", marginTop: 8}}>Create Account & Start <ArrowRight /></button>
+          </form>
+          <p style={{textAlign: "center", marginTop: 16, fontSize: 13, color: "var(--text-secondary)"}}>Already have an account? <a style={{color: "var(--accent)", cursor: "pointer"}}>Sign in</a></p>
+          <p style={{textAlign: "center", marginTop: 10, fontSize: 13}}>
+            <a style={{color: "var(--text-secondary)", cursor: "pointer"}} onClick={() => setPage("landing")}>Back to home</a>
+          </p>
+        </div>
+        <HelpButton page={page} />
+      </div>
+    );
+  }
+
+  /* ─── INTAKE PAGE (Light) ─── */
+  if (page === "intake") {
+    return (
+      <div style={{minHeight: "100vh", padding: "80px 24px 60px", background: "var(--white)"}}>
+        <div className="container" style={{maxWidth: 900}}>
+          <div style={{textAlign: "center", marginBottom: 40}} className="fade-up">
+            <div style={{fontSize: 13, color: "var(--accent)", fontWeight: 700, marginBottom: 8, letterSpacing: "1.5px", textTransform: "uppercase"}}>Step 1 of 2</div>
+            <h1 className="font-serif" style={{fontSize: 32, fontWeight: 800, marginBottom: 10, color: "var(--text)"}}>What's going on with your landlord?</h1>
+            <p style={{color: "var(--text-secondary)", fontSize: 16, lineHeight: 1.6}}>Select your issue, then tell us the details. Be as specific as you can.</p>
+          </div>
+
+          <div className="issue-grid">
+            {NY_LAW.commonIssues.map((issue, i) => (
+              <div key={issue.id} className={`card issue-card ${selectedIssue === issue.id ? "selected" : ""}`} onClick={() => { setSelectedIssue(issue.id); setSignupData({...signupData, issueType: issue.id}); }}>
+                <div className="issue-icon">{issue.icon}</div>
+                <div className="issue-title">{issue.title}</div>
+                <div className="issue-desc">{issue.desc}</div>
+                {selectedIssue === issue.id && (
+                  <div style={{position: "absolute", top: 12, right: 12, color: "var(--accent)"}}><CheckIcon /></div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {selectedIssue && (
+            <div className="fade-up" style={{marginTop: 32}}>
+              <div className="card" style={{padding: 28}}>
+                <h3 style={{fontSize: 17, fontWeight: 700, marginBottom: 12, color: "var(--text)"}}>Tell us what happened</h3>
+                <p style={{color: "var(--text-secondary)", fontSize: 14, marginBottom: 14, lineHeight: 1.6}}>The more detail you provide, the better our AI agents can analyze your case. Include dates, communications, and specific incidents.</p>
+                <textarea className="input-field" placeholder="Example: My landlord hasn't fixed the heating in my apartment since November 2025. I've called the super 5 times and sent 2 emails to management. The temperature drops to 55°F at night. I have photos and email records..." value={caseDetails} onChange={e => setCaseDetails(e.target.value)} style={{minHeight: 160}} />
+                <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16}}>
+                  <span style={{fontSize: 13, color: "var(--text-secondary)"}}>{caseDetails.length > 0 ? `${caseDetails.length} characters` : "Minimum 50 characters recommended"}</span>
+                  <button className="btn-cta" style={{padding: "12px 28px", fontSize: 15}} onClick={startAnalysis} disabled={!caseDetails.trim() || caseDetails.length < 20}>Launch Analysis <ArrowRight /></button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="disclaimer" style={{marginTop: 24}}>
+            <strong><AlertIcon /> Privacy Note:</strong> Your case details are processed securely and not shared with third parties. We do not store personally identifiable information beyond what's needed for your analysis.
+          </div>
+        </div>
+        <HelpButton page={page} />
+      </div>
+    );
+  }
+
+  /* ─── ANALYSIS PAGE (Dark — this is the product) ─── */
+  if (page === "analysis") {
+    const progressPercent = showVerdict ? 100 : agentMessages.length * 20 + (currentAgent ? 10 : 0);
+    const issueInfo = NY_LAW.commonIssues.find(i => i.id === selectedIssue);
+
+    return (
+      <div style={{minHeight: "100vh", padding: "40px 24px 60px", background: "var(--navy)", color: "white"}}>
+        <div className="container" style={{maxWidth: 900}}>
+          <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20}}>
+            <div>
+              <div style={{display: "flex", alignItems: "center", gap: 10, marginBottom: 6}}>
+                <span style={{fontSize: 22}}>{issueInfo ? issueInfo.icon : "📋"}</span>
+                <h2 style={{fontSize: 22, fontWeight: 700}}>Case Analysis: {issueInfo ? issueInfo.title : "Legal Issue"}</h2>
+              </div>
+              <p style={{color: "rgba(255,255,255,0.4)", fontSize: 14}}>New York State — {signupData.borough}</p>
+            </div>
+            {!isProcessing && showVerdict && (
+              <button className="btn-secondary-dark" style={{padding: "8px 16px", fontSize: 13, background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)", borderRadius: 6, cursor: "pointer"}} onClick={() => { setPage("intake"); setAgentMessages([]); setVerdict(null); setShowVerdict(false); setCurrentRound(0); setSelectedIssue(null); setCaseDetails(""); }}>New Analysis</button>
+            )}
+          </div>
+
+          {/* Win Meter */}
+          <WinMeter score={winScore} isAnimating={isProcessing} label={winLabel} />
+
+          {/* Progress */}
+          <div style={{background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "12px 20px", marginBottom: 20}}>
+            <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6}}>
+              <span style={{fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)"}}>
+                {showVerdict ? "Analysis Complete" : isProcessing ? "Agents Deliberating..." : "Preparing..."}
+              </span>
+              <span style={{fontSize: 13, color: "rgba(255,255,255,0.3)"}}>{Math.round(progressPercent)}%</span>
+            </div>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{width: `${progressPercent}%`, background: showVerdict ? "var(--green-light)" : "var(--accent)"}}></div>
+            </div>
+          </div>
+
+          <div className="chat-area" ref={chatRef}>
+            {agentMessages.map((msg, i) => {
+              const showRound1 = i === 0;
+              const showRound2 = i === 2 && agentMessages.length > 2;
+
+              return (
+                <React.Fragment key={i}>
+                  {showRound1 && (
+                    <div className="round-indicator"><div className="round-badge">Round 1 — Opening Arguments</div></div>
+                  )}
+                  {showRound2 && (
+                    <div className="round-indicator"><div className="round-badge">Round 2 — Rebuttals</div></div>
+                  )}
+                  <div className={`agent-card agent-${msg.agent}`}>
+                    <div className={`agent-badge badge-${msg.agent}`}>
+                      {msg.agent === "defense" && "Your Defense Counsel"}
+                      {msg.agent === "opposing" && "Opposing Counsel"}
+                      {msg.agent === "judge" && "The Judge"}
+                    </div>
+                    {i === agentMessages.length - 1 ? (
+                      <StreamingText text={msg.content} speed={6} />
+                    ) : (
+                      <div className="agent-text" dangerouslySetInnerHTML={{__html: msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}} />
+                    )}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+
+            {currentAgent && (
+              <div className={`agent-card agent-${currentAgent} fade-in`}>
+                <div className={`agent-badge badge-${currentAgent}`}>
+                  {currentAgent === "defense" && "Your Defense Counsel"}
+                  {currentAgent === "opposing" && "Opposing Counsel"}
+                  {currentAgent === "judge" && "The Judge"}
+                </div>
+                <div className="typing-dots">
+                  <span style={{background: currentAgent === "defense" ? "#22c55e" : currentAgent === "opposing" ? "#f87171" : "#a78bfa"}}></span>
+                  <span style={{background: currentAgent === "defense" ? "#22c55e" : currentAgent === "opposing" ? "#f87171" : "#a78bfa"}}></span>
+                  <span style={{background: currentAgent === "defense" ? "#22c55e" : currentAgent === "opposing" ? "#f87171" : "#a78bfa"}}></span>
+                </div>
+              </div>
+            )}
+
+            {showVerdict && verdict && (
+              <div>
+                <div className="round-indicator"><div className="round-badge">Final Assessment</div></div>
+                <div className="verdict-card">
+                  <div className={`strength-banner ${verdict.score >= 80 ? 'strong' : verdict.score >= 60 ? 'moderate' : 'weak'}`}>
+                    <div className="strength-emoji">
+                      {verdict.score >= 80 ? '💪' : verdict.score >= 60 ? '👍' : '⚠️'}
+                    </div>
+                    <div className={`strength-label ${verdict.score >= 80 ? 'strong' : verdict.score >= 60 ? 'moderate' : 'weak'}`}>
+                      {verdict.score >= 80 ? 'Strong Case' : verdict.score >= 60 ? 'Decent Case' : 'Tough Case'}
+                    </div>
+                    <div className="strength-score">Case Strength: {verdict.score}/100</div>
+                  </div>
+
+                  <div className="verdict-title">Judicial Assessment</div>
+                  <div className="agent-text" dangerouslySetInnerHTML={{__html: verdict.summary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}} />
+                  <div style={{marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap"}}>
+                    <button className="btn-cta" style={{padding: "10px 20px", fontSize: 14}}>Generate Demand Letter</button>
+                    <button style={{padding: "10px 20px", fontSize: 14, background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontWeight: 600}}>Download Full Report</button>
+                    <button style={{padding: "10px 20px", fontSize: 14, background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontWeight: 600}}>Find a Tenant Lawyer</button>
+                  </div>
+                </div>
+
+                <div className="timeline-section">
+                  <div className="timeline-title">What Happens Next</div>
+                  <div className="timeline">
+                    <TimelineStep stepNumber="1" title="Send a Demand Letter" timeframe="This Week" detail="Write a formal letter to your landlord documenting the issue and demanding action. Send it via certified mail so you have proof. Keep a copy for your records. We can help you generate one — click 'Generate Demand Letter' above." />
+                    <TimelineStep stepNumber="2" title="File a Complaint with HPD/311" timeframe="This Week" detail="Call 311 or visit nyc.gov/311 to file a complaint. An inspector will be sent to verify conditions. This creates an official government record that strengthens your case significantly." />
+                    <TimelineStep stepNumber="3" title="File in Housing Court (if no response)" timeframe="2-4 Weeks" detail="If your landlord ignores the demand letter and conditions persist, file an HP Action in Housing Court. You don't need a lawyer — the court has a Help Center. Bring all documentation." />
+                  </div>
+                </div>
+
+                <div className="share-section">
+                  <div className="share-heading">Know someone dealing with a bad landlord?</div>
+                  <div className="share-subtext">Send them TenantShield AI — it's free for the first analysis.</div>
+                  <div className="share-buttons">
+                    <button className="share-button" onClick={handleShareCopy}>{shareCopied ? "Copied!" : "Copy Link"}</button>
+                    <button className="share-button" onClick={handleShareText}>Text a Friend</button>
+                    <button className="share-button" onClick={handleShareEmail}>Send Email</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="disclaimer disclaimer-dark" style={{marginTop: 20}}>
+            <strong><AlertIcon /> Reminder:</strong> This analysis is based on New York State and NYC housing law as of 2026. Laws may change. For cases involving immediate safety concerns, contact 311 (NYC) or your local code enforcement. For legal emergencies, contact Legal Aid at (212) 577-3300.
+          </div>
+        </div>
+
+        {!isProcessing && showVerdict && (
+          <div className="sticky-status-bar">
+            <div className="pulse-dot"></div>
+            <div className="status-text">Analysis Complete</div>
+            <div className="status-progress"><div className="status-progress-fill"></div></div>
+          </div>
+        )}
+        {isProcessing && (
+          <div className="sticky-status-bar">
+            <div className="pulse-dot"></div>
+            <div className="status-text">Agents Deliberating...</div>
+            <div className="status-progress"><div className="status-progress-fill"></div></div>
+          </div>
+        )}
+
+        <HelpButton page={page} isProcessing={isProcessing} showVerdict={showVerdict} />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

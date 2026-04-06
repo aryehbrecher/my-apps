@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ContentEngine — FM Home Loans</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--navy:#1B365D;--gold:#C5A55A;--navy-light:#264a80;--gold-light:#d4b96e;--gold-dark:#a88c3e}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,-apple-system,sans-serif}
+body.dark{background:#0f1117;color:#e2e8f0}
+body.light{background:#f8fafc;color:#1a202c}
+.dark .card{background:#1a1d2e;border:1px solid #2d3148}
+.light .card{background:#fff;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.dark .card-inner{background:#141625;border:1px solid #252840}
+.light .card-inner{background:#f7f8fa;border:1px solid #e8ecf1}
+.dark input,.dark textarea,.dark select{background:#141625;border:1px solid #2d3148;color:#e2e8f0}
+.light input,.light textarea,.light select{background:#fff;border:1px solid #d1d5db;color:#1a202c}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold)!important;box-shadow:0 0 0 2px rgba(197,165,90,.25)}
+.btn-primary{background:var(--navy);color:#fff;transition:all .2s}
+.btn-primary:hover{background:var(--navy-light)}
+.btn-gold{background:var(--gold);color:#1a202c;font-weight:600;transition:all .2s}
+.btn-gold:hover{background:var(--gold-light)}
+.btn-outline{border:1px solid var(--gold);color:var(--gold);transition:all .2s}
+.btn-outline:hover{background:var(--gold);color:#1a202c}
+.dark .btn-ghost{color:#94a3b8;transition:all .2s}
+.dark .btn-ghost:hover{color:#e2e8f0;background:#252840}
+.light .btn-ghost{color:#64748b;transition:all .2s}
+.light .btn-ghost:hover{color:#1a202c;background:#f1f5f9}
+.tab-active{border-bottom:2px solid var(--gold);color:var(--gold)!important;font-weight:600}
+.dark .sidebar{background:#13151f;border-right:1px solid #2d3148}
+.light .sidebar{background:#fff;border-right:1px solid #e2e8f0}
+.dark .sidebar-item:hover,.dark .sidebar-item.active{background:#1a1d2e}
+.light .sidebar-item:hover,.light .sidebar-item.active{background:#f1f5f9}
+.sidebar-item.active{border-left:3px solid var(--gold)}
+.output-block{position:relative}
+.output-block .copy-btn{position:absolute;top:8px;right:8px;opacity:0;transition:opacity .2s}
+.output-block:hover .copy-btn{opacity:1}
+.toast{animation:slideUp .3s ease-out}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.loading-dot{animation:pulse 1.5s ease-in-out infinite}
+.slider-track{-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;outline:none}
+.dark .slider-track{background:#2d3148}
+.light .slider-track{background:#e2e8f0}
+.slider-track::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--gold);cursor:pointer}
+::-webkit-scrollbar{width:6px}
+.dark ::-webkit-scrollbar-track{background:#0f1117}
+.light ::-webkit-scrollbar-track{background:#f1f5f9}
+.dark ::-webkit-scrollbar-thumb{background:#2d3148;border-radius:3px}
+.light ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+.dark .tag{background:#252840;color:#94a3b8;border:1px solid #2d3148}
+.light .tag{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+.dark .divider{border-color:#2d3148}
+.light .divider{border-color:#e2e8f0}
+.dark .text-muted{color:#64748b}
+.light .text-muted{color:#94a3b8}
+.dark .text-secondary{color:#94a3b8}
+.light .text-secondary{color:#64748b}
+</style>
+</head>
+<body class="dark">
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo,createContext,useContext} = React;
+
+// ============================================================
+// CONTEXT & STATE
+// ============================================================
+const AppContext = createContext();
+
+const DEFAULT_SETTINGS = {
+  apiKey: '',
+  name: 'Aryeh Brecher',
+  title: 'Senior Loan Officer',
+  nmls: '',
+  phone: '',
+  email: '',
+  company: 'FM Home Loans',
+  defaultTone: 'professional',
+  brandVoiceSamples: [],
+  personalitySliders: { professional: 70, educational: 50, brief: 40 }
+};
+
+const DEFAULT_RATES = { thirtyYr: '', fifteenYr: '', fha: '', va: '' };
+
+const TONE_OPTIONS = ['Professional','Casual','Educational','Urgent'];
+
+// ============================================================
+// AI PROMPTS — THE CORE ENGINE
+// ============================================================
+const buildSystemPrompt = (settings, brandVoice) => {
+  const voiceExamples = brandVoice.length > 0
+    ? `\n\nHere are examples of the user's actual writing voice. Match this tone, cadence, and style closely:\n---\n${brandVoice.join('\n---\n')}\n---`
+    : '';
+  const personality = settings.personalitySliders || {professional:70,educational:50,brief:40};
+  return `You are a content ghostwriter for ${settings.name}, ${settings.title} at ${settings.company}. You write mortgage marketing content that sounds like a real, experienced loan officer — NOT generic AI content.
+
+CRITICAL RULES:
+- Sound human. Use contractions. Be direct. No corporate buzzwords like "navigate," "leverage," "landscape," or "journey."
+- Never guarantee rates or outcomes. Always imply "subject to qualification" where relevant.
+- Never use phrases like "In today's market" or "As a mortgage professional" — these are dead giveaways of AI slop.
+- Include real mortgage knowledge: LTV, DTI, PMI, rate locks, points, buydowns, ARM vs fixed, conforming limits, etc. when relevant.
+- Compliance: No discriminatory language. No guaranteed approvals. No specific rate promises without "as of [date], subject to change."
+- NMLS#: ${settings.nmls || '[not set]'} | Phone: ${settings.phone || '[not set]'} | Email: ${settings.email || '[not set]'}
+
+PERSONALITY CALIBRATION:
+- Professional ↔ Casual: ${personality.professional}/100 (higher = more formal)
+- Educational ↔ Sales: ${personality.educational}/100 (higher = more educational)
+- Brief ↔ Detailed: ${personality.brief}/100 (higher = more detailed)
+${voiceExamples}
+
+Write content that a loan officer would actually want to post. If it sounds like it came from ChatGPT, you failed.`;
+};
+
+const CHANNEL_PROMPTS = {
+  whatsapp: `Generate a WhatsApp market update blurb. Requirements:
+- 3-4 sentences MAX. Punchy and conversational.
+- Lead with the most interesting rate movement or market insight.
+- End with a soft CTA like "DM me if you have a buyer on the fence" or "Send your buyers my way."
+- Use casual language — this goes to realtor partners via WhatsApp.
+- No emojis overload — max 1-2 if natural. No bullet points.
+- Example style: "30yr fixed ticked down to X.XX% today — best we've seen in 3 weeks. If you've got buyers waiting on the sidelines, now's a solid window before the next Fed meeting. Shoot me a text if anyone needs a quick pre-approval."`,
+
+  linkedin: `Generate a LinkedIn post for a mortgage professional. Requirements:
+- 150-250 words. Professional but personable.
+- Hook in the first line (this shows above the "see more" fold — make it count).
+- Include 1-2 specific data points or insights that demonstrate expertise.
+- End with a question or CTA that drives engagement (comments, DMs).
+- Add 3-5 relevant hashtags at the end: mix of broad (#mortgage #realestate) and niche (#firsttimehomebuyer #ratewatchc).
+- Format with line breaks for readability. LinkedIn rewards this.
+- Do NOT start with "I'm excited to share" or "As a mortgage professional." Ever.`,
+
+  realtorEmail: `Generate a realtor-facing email. Requirements:
+- Subject line included (make it compelling, not generic).
+- Greeting → brief market context → what this means for their buyers → specific CTA.
+- Tone: collegial, peer-to-peer. You're their lending partner, not a vendor.
+- Include 1 specific scenario (e.g., "A buyer at $400K purchase price with 5% down would see roughly $XX/month at today's rate").
+- End with a clear next step: "Send me your pre-approval needs" or "Let's get your buyers locked before [event]."
+- Keep under 200 words. Realtors don't read long emails.`,
+
+  consumer: `Generate a consumer/lead-facing social media post. Requirements:
+- Educational tone — explain what rates mean in plain English.
+- Use a real-world example: "If you're buying a $350K home with 10% down, here's what your payment looks like at X.XX%..."
+- Address common buyer concerns: affordability, timing, "should I wait?"
+- No jargon without explanation. If you say DTI, explain it.
+- Encouraging but honest — don't oversell.
+- Include a CTA: "Questions? DM me — I do this all day."
+- 100-180 words. Digestible for social media.`
+};
+
+const LINKEDIN_TYPE_PROMPTS = {
+  marketUpdate: `Write a LinkedIn market update post. Focus on what happened this week in rates/housing and what it means for buyers and sellers. Include specific numbers. Be the expert voice people trust for mortgage market intel.`,
+  mythFact: `Write a "Myth vs. Fact" LinkedIn post about a common mortgage misconception. Structure: State the myth (something people actually believe), then break it down with facts. Examples of myths: "You need 20% down," "Checking rates hurts your credit," "You should always go with the lowest rate," "You can't buy with student loans," "FHA is only for first-time buyers." Pick one and demolish it with expertise.`,
+  buyerTip: `Write a "Homebuyer Tip of the Week" LinkedIn post. Share one specific, actionable piece of advice that a buyer can use right now. Not generic — something that shows deep industry knowledge. Examples: "How to strategically time your rate lock," "Why your pre-approval letter amount matters in a multiple-offer situation," "The 2-1 buydown strategy nobody's talking about."`,
+  successStory: `Write a "just closed" celebration post for LinkedIn. Use a FICTIONAL scenario (no real names — use "my client" or first name only). Tell the story: what was the challenge (low credit, self-employed, first-time buyer nerves, multiple offer losses), what strategy did you use, what was the outcome. Make it emotional but professional. This should make other potential borrowers think "I want that experience."`,
+  rateCommentary: `Write a rate analysis/commentary post for LinkedIn. Go deeper than "rates went up/down." Explain WHY — what economic indicators drove the movement, what the bond market is doing, what the Fed signals mean. Position yourself as someone who actually understands the macro picture, not just reads rate sheets.`,
+  firstTimeBuyer: `Write a first-time homebuyer education post for LinkedIn. Address one specific topic: down payment assistance programs, the actual steps of getting a mortgage, what to expect at closing, how much you really need saved, etc. Be the reassuring expert that makes the process feel less scary.`,
+  refiAlert: `Write a refinance opportunity post for LinkedIn. Identify who should be looking at refinancing right now and why. Be specific about scenarios: "If you bought in [year] at X%+ and haven't looked at rates lately..." Include rough math on potential savings. Don't oversell — be the honest advisor.`,
+  seasonal: `Write a seasonal/timely LinkedIn post related to mortgage and real estate. Connect current season or upcoming holiday to homeownership themes. Examples: spring buying season prep, year-end tax benefits of homeownership, New Year's resolution to buy, back-to-school timing for family moves. Make it timely and relevant without being cheesy.`
+};
+
+const REALTOR_TEMPLATE_PROMPTS = {
+  reEngage: `Write a re-engagement message to a realtor partner I haven't heard from in a while. Tone: warm, no guilt trip, just checking in. Mention something valuable (rate update, market shift, new program) as the reason for reaching out. Make it easy to reply.`,
+  ratesDrop: `Write an alert message to a realtor about a recent rate improvement. Be specific about the opportunity. Create urgency without being pushy. Focus on how this helps THEIR buyers and THEIR deals.`,
+  justClosed: `Write a thank-you message to a realtor after closing a deal together. Be genuine, mention the teamwork, and plant the seed for future referrals. Short and warm.`,
+  coffee: `Write a casual "let's catch up" message to a realtor for relationship building. No hard sell — just genuine networking. Suggest coffee, lunch, or a quick call. Keep it human.`,
+  coMarketing: `Write a co-marketing pitch to a realtor. Suggest a specific collaboration: joint open house, co-branded first-time buyer seminar, Instagram Live together, shared mailer campaign. Be specific about what you'll bring to the table.`,
+  openHouse: `Write a message offering to support a realtor's open house. Offer specific value: on-site pre-approvals, rate sheets for visitors, buyer education handouts. Show how your presence helps them convert more leads.`
+};
+
+const NURTURE_SEQUENCE_PROMPTS = {
+  newLead: {
+    name: 'New Lead Drip (5 Messages)',
+    description: 'For leads who just inquired — build trust and move toward application',
+    count: 5,
+    prompts: [
+      'Write message 1 of 5 in a new lead nurture sequence. This is the immediate response after someone inquires about a mortgage. Be warm, introduce yourself briefly, acknowledge their inquiry, and set expectations for what comes next. Ask ONE qualifying question (timeline, purchase vs refi, price range). Keep it under 100 words.',
+      'Write message 2 of 5 (sent day 2). Follow up with value — share a quick tip relevant to their situation. If they mentioned buying, share something about the current market. Build credibility without being salesy. Ask if they have questions.',
+      'Write message 3 of 5 (sent day 4). Share a specific resource: a rate update, a first-time buyer checklist, or a "what to expect" overview. Position yourself as an educator, not a closer.',
+      'Write message 4 of 5 (sent day 7). Soft check-in. Reference something from the previous messages. Create a low-pressure CTA: "Would a 15-minute call be helpful? I can answer all your questions and give you a clear picture of your options."',
+      'Write message 5 of 5 (sent day 14). Final touchpoint if no response. Short, friendly, no guilt. "Just wanted to make sure you have my info when you are ready. No rush — buying a home is a big decision and I am here whenever the timing is right."'
+    ]
+  },
+  preApproved: {
+    name: 'Pre-Approved & Searching (4 Messages)',
+    description: 'For buyers who are pre-approved but haven\'t found a home yet',
+    count: 4,
+    prompts: [
+      'Write message 1 of 4 for a pre-approved buyer who is actively searching. Check in on their house hunt. Remind them their pre-approval is valid for X days. Offer to update their letter if they need a different amount.',
+      'Write message 2 of 4 (sent 2 weeks later). Share a market insight relevant to their search. Mention any rate changes that affect their buying power. Be their inside source.',
+      'Write message 3 of 4 (sent 1 month in). Acknowledge that house hunting can be tiring. Share a motivational story or tip. Remind them you are monitoring rates on their behalf.',
+      'Write message 4 of 4 (sent 6 weeks in). If pre-approval is nearing expiration, give them a heads up. Offer to refresh it. If rates have changed, explain what that means for their payment.'
+    ]
+  },
+  rateWatcher: {
+    name: 'Rate Watcher Updates (4 Messages)',
+    description: 'For leads waiting for rates to drop before making a move',
+    count: 4,
+    prompts: [
+      'Write message 1 of 4 for someone waiting for rates to improve. Acknowledge their strategy. Share current rate context. Gently introduce the concept that timing the market is difficult — the best time to buy is when you find the right house.',
+      'Write message 2 of 4. Share a rate update with context. If rates improved, highlight it. If not, discuss strategies: buydowns, ARMs, points. Show there are options beyond just waiting.',
+      'Write message 3 of 4. Use a concrete example: "Here is what the monthly difference actually looks like between X% and Y%..." Sometimes the math shows waiting is not worth it. Be honest either way.',
+      'Write message 4 of 4. Big picture perspective: home appreciation vs rate savings, the cost of renting while waiting, "marry the house, date the rate" philosophy. Soft CTA to explore options.'
+    ]
+  },
+  pastClient: {
+    name: 'Past Client Touchpoints (4 Messages)',
+    description: 'Quarterly check-ins to stay top of mind and generate referrals',
+    count: 4,
+    prompts: [
+      'Write quarterly touchpoint 1 (Q1). Happy New Year + home ownership tip for the new year (check insurance rates, review escrow, spring maintenance prep). Casual and helpful, not salesy.',
+      'Write quarterly touchpoint 2 (Q2). Spring check-in. Share something about the current market or rates. Mention you are always here if they know anyone thinking about buying. Plant the referral seed naturally.',
+      'Write quarterly touchpoint 3 (Q3). Mid-year touchpoint. Share a relevant tip: home equity, potential refi opportunity, tax benefits reminder. Ask how they are enjoying the home.',
+      'Write quarterly touchpoint 4 (Q4). Year-end message. Holiday wishes + year-in-review of the housing market. Remind them about mortgage interest deduction for taxes. Warm and personal.'
+    ]
+  }
+};
+
+const CALENDAR_THEMES = {
+  Monday: { theme: 'Market Update', icon: '📊', prompt: 'Write a Monday market update post for LinkedIn. Cover what happened in mortgage rates over the past week and what to watch for this week.' },
+  Tuesday: { theme: 'Buyer Tip', icon: '💡', prompt: 'Write a Tuesday tip post for LinkedIn aimed at homebuyers. Share one specific, actionable piece of mortgage or homebuying advice.' },
+  Wednesday: { theme: 'Myth Busting', icon: '🔍', prompt: 'Write a Wednesday myth-busting post for LinkedIn. Take a common mortgage misconception and set the record straight with facts.' },
+  Thursday: { theme: 'Partner Spotlight', icon: '🤝', prompt: 'Write a Thursday post for LinkedIn celebrating the realtor/agent community. This could be a general appreciation post, a tip for working with loan officers, or a co-branding idea. Do NOT use specific names.' },
+  Friday: { theme: 'Success Story / Motivation', icon: '🏠', prompt: 'Write a Friday feel-good post for LinkedIn. Either a fictional success story about helping someone achieve homeownership, or a motivational message about the importance of what we do in this industry.' }
+};
+
+// ============================================================
+// SAMPLE CONTENT
+// ============================================================
+const SAMPLE_OUTPUTS = {
+  whatsapp: `30yr fixed sitting at 6.625% this morning — down about an eighth from last week. Nothing dramatic but the trend's been our friend lately. If you've got buyers circling, this is a good window to get them locked before the jobs report Friday. Shoot me a text with any pre-approval needs 📱`,
+  linkedin: `6.625% on the 30-year fixed today.\n\nThat's the lowest we've seen in 3 weeks, and here's why it matters:\n\nOn a $400K purchase with 10% down, that eighth-point drop saves your buyer about $27/month. Not life-changing alone — but it signals a trend.\n\nThe bond market is pricing in a more dovish Fed, and if Friday's jobs report comes in soft, we could see another leg down.\n\nMy take: if your buyers have been waiting for "the right time," the right time isn't a single number — it's when the math works for their budget and they find the right house.\n\nI'm running numbers all day. Send me your buyers and I'll give them a clear picture in 15 minutes.\n\n#mortgagerates #realestate #homebuying #firsttimehomebuyer #housingmarket`,
+  realtorEmail: `Subject: Rates ticked down — good window for your buyers\n\nHey [Name],\n\nQuick heads up — 30yr fixed came in at 6.625% this morning, down from 6.75% last week. The trend's been moving in our favor.\n\nFor context: on a $400K purchase with 5% down, your buyer's looking at roughly $2,430/mo P&I at today's rate. That's about $50/mo less than two weeks ago.\n\nWith the jobs report Friday, rates could move either direction. If you've got anyone on the fence, locking this week could be smart.\n\nSend me anyone who needs a quick pre-approval — I can usually turn them around same day.\n\nTalk soon,\nAryeh`,
+  consumer: `Mortgage rates dropped a bit this week — 30-year fixed is at 6.625%.\n\nWhat does that actually mean for you?\n\nIf you're looking at a $350,000 home and putting 10% down, your monthly payment (principal + interest) would be around $2,018. Add taxes and insurance and you're probably in the $2,400-2,600 range depending on your area.\n\nIs that affordable? That depends on your income, debts, and comfort level — not on what the internet says you "should" spend.\n\nHere's what I tell every buyer: don't wait for a magic number. Rates will always fluctuate. What matters is finding a payment that fits YOUR budget and a home that fits YOUR life.\n\nWant to see what you actually qualify for? Takes 15 minutes. DM me and let's run the numbers — no commitment, no pressure. That's literally my job. 🏠`
+};
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+const generateId = () => Math.random().toString(36).substring(2, 11);
+
+const copyToClipboard = async (text) => {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch { return false; }
+};
+
+const callClaude = async (apiKey, systemPrompt, userPrompt, onStream) => {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.content?.[0]?.text || '';
+};
+
+// ============================================================
+// COMPONENTS
+// ============================================================
+
+// Toast notification
+const Toast = ({message, type='success', onClose}) => {
+  useEffect(() => { const t = setTimeout(onClose, 2500); return () => clearTimeout(t); }, []);
+  const bg = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
+  return <div className={`toast fixed bottom-6 right-6 ${bg} text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm font-medium`}>{message}</div>;
+};
+
+// Copy button
+const CopyBtn = ({text, className=''}) => {
+  const {addToast} = useContext(AppContext);
+  return <button className={`btn-ghost px-2 py-1 rounded text-xs ${className}`} onClick={async()=>{
+    if(await copyToClipboard(text)) addToast('Copied!');
+    else addToast('Failed to copy','error');
+  }}>📋 Copy</button>;
+};
+
+// Loading indicator
+const LoadingDots = () => <span className="loading-dot">Generating<span className="loading-dot">.</span><span className="loading-dot" style={{animationDelay:'.2s'}}>.</span><span className="loading-dot" style={{animationDelay:'.4s'}}>.</span></span>;
+
+// Tone selector
+const ToneSelect = ({value, onChange}) => (
+  <select value={value} onChange={e=>onChange(e.target.value)} className="px-2 py-1 rounded text-xs">
+    {TONE_OPTIONS.map(t=><option key={t} value={t.toLowerCase()}>{t}</option>)}
+  </select>
+);
+
+// Output block with copy and regenerate
+const OutputBlock = ({label, content, loading, onRegenerate, tone, onToneChange, onSave, icon}) => {
+  const {theme} = useContext(AppContext);
+  return (
+    <div className="card-inner rounded-lg p-4 output-block">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{icon}</span>
+          <span className="font-semibold text-sm">{label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {onToneChange && <ToneSelect value={tone} onChange={onToneChange}/>}
+          {onRegenerate && <button onClick={onRegenerate} className="btn-ghost px-2 py-1 rounded text-xs" disabled={loading}>🔄</button>}
+          {content && onSave && <button onClick={()=>onSave(content,label)} className="btn-ghost px-2 py-1 rounded text-xs">💾</button>}
+          {content && <CopyBtn text={content} className="copy-btn" style={{opacity:1}}/>}
+        </div>
+      </div>
+      {loading ? (
+        <div className="text-sm text-muted py-4 text-center"><LoadingDots/></div>
+      ) : content ? (
+        <pre className="text-sm whitespace-pre-wrap leading-relaxed" style={{fontFamily:'Inter,sans-serif'}}>{content}</pre>
+      ) : (
+        <div className="text-sm text-muted py-4 text-center italic">Content will appear here after generation</div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 1: RATE UPDATE GENERATOR
+// ============================================================
+const RateUpdateGenerator = () => {
+  const {settings, addToast, saveContent} = useContext(AppContext);
+  const [rates, setRates] = useState(DEFAULT_RATES);
+  const [context, setContext] = useState('');
+  const [outputs, setOutputs] = useState({whatsapp:SAMPLE_OUTPUTS.whatsapp, linkedin:SAMPLE_OUTPUTS.linkedin, realtorEmail:SAMPLE_OUTPUTS.realtorEmail, consumer:SAMPLE_OUTPUTS.consumer});
+  const [loading, setLoading] = useState({whatsapp:false,linkedin:false,realtorEmail:false,consumer:false});
+  const [tones, setTones] = useState({whatsapp:'casual',linkedin:'professional',realtorEmail:'professional',consumer:'educational'});
+
+  const generateChannel = async (channel) => {
+    if(!settings.apiKey){addToast('Set your API key in Settings','error');return;}
+    if(!rates.thirtyYr){addToast('Enter at least the 30yr rate','error');return;}
+    setLoading(p=>({...p,[channel]:true}));
+    try{
+      const rateStr = `Today's rates: 30yr Fixed: ${rates.thirtyYr}%${rates.fifteenYr?`, 15yr Fixed: ${rates.fifteenYr}%`:''}${rates.fha?`, FHA: ${rates.fha}%`:''}${rates.va?`, VA: ${rates.va}%`:''}`;
+      const contextStr = context ? `\nMarket context: ${context}` : '';
+      const toneStr = `\nTone: ${tones[channel]}`;
+      const sys = buildSystemPrompt(settings, settings.brandVoiceSamples||[]);
+      const user = `${CHANNEL_PROMPTS[channel]}\n\n${rateStr}${contextStr}${toneStr}`;
+      const result = await callClaude(settings.apiKey, sys, user);
+      setOutputs(p=>({...p,[channel]:result}));
+    }catch(e){addToast(e.message,'error');}
+    setLoading(p=>({...p,[channel]:false}));
+  };
+
+  const generateAll = () => {
+    ['whatsapp','linkedin','realtorEmail','consumer'].forEach(ch=>generateChannel(ch));
+  };
+
+  const handleSave = (content, label) => {
+    const tagMap = {whatsapp:'WhatsApp',linkedin:'LinkedIn',realtorEmail:'Email',consumer:'Social'};
+    saveContent({id:generateId(), content, label, tag: tagMap[Object.keys(outputs).find(k=>outputs[k]===content)] || 'Other', date: new Date().toLocaleDateString()});
+    addToast('Saved to library!');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <h2 className="text-lg font-bold mb-4" style={{color:'var(--gold)'}}>📊 Today's Rates</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          {[['thirtyYr','30yr Fixed'],['fifteenYr','15yr Fixed'],['fha','FHA'],['va','VA']].map(([k,l])=>(
+            <div key={k}>
+              <label className="text-xs text-secondary block mb-1">{l}</label>
+              <div className="relative">
+                <input type="text" value={rates[k]} onChange={e=>setRates(p=>({...p,[k]:e.target.value}))} placeholder="6.625" className="w-full px-3 py-2 rounded-lg text-sm pr-6"/>
+                <span className="absolute right-2 top-2 text-xs text-muted">%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mb-4">
+          <label className="text-xs text-secondary block mb-1">Market Context (optional)</label>
+          <input type="text" value={context} onChange={e=>setContext(e.target.value)} placeholder="Fed meeting today, jobs report came in weak, etc." className="w-full px-3 py-2 rounded-lg text-sm"/>
+        </div>
+        <button onClick={generateAll} className="btn-gold px-6 py-2 rounded-lg text-sm font-semibold">⚡ Generate All Channels</button>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <OutputBlock label="WhatsApp Blurb" icon="💬" content={outputs.whatsapp} loading={loading.whatsapp} onRegenerate={()=>generateChannel('whatsapp')} tone={tones.whatsapp} onToneChange={v=>setTones(p=>({...p,whatsapp:v}))} onSave={handleSave}/>
+        <OutputBlock label="LinkedIn Post" icon="💼" content={outputs.linkedin} loading={loading.linkedin} onRegenerate={()=>generateChannel('linkedin')} tone={tones.linkedin} onToneChange={v=>setTones(p=>({...p,linkedin:v}))} onSave={handleSave}/>
+        <OutputBlock label="Realtor Email" icon="📧" content={outputs.realtorEmail} loading={loading.realtorEmail} onRegenerate={()=>generateChannel('realtorEmail')} tone={tones.realtorEmail} onToneChange={v=>setTones(p=>({...p,realtorEmail:v}))} onSave={handleSave}/>
+        <OutputBlock label="Consumer Post" icon="🏠" content={outputs.consumer} loading={loading.consumer} onRegenerate={()=>generateChannel('consumer')} tone={tones.consumer} onToneChange={v=>setTones(p=>({...p,consumer:v}))} onSave={handleSave}/>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 2: LINKEDIN CONTENT STUDIO
+// ============================================================
+const LinkedInStudio = () => {
+  const {settings, addToast, saveContent} = useContext(AppContext);
+  const [selectedType, setSelectedType] = useState('marketUpdate');
+  const [customContext, setCustomContext] = useState('');
+  const [output, setOutput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [tone, setTone] = useState('professional');
+
+  const TYPES = [
+    {id:'marketUpdate', label:'Market Update', icon:'📊'},
+    {id:'mythFact', label:'Myth vs. Fact', icon:'🔍'},
+    {id:'buyerTip', label:'Buyer Tip of the Week', icon:'💡'},
+    {id:'successStory', label:'Success Story', icon:'🎉'},
+    {id:'rateCommentary', label:'Rate Commentary', icon:'📈'},
+    {id:'firstTimeBuyer', label:'First-Time Buyer Education', icon:'🎓'},
+    {id:'refiAlert', label:'Refinance Alert', icon:'🔔'},
+    {id:'seasonal', label:'Seasonal Content', icon:'🗓️'}
+  ];
+
+  const generate = async () => {
+    if(!settings.apiKey){addToast('Set your API key in Settings','error');return;}
+    setLoading(true);
+    try{
+      const sys = buildSystemPrompt(settings, settings.brandVoiceSamples||[]);
+      const extra = customContext ? `\nAdditional context: ${customContext}` : '';
+      const user = `${LINKEDIN_TYPE_PROMPTS[selectedType]}${extra}\nTone: ${tone}\nFormat this as a ready-to-post LinkedIn post.`;
+      const result = await callClaude(settings.apiKey, sys, user);
+      setOutput(result);
+    }catch(e){addToast(e.message,'error');}
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <h2 className="text-lg font-bold mb-4" style={{color:'var(--gold)'}}>💼 LinkedIn Content Studio</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+          {TYPES.map(t=>(
+            <button key={t.id} onClick={()=>setSelectedType(t.id)} className={`p-3 rounded-lg text-left text-sm transition-all ${selectedType===t.id?'ring-2':'card-inner'}`} style={selectedType===t.id?{borderColor:'var(--gold)',background:'rgba(197,165,90,.1)'}:{}}>
+              <div className="text-lg mb-1">{t.icon}</div>
+              <div className="font-medium text-xs">{t.label}</div>
+            </button>
+          ))}
+        </div>
+        <div className="mb-4">
+          <label className="text-xs text-secondary block mb-1">Additional Context (optional)</label>
+          <input type="text" value={customContext} onChange={e=>setCustomContext(e.target.value)} placeholder="Any specific topic, data point, or angle..." className="w-full px-3 py-2 rounded-lg text-sm"/>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={generate} className="btn-gold px-6 py-2 rounded-lg text-sm font-semibold" disabled={loading}>⚡ Generate Post</button>
+          <ToneSelect value={tone} onChange={setTone}/>
+        </div>
+      </div>
+
+      {(output || loading) && (
+        <OutputBlock label="Generated LinkedIn Post" icon="💼" content={output} loading={loading} onRegenerate={generate} onSave={(c,l)=>{saveContent({id:generateId(),content:c,label:l,tag:'LinkedIn',date:new Date().toLocaleDateString()});addToast('Saved!');}}/>
+      )}
+
+      <div className="card rounded-xl p-6">
+        <h3 className="font-semibold mb-3 text-sm">📅 Best Times to Post Mortgage Content on LinkedIn</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="card-inner rounded-lg p-3"><span className="font-semibold">Tuesday - Thursday</span><br/>7:00 - 8:30 AM (before work commute)</div>
+          <div className="card-inner rounded-lg p-3"><span className="font-semibold">Lunch hours</span><br/>11:30 AM - 1:00 PM (scrolling during break)</div>
+          <div className="card-inner rounded-lg p-3"><span className="font-semibold">Evening</span><br/>5:00 - 6:30 PM (post-work scroll)</div>
+        </div>
+        <p className="text-xs text-muted mt-3">Mortgage content performs best mid-week. Avoid Monday mornings and Friday afternoons. Rate-related posts do well when timed with rate sheet releases (typically early morning).</p>
+      </div>
+
+      <div className="card rounded-xl p-6">
+        <h3 className="font-semibold mb-3 text-sm">🏷️ Suggested Hashtags</h3>
+        <div className="flex flex-wrap gap-2">
+          {['#mortgagerates','#realestate','#homebuying','#firsttimehomebuyer','#housingmarket','#mortgagetips','#homeloans','#realestateagent','#FHA','#VA','#refinance','#homeownership','#closingday','#preapproval','#ratewatcher','#homebuyer2025','#mortgagebroker','#loanofficerlife','#realtorpartner','#buyersmarket'].map(h=>
+            <span key={h} className="tag px-2 py-1 rounded text-xs cursor-pointer hover:opacity-80" onClick={()=>{copyToClipboard(h);addToast(`Copied ${h}`);}}>{h}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 3: REALTOR OUTREACH
+// ============================================================
+const RealtorOutreach = () => {
+  const {settings, addToast, saveContent} = useContext(AppContext);
+  const [selectedTemplate, setSelectedTemplate] = useState('reEngage');
+  const [realtorName, setRealtorName] = useState('');
+  const [recentContext, setRecentContext] = useState('');
+  const [outputFormat, setOutputFormat] = useState('email');
+  const [output, setOutput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const TEMPLATES = [
+    {id:'reEngage', label:"Haven't Heard From You", icon:'👋'},
+    {id:'ratesDrop', label:'Rates Just Dropped', icon:'📉'},
+    {id:'justClosed', label:'Just Closed — Thank You', icon:'🎉'},
+    {id:'coffee', label:"Let's Grab Coffee", icon:'☕'},
+    {id:'coMarketing', label:'Co-Marketing Opportunity', icon:'🤝'},
+    {id:'openHouse', label:'Open House Support', icon:'🏡'}
+  ];
+
+  const FORMATS = [{id:'email',label:'Email',icon:'📧'},{id:'text',label:'Text/WhatsApp',icon:'💬'},{id:'linkedin',label:'LinkedIn DM',icon:'💼'}];
+
+  const generate = async () => {
+    if(!settings.apiKey){addToast('Set your API key in Settings','error');return;}
+    setLoading(true);
+    try{
+      const sys = buildSystemPrompt(settings, settings.brandVoiceSamples||[]);
+      const nameStr = realtorName ? `\nRealtor's name: ${realtorName}` : '\nUse [Name] as placeholder for the realtor\'s name.';
+      const ctxStr = recentContext ? `\nRecent context: ${recentContext}` : '';
+      const fmtStr = `\nFormat for: ${outputFormat === 'email' ? 'Email (include subject line)' : outputFormat === 'text' ? 'Text message / WhatsApp (keep short, under 100 words)' : 'LinkedIn DM (professional but personal, under 150 words)'}`;
+      const user = `${REALTOR_TEMPLATE_PROMPTS[selectedTemplate]}${nameStr}${ctxStr}${fmtStr}`;
+      const result = await callClaude(settings.apiKey, sys, user);
+      setOutput(result);
+    }catch(e){addToast(e.message,'error');}
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <h2 className="text-lg font-bold mb-4" style={{color:'var(--gold)'}}>🤝 Realtor Outreach Templates</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+          {TEMPLATES.map(t=>(
+            <button key={t.id} onClick={()=>setSelectedTemplate(t.id)} className={`p-3 rounded-lg text-left text-sm transition-all ${selectedTemplate===t.id?'ring-2':'card-inner'}`} style={selectedTemplate===t.id?{borderColor:'var(--gold)',background:'rgba(197,165,90,.1)'}:{}}>
+              <div className="text-lg mb-1">{t.icon}</div>
+              <div className="font-medium text-xs">{t.label}</div>
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="text-xs text-secondary block mb-1">Realtor Name (optional)</label>
+            <input type="text" value={realtorName} onChange={e=>setRealtorName(e.target.value)} placeholder="Sarah Johnson" className="w-full px-3 py-2 rounded-lg text-sm"/>
+          </div>
+          <div>
+            <label className="text-xs text-secondary block mb-1">Recent Context (optional)</label>
+            <input type="text" value={recentContext} onChange={e=>setRecentContext(e.target.value)} placeholder="We closed a deal together last month..." className="w-full px-3 py-2 rounded-lg text-sm"/>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mb-4">
+          <label className="text-xs text-secondary">Output Format:</label>
+          {FORMATS.map(f=>(
+            <button key={f.id} onClick={()=>setOutputFormat(f.id)} className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${outputFormat===f.id?'btn-gold':'btn-ghost'}`}>
+              {f.icon} {f.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={generate} className="btn-gold px-6 py-2 rounded-lg text-sm font-semibold" disabled={loading}>⚡ Generate Message</button>
+      </div>
+      {(output || loading) && (
+        <OutputBlock label={`${TEMPLATES.find(t=>t.id===selectedTemplate)?.label} — ${FORMATS.find(f=>f.id===outputFormat)?.label}`} icon={TEMPLATES.find(t=>t.id===selectedTemplate)?.icon} content={output} loading={loading} onRegenerate={generate} onSave={(c,l)=>{saveContent({id:generateId(),content:c,label:l,tag:'Realtor',date:new Date().toLocaleDateString()});addToast('Saved!');}}/>
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 4: LEAD NURTURE SEQUENCES
+// ============================================================
+const LeadNurture = () => {
+  const {settings, addToast, saveContent} = useContext(AppContext);
+  const [selectedSeq, setSelectedSeq] = useState('newLead');
+  const [messages, setMessages] = useState({});
+  const [loadingIdx, setLoadingIdx] = useState({});
+  const [generating, setGenerating] = useState(false);
+
+  const sequences = Object.entries(NURTURE_SEQUENCE_PROMPTS);
+
+  const generateSequence = async () => {
+    if(!settings.apiKey){addToast('Set your API key in Settings','error');return;}
+    const seq = NURTURE_SEQUENCE_PROMPTS[selectedSeq];
+    setGenerating(true);
+    const newMsgs = {};
+    for(let i=0;i<seq.count;i++){
+      setLoadingIdx(p=>({...p,[i]:true}));
+      try{
+        const sys = buildSystemPrompt(settings, settings.brandVoiceSamples||[]);
+        const result = await callClaude(settings.apiKey, sys, seq.prompts[i]);
+        newMsgs[i] = result;
+        setMessages(p=>({...p,[`${selectedSeq}_${i}`]:result}));
+      }catch(e){addToast(`Message ${i+1} failed: ${e.message}`,'error');}
+      setLoadingIdx(p=>({...p,[i]:false}));
+    }
+    setGenerating(false);
+  };
+
+  const regenerateOne = async (idx) => {
+    if(!settings.apiKey){addToast('Set your API key in Settings','error');return;}
+    const seq = NURTURE_SEQUENCE_PROMPTS[selectedSeq];
+    setLoadingIdx(p=>({...p,[idx]:true}));
+    try{
+      const sys = buildSystemPrompt(settings, settings.brandVoiceSamples||[]);
+      const result = await callClaude(settings.apiKey, sys, seq.prompts[idx]);
+      setMessages(p=>({...p,[`${selectedSeq}_${idx}`]:result}));
+    }catch(e){addToast(e.message,'error');}
+    setLoadingIdx(p=>({...p,[idx]:false}));
+  };
+
+  const copyAll = () => {
+    const seq = NURTURE_SEQUENCE_PROMPTS[selectedSeq];
+    const allText = Array.from({length:seq.count}, (_,i) => {
+      const msg = messages[`${selectedSeq}_${i}`];
+      return msg ? `--- Message ${i+1} ---\n${msg}` : null;
+    }).filter(Boolean).join('\n\n');
+    if(allText){copyToClipboard(allText);addToast('All messages copied!');}
+  };
+
+  const seq = NURTURE_SEQUENCE_PROMPTS[selectedSeq];
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <h2 className="text-lg font-bold mb-4" style={{color:'var(--gold)'}}>📬 Lead Nurture Sequences</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          {sequences.map(([id,s])=>(
+            <button key={id} onClick={()=>setSelectedSeq(id)} className={`p-4 rounded-lg text-left transition-all ${selectedSeq===id?'ring-2':'card-inner'}`} style={selectedSeq===id?{borderColor:'var(--gold)',background:'rgba(197,165,90,.1)'}:{}}>
+              <div className="font-semibold text-sm">{s.name}</div>
+              <div className="text-xs text-muted mt-1">{s.description}</div>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={generateSequence} className="btn-gold px-6 py-2 rounded-lg text-sm font-semibold" disabled={generating}>
+            {generating ? <LoadingDots/> : `⚡ Generate ${seq.count}-Message Sequence`}
+          </button>
+          <button onClick={copyAll} className="btn-outline px-4 py-2 rounded-lg text-sm">📋 Copy All</button>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {Array.from({length:seq.count}, (_,i) => {
+          const key = `${selectedSeq}_${i}`;
+          const content = messages[key] || '';
+          return (
+            <OutputBlock key={key} label={`Message ${i+1} of ${seq.count}`} icon={`${i+1}️⃣`} content={content} loading={loadingIdx[i]} onRegenerate={()=>regenerateOne(i)} onSave={(c,l)=>{saveContent({id:generateId(),content:c,label:`${seq.name} - Msg ${i+1}`,tag:'Nurture',date:new Date().toLocaleDateString()});addToast('Saved!');}}/>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 5: CONTENT CALENDAR
+// ============================================================
+const ContentCalendar = () => {
+  const {settings, addToast, saveContent} = useContext(AppContext);
+  const [weekContent, setWeekContent] = useState({});
+  const [loading, setLoading] = useState({});
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+
+  const getWeekDates = () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) + weekOffset * 7);
+    return days.map((d,i) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      return date.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    });
+  };
+  const weekDates = getWeekDates();
+
+  const generateDay = async (day) => {
+    if(!settings.apiKey){addToast('Set your API key in Settings','error');return;}
+    setLoading(p=>({...p,[day]:true}));
+    try{
+      const sys = buildSystemPrompt(settings, settings.brandVoiceSamples||[]);
+      const result = await callClaude(settings.apiKey, sys, CALENDAR_THEMES[day].prompt);
+      setWeekContent(p=>({...p,[day]:result}));
+    }catch(e){addToast(e.message,'error');}
+    setLoading(p=>({...p,[day]:false}));
+  };
+
+  const generateWeek = async () => {
+    if(!settings.apiKey){addToast('Set your API key in Settings','error');return;}
+    setGeneratingAll(true);
+    for(const day of days){
+      await generateDay(day);
+    }
+    setGeneratingAll(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold" style={{color:'var(--gold)'}}>📅 Content Calendar</h2>
+          <div className="flex items-center gap-2">
+            <button onClick={()=>setWeekOffset(p=>p-1)} className="btn-ghost px-2 py-1 rounded text-sm">← Prev</button>
+            <button onClick={()=>setWeekOffset(0)} className="btn-ghost px-2 py-1 rounded text-xs">This Week</button>
+            <button onClick={()=>setWeekOffset(p=>p+1)} className="btn-ghost px-2 py-1 rounded text-sm">Next →</button>
+          </div>
+        </div>
+        <button onClick={generateWeek} className="btn-gold px-6 py-2 rounded-lg text-sm font-semibold mb-4" disabled={generatingAll}>
+          {generatingAll ? <LoadingDots/> : '⚡ Generate Full Week'}
+        </button>
+        <div className="space-y-3">
+          {days.map((day,i)=>{
+            const theme = CALENDAR_THEMES[day];
+            return (
+              <div key={day} className="card-inner rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{theme.icon}</span>
+                    <div>
+                      <span className="font-semibold text-sm">{day}</span>
+                      <span className="text-xs text-muted ml-2">{weekDates[i]}</span>
+                      <span className="text-xs ml-2 tag px-2 py-0.5 rounded">{theme.theme}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>generateDay(day)} className="btn-ghost px-2 py-1 rounded text-xs" disabled={loading[day]}>🔄</button>
+                    {weekContent[day] && <CopyBtn text={weekContent[day]}/>}
+                    {weekContent[day] && <button onClick={()=>{saveContent({id:generateId(),content:weekContent[day],label:`${day} - ${theme.theme}`,tag:'Calendar',date:weekDates[i]});addToast('Saved!');}} className="btn-ghost px-2 py-1 rounded text-xs">💾</button>}
+                  </div>
+                </div>
+                {loading[day] ? (
+                  <div className="text-sm text-muted py-2"><LoadingDots/></div>
+                ) : weekContent[day] ? (
+                  <pre className="text-sm whitespace-pre-wrap leading-relaxed" style={{fontFamily:'Inter,sans-serif'}}>{weekContent[day]}</pre>
+                ) : (
+                  <div className="text-xs text-muted italic">Click generate to create {day}'s {theme.theme.toLowerCase()} post</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 6: BRAND VOICE
+// ============================================================
+const BrandVoice = () => {
+  const {settings, updateSettings, addToast} = useContext(AppContext);
+  const [newSample, setNewSample] = useState('');
+  const samples = settings.brandVoiceSamples || [];
+  const sliders = settings.personalitySliders || {professional:70,educational:50,brief:40};
+
+  const addSample = () => {
+    if(!newSample.trim()) return;
+    const updated = [...samples, newSample.trim()];
+    updateSettings({brandVoiceSamples: updated});
+    setNewSample('');
+    addToast('Voice sample added!');
+  };
+
+  const removeSample = (idx) => {
+    const updated = samples.filter((_,i)=>i!==idx);
+    updateSettings({brandVoiceSamples: updated});
+  };
+
+  const updateSlider = (key, val) => {
+    updateSettings({personalitySliders: {...sliders, [key]: parseInt(val)}});
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <h2 className="text-lg font-bold mb-4" style={{color:'var(--gold)'}}>🎤 Brand Voice Training</h2>
+        <p className="text-sm text-secondary mb-4">Paste examples of your actual writing — WhatsApp blurbs, LinkedIn posts, emails — so the AI can match your voice. The more samples, the better.</p>
+        <div className="mb-4">
+          <textarea value={newSample} onChange={e=>setNewSample(e.target.value)} placeholder="Paste a sample of your writing here..." className="w-full px-3 py-2 rounded-lg text-sm h-24 resize-none"/>
+          <button onClick={addSample} className="btn-gold px-4 py-2 rounded-lg text-sm mt-2">+ Add Sample</button>
+        </div>
+        {samples.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs text-muted font-semibold mb-2">{samples.length} voice sample{samples.length>1?'s':''} saved</div>
+            {samples.map((s,i)=>(
+              <div key={i} className="card-inner rounded-lg p-3 flex items-start justify-between gap-3">
+                <pre className="text-xs whitespace-pre-wrap flex-1" style={{fontFamily:'Inter,sans-serif'}}>{s.length>200?s.slice(0,200)+'...':s}</pre>
+                <button onClick={()=>removeSample(i)} className="btn-ghost px-2 py-1 rounded text-xs text-red-400 hover:text-red-300">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card rounded-xl p-6">
+        <h3 className="font-semibold mb-4">🎛️ Personality Sliders</h3>
+        <div className="space-y-6">
+          {[
+            {key:'professional', left:'Casual', right:'Professional'},
+            {key:'educational', left:'Sales-focused', right:'Educational'},
+            {key:'brief', left:'Brief', right:'Detailed'}
+          ].map(s=>(
+            <div key={s.key}>
+              <div className="flex justify-between text-xs text-secondary mb-1">
+                <span>{s.left}</span><span>{s.right}</span>
+              </div>
+              <input type="range" min="0" max="100" value={sliders[s.key]} onChange={e=>updateSlider(s.key,e.target.value)} className="w-full slider-track"/>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 7: SAVED CONTENT LIBRARY
+// ============================================================
+const SavedLibrary = () => {
+  const {savedContent, setSavedContent, addToast, settings} = useContext(AppContext);
+  const [search, setSearch] = useState('');
+  const [filterTag, setFilterTag] = useState('All');
+
+  const tags = ['All', ...new Set(savedContent.map(c=>c.tag))];
+
+  const filtered = savedContent.filter(c => {
+    const matchSearch = !search || c.content.toLowerCase().includes(search.toLowerCase()) || c.label.toLowerCase().includes(search.toLowerCase());
+    const matchTag = filterTag === 'All' || c.tag === filterTag;
+    return matchSearch && matchTag;
+  });
+
+  const deleteItem = (id) => {
+    setSavedContent(prev => prev.filter(c => c.id !== id));
+    addToast('Deleted');
+  };
+
+  const exportAll = () => {
+    const blob = new Blob([JSON.stringify(savedContent, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'content-engine-library.json'; a.click();
+    URL.revokeObjectURL(url);
+    addToast('Exported!');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold" style={{color:'var(--gold)'}}>📚 Saved Content Library</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted">{savedContent.length} items</span>
+            <button onClick={exportAll} className="btn-outline px-3 py-1 rounded-lg text-xs">Export JSON</button>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mb-4">
+          <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search saved content..." className="flex-1 px-3 py-2 rounded-lg text-sm"/>
+          <div className="flex gap-1">
+            {tags.map(t=>(
+              <button key={t} onClick={()=>setFilterTag(t)} className={`px-2 py-1 rounded text-xs ${filterTag===t?'btn-gold':'btn-ghost'}`}>{t}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <div className="card rounded-xl p-8 text-center">
+          <div className="text-3xl mb-2">📭</div>
+          <div className="text-sm text-muted">{savedContent.length===0 ? 'No saved content yet. Generate content and click 💾 to save.' : 'No results match your search.'}</div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(item=>(
+            <div key={item.id} className="card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="tag px-2 py-0.5 rounded text-xs">{item.tag}</span>
+                  <span className="text-xs text-muted">{item.date}</span>
+                  <span className="text-xs text-secondary">{item.label}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <CopyBtn text={item.content}/>
+                  <button onClick={()=>deleteItem(item.id)} className="btn-ghost px-2 py-1 rounded text-xs text-red-400">🗑️</button>
+                </div>
+              </div>
+              <pre className="text-sm whitespace-pre-wrap leading-relaxed" style={{fontFamily:'Inter,sans-serif'}}>{item.content.length > 300 ? item.content.slice(0,300)+'...' : item.content}</pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// TAB 8: SETTINGS
+// ============================================================
+const SettingsPanel = () => {
+  const {settings, updateSettings, addToast, savedContent, theme, setTheme} = useContext(AppContext);
+  const [showKey, setShowKey] = useState(false);
+
+  const exportAll = () => {
+    const data = {settings: {...settings, apiKey: '[REDACTED]'}, savedContent};
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'content-engine-export.json'; a.click();
+    URL.revokeObjectURL(url);
+    addToast('Exported!');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-6">
+        <h2 className="text-lg font-bold mb-4" style={{color:'var(--gold)'}}>⚙️ Settings</h2>
+
+        <div className="mb-6">
+          <h3 className="font-semibold text-sm mb-3">🔑 Claude API Key</h3>
+          <div className="flex items-center gap-2">
+            <input type={showKey?'text':'password'} value={settings.apiKey} onChange={e=>updateSettings({apiKey:e.target.value})} placeholder="sk-ant-..." className="flex-1 px-3 py-2 rounded-lg text-sm font-mono"/>
+            <button onClick={()=>setShowKey(!showKey)} className="btn-ghost px-3 py-2 rounded-lg text-sm">{showKey?'Hide':'Show'}</button>
+          </div>
+          <p className="text-xs text-muted mt-1">Uses Claude Haiku for fast, affordable content generation</p>
+        </div>
+
+        <div className="border-t divider pt-6 mb-6">
+          <h3 className="font-semibold text-sm mb-3">👤 Personal Info</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[['name','Full Name','Aryeh Brecher'],['title','Title','Senior Loan Officer'],['nmls','NMLS#','123456'],['phone','Phone','(555) 123-4567'],['email','Email','aryeh@fmhomeloans.com'],['company','Company','FM Home Loans']].map(([k,l,ph])=>(
+              <div key={k}>
+                <label className="text-xs text-secondary block mb-1">{l}</label>
+                <input type="text" value={settings[k]||''} onChange={e=>updateSettings({[k]:e.target.value})} placeholder={ph} className="w-full px-3 py-2 rounded-lg text-sm"/>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t divider pt-6 mb-6">
+          <h3 className="font-semibold text-sm mb-3">🎨 Appearance</h3>
+          <div className="flex items-center gap-3">
+            <button onClick={()=>setTheme('dark')} className={`px-4 py-2 rounded-lg text-sm ${theme==='dark'?'btn-gold':'btn-ghost'}`}>🌙 Dark</button>
+            <button onClick={()=>setTheme('light')} className={`px-4 py-2 rounded-lg text-sm ${theme==='light'?'btn-gold':'btn-ghost'}`}>☀️ Light</button>
+          </div>
+        </div>
+
+        <div className="border-t divider pt-6 mb-6">
+          <h3 className="font-semibold text-sm mb-3">🎯 Default Tone</h3>
+          <div className="flex items-center gap-2">
+            {TONE_OPTIONS.map(t=>(
+              <button key={t} onClick={()=>updateSettings({defaultTone:t.toLowerCase()})} className={`px-3 py-1 rounded-lg text-xs ${settings.defaultTone===t.toLowerCase()?'btn-gold':'btn-ghost'}`}>{t}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t divider pt-6">
+          <h3 className="font-semibold text-sm mb-3">📦 Data</h3>
+          <div className="flex items-center gap-3">
+            <button onClick={exportAll} className="btn-outline px-4 py-2 rounded-lg text-sm">Export All Data</button>
+            <button onClick={()=>{if(confirm('Clear all saved content?')){localStorage.removeItem('ce_saved');window.location.reload();}}} className="px-4 py-2 rounded-lg text-sm text-red-400 border border-red-400 hover:bg-red-400 hover:text-white transition-all">Clear Saved Content</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// MAIN APP
+// ============================================================
+const App = () => {
+  const [activeTab, setActiveTab] = useState('rates');
+  const [theme, setTheme] = useState(()=>{ try{return localStorage.getItem('ce_theme')||'dark';}catch{return 'dark';} });
+  const [toast, setToast] = useState(null);
+  const [settings, setSettings] = useState(()=>{
+    try{const s = localStorage.getItem('ce_settings'); return s ? {...DEFAULT_SETTINGS,...JSON.parse(s)} : DEFAULT_SETTINGS;}catch{return DEFAULT_SETTINGS;}
+  });
+  const [savedContent, setSavedContent] = useState(()=>{
+    try{const s = localStorage.getItem('ce_saved'); return s ? JSON.parse(s) : [];}catch{return [];}
+  });
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(()=>{document.body.className=theme;try{localStorage.setItem('ce_theme',theme);}catch{}}, [theme]);
+  useEffect(()=>{try{localStorage.setItem('ce_settings',JSON.stringify(settings));}catch{}}, [settings]);
+  useEffect(()=>{try{localStorage.setItem('ce_saved',JSON.stringify(savedContent));}catch{}}, [savedContent]);
+
+  const updateSettings = (partial) => setSettings(prev=>({...prev,...partial}));
+  const addToast = (message, type='success') => setToast({message,type,key:Date.now()});
+  const saveContent = (item) => setSavedContent(prev=>[item,...prev]);
+
+  const TABS = [
+    {id:'rates', label:'Rate Updates', icon:'📊'},
+    {id:'linkedin', label:'LinkedIn Studio', icon:'💼'},
+    {id:'realtor', label:'Realtor Outreach', icon:'🤝'},
+    {id:'nurture', label:'Lead Nurture', icon:'📬'},
+    {id:'calendar', label:'Content Calendar', icon:'📅'},
+    {id:'voice', label:'Brand Voice', icon:'🎤'},
+    {id:'library', label:'Saved Library', icon:'📚'},
+    {id:'settings', label:'Settings', icon:'⚙️'}
+  ];
+
+  const ctx = {settings, updateSettings, addToast, saveContent, savedContent, setSavedContent, theme, setTheme};
+
+  return (
+    <AppContext.Provider value={ctx}>
+      <div className="flex h-screen overflow-hidden">
+        {/* Sidebar */}
+        <div className={`sidebar flex-shrink-0 transition-all duration-300 ${sidebarOpen?'w-56':'w-16'} flex flex-col`}>
+          <div className="p-4 flex items-center gap-3" style={{borderBottom:'1px solid var(--navy)'}}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background:'var(--navy)'}}>
+              <span style={{color:'var(--gold)', fontWeight:800, fontSize:'14px'}}>CE</span>
+            </div>
+            {sidebarOpen && (
+              <div>
+                <div className="text-sm font-bold" style={{color:'var(--gold)'}}>ContentEngine</div>
+                <div className="text-xs text-muted">FM Home Loans</div>
+              </div>
+            )}
+          </div>
+          <nav className="flex-1 py-2 overflow-y-auto">
+            {TABS.map(tab=>(
+              <button key={tab.id} onClick={()=>setActiveTab(tab.id)} className={`sidebar-item w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${activeTab===tab.id?'active':''}`}>
+                <span className="text-lg flex-shrink-0">{tab.icon}</span>
+                {sidebarOpen && <span className="text-sm">{tab.label}</span>}
+              </button>
+            ))}
+          </nav>
+          <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="btn-ghost w-full py-3 text-center text-xs">
+            {sidebarOpen ? '◀ Collapse' : '▶'}
+          </button>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto">
+          <header className="sticky top-0 z-10 px-6 py-4 flex items-center justify-between" style={{background:theme==='dark'?'rgba(15,17,23,.9)':'rgba(248,250,252,.9)',backdropFilter:'blur(12px)',borderBottom:theme==='dark'?'1px solid #2d3148':'1px solid #e2e8f0'}}>
+            <div>
+              <h1 className="text-xl font-bold">{TABS.find(t=>t.id===activeTab)?.icon} {TABS.find(t=>t.id===activeTab)?.label}</h1>
+              <p className="text-xs text-muted">{settings.name} · {settings.company}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {!settings.apiKey && (
+                <button onClick={()=>setActiveTab('settings')} className="px-3 py-1 rounded-lg text-xs bg-red-500 bg-opacity-20 text-red-400 border border-red-500 border-opacity-30">
+                  ⚠️ Set API Key
+                </button>
+              )}
+              <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="btn-ghost px-2 py-1 rounded-lg text-sm">
+                {theme==='dark'?'☀️':'🌙'}
+              </button>
+            </div>
+          </header>
+          <main className="p-6 max-w-5xl">
+            {activeTab==='rates' && <RateUpdateGenerator/>}
+            {activeTab==='linkedin' && <LinkedInStudio/>}
+            {activeTab==='realtor' && <RealtorOutreach/>}
+            {activeTab==='nurture' && <LeadNurture/>}
+            {activeTab==='calendar' && <ContentCalendar/>}
+            {activeTab==='voice' && <BrandVoice/>}
+            {activeTab==='library' && <SavedLibrary/>}
+            {activeTab==='settings' && <SettingsPanel/>}
+          </main>
+        </div>
+      </div>
+      {toast && <Toast key={toast.key} message={toast.message} type={toast.type} onClose={()=>setToast(null)}/>}
+    </AppContext.Provider>
+  );
+};
+
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>

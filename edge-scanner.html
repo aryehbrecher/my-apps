@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EdgeScanner — Day Trading Stock Scanner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f12;--bg2:#141720;--bg3:#1a1e2a;--bg4:#222738;--bg5:#2a3045;
+  --border:#1e2333;--border2:#2a3045;--border3:#3a4260;
+  --text:#e8ecf4;--text2:#a0a8c0;--text3:#6b7394;--text4:#3e4563;
+  --blue:#6366f1;--blue2:#4f46e5;--blue-glow:rgba(99,102,241,0.15);
+  --green:#00e676;--green2:#00c853;--green-glow:rgba(0,230,118,0.14);
+  --red:#ff3d57;--red2:#d63040;--red-glow:rgba(255,61,87,0.14);
+  --gold:#ffab00;--gold2:#ff8f00;--gold-glow:rgba(255,171,0,0.14);
+  --purple:#a78bfa;--purple-glow:rgba(167,139,250,0.14);
+  --cyan:#22d3ee;--cyan-glow:rgba(34,211,238,0.14);
+  --r:10px;--r2:14px;--r3:20px;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.35);
+  --shadow-md:0 4px 20px rgba(0,0,0,.45);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.55);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;background-image:radial-gradient(ellipse at 50% 0%,rgba(99,102,241,0.04) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(0,230,118,0.03) 0%,transparent 50%)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:var(--border3)}
+.header{background:rgba(13,15,18,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--green),var(--cyan));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 18px var(--green-glow)}
+.logo-text{font-size:17px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-badge{font-size:9px;font-weight:700;color:var(--cyan);background:var(--cyan-glow);border:1px solid rgba(34,211,238,0.25);padding:1px 6px;border-radius:20px;letter-spacing:.5px}
+.header-left{display:flex;align-items:center;gap:20px}
+.nav{display:flex;gap:1px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:3px}
+.nav-btn{background:none;border:none;color:var(--text3);padding:6px 14px;border-radius:9px;cursor:pointer;font-size:11.5px;font-weight:600;transition:all .18s;white-space:nowrap}
+.nav-btn:hover{color:var(--text2);background:rgba(255,255,255,0.04)}
+.nav-btn.active{background:var(--bg4);color:var(--text);box-shadow:0 1px 6px rgba(0,0,0,.35)}
+.header-right{display:flex;align-items:center;gap:10px}
+.icon-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text3);width:34px;height:34px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .18s}
+.icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.fade-in{animation:fadeIn .3s ease}
+.spin{display:inline-block;animation:spin .7s linear infinite}
+.content{flex:1;padding:20px 24px;max-width:1600px;width:100%;margin:0 auto}
+/* ── Disclaimer ── */
+.disclaimer{background:rgba(255,171,0,0.06);border:1px solid rgba(255,171,0,0.15);border-left:3px solid var(--gold);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;font-size:11px;color:var(--gold);display:flex;align-items:center;gap:8px}
+/* ── Cards ── */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;box-shadow:var(--shadow-sm);transition:all .22s}
+.card:hover{border-color:var(--border2)}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.card-body{padding:16px 18px}
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;position:relative;overflow:hidden;transition:all .22s;box-shadow:var(--shadow-sm)}
+.kpi:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r2) var(--r2) 0 0}
+.kpi.kpi-green::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.kpi.kpi-red::before{background:linear-gradient(90deg,var(--red),#ff6b60)}
+.kpi.kpi-blue::before{background:linear-gradient(90deg,var(--blue),var(--purple))}
+.kpi.kpi-gold::before{background:linear-gradient(90deg,var(--gold),#ffe066)}
+.kpi-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:800;line-height:1;letter-spacing:-0.8px;margin-bottom:4px}
+.kpi-sub{font-size:11px;color:var(--text3)}
+.kpi-icon{position:absolute;top:12px;right:12px;font-size:20px;opacity:.12}
+/* ── Buttons ── */
+.btn{padding:7px 14px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .18s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:default}
+.btn-primary{background:var(--green);color:#000;font-weight:700;box-shadow:0 2px 10px var(--green-glow)}
+.btn-primary:hover:not(:disabled){box-shadow:0 4px 18px var(--green-glow);background:var(--green2)}
+.btn-secondary{background:var(--bg4);color:var(--text2);border:1px solid var(--border2)}
+.btn-secondary:hover:not(:disabled){background:var(--bg5);color:var(--text)}
+.btn-ghost{background:none;color:var(--text3);border:1px solid transparent}
+.btn-ghost:hover:not(:disabled){background:var(--bg4);color:var(--text2)}
+.btn-danger{background:rgba(255,61,87,0.1);color:var(--red);border:1px solid rgba(255,61,87,0.22)}
+.btn-danger:hover:not(:disabled){background:rgba(255,61,87,0.18)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:8px}
+.btn-xs{padding:3px 8px;font-size:10px;border-radius:6px}
+/* ── Forms ── */
+input,select,textarea{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);padding:9px 12px;font-size:13px;width:100%;outline:none;transition:all .18s;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow)}
+input::placeholder,textarea::placeholder{color:var(--text4)}
+select option{background:var(--bg3)}
+label{font-size:11px;color:var(--text3);font-weight:600;display:block;margin-bottom:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;gap:3px}
+.b-bull{background:rgba(0,230,118,0.1);color:var(--green);border:1px solid rgba(0,230,118,0.22)}
+.b-bear{background:rgba(255,61,87,0.1);color:var(--red);border:1px solid rgba(255,61,87,0.22)}
+.b-neutral{background:rgba(107,115,148,0.12);color:var(--text3);border:1px solid rgba(107,115,148,0.22)}
+.b-signal{background:rgba(99,102,241,0.12);color:var(--blue);border:1px solid rgba(99,102,241,0.22)}
+.b-vol{background:rgba(167,139,250,0.12);color:var(--purple);border:1px solid rgba(167,139,250,0.22)}
+.b-momentum{background:rgba(34,211,238,0.12);color:var(--cyan);border:1px solid rgba(34,211,238,0.22)}
+/* ── Edge Score ── */
+.edge-score{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;font-size:16px;font-weight:900;flex-shrink:0;position:relative}
+.edge-score::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid transparent}
+.edge-high{background:rgba(0,230,118,0.15);color:var(--green);border:2px solid rgba(0,230,118,0.4)}
+.edge-high::after{border-color:rgba(0,230,118,0.1)}
+.edge-med{background:rgba(255,171,0,0.12);color:var(--gold);border:2px solid rgba(255,171,0,0.3)}
+.edge-low{background:rgba(255,61,87,0.12);color:var(--red);border:2px solid rgba(255,61,87,0.3)}
+/* ── Stock Cards ── */
+.stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:20px}
+.stock-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:18px;transition:all .22s;cursor:pointer;position:relative;overflow:hidden;box-shadow:var(--shadow-sm)}
+.stock-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.stock-card-accent{position:absolute;top:0;left:0;right:0;height:3px}
+.stock-card-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.stock-card-info{flex:1;min-width:0}
+.stock-ticker{font-size:20px;font-weight:900;letter-spacing:-.5px}
+.stock-name{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stock-price-block{text-align:right}
+.stock-price{font-size:18px;font-weight:800;letter-spacing:-.3px}
+.stock-change{font-size:11px;font-weight:700}
+.stock-signals{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.stock-thesis{font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.stock-meta{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text4)}
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r3);padding:24px;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.6)}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+/* ── Heat Map ── */
+.heatmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.heatmap-cell{border-radius:var(--r);padding:14px;text-align:center;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.heatmap-cell:hover{transform:scale(1.05);border-color:rgba(255,255,255,0.15)}
+.heatmap-name{font-size:11px;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+.heatmap-val{font-size:18px;font-weight:900;letter-spacing:-.5px}
+.heatmap-sub{font-size:10px;opacity:.7;margin-top:2px}
+/* ── Screener ── */
+.screener-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+/* ── AI Chat ── */
+.ai-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:16px}
+.ai-header{background:linear-gradient(135deg,rgba(0,230,118,0.06),rgba(99,102,241,0.06));border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.ai-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.ai-messages{max-height:360px;overflow-y:auto;padding:14px}
+.ai-msg{display:flex;gap:8px;margin-bottom:12px}
+.ai-msg.user{flex-direction:row-reverse}
+.ai-bubble{max-width:85%;padding:10px 14px;border-radius:12px;font-size:12.5px;line-height:1.6}
+.ai-bubble.assistant{background:var(--bg2);border:1px solid var(--border);color:var(--text2);border-radius:4px 12px 12px 12px}
+.ai-bubble.user{background:var(--green);color:#000;border-radius:12px 4px 12px 12px;font-weight:500}
+.ai-input-row{border-top:1px solid var(--border);padding:10px 14px;display:flex;gap:8px}
+.ai-textarea{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text);padding:9px 14px;font-size:12.5px;outline:none;resize:none;font-family:inherit;max-height:80px}
+.ai-textarea:focus{border-color:var(--green)}
+.ai-send{background:var(--green);color:#000;border:none;width:36px;height:36px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;font-weight:700}
+.ai-send:disabled{opacity:.4;cursor:default}
+/* ── Tabs ── */
+.tab-pills{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.tab-pill{background:var(--bg4);border:1px solid var(--border);color:var(--text3);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s}
+.tab-pill.active{background:var(--bg5);color:var(--text);border-color:var(--border3)}
+/* ── Table ── */
+.tbl-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;box-shadow:var(--shadow-sm)}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.8px;padding:10px 14px;border-bottom:1px solid var(--border);text-align:left;background:rgba(0,0,0,.15)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .12s}
+tbody tr:hover td{background:rgba(255,255,255,0.02)}
+/* ── Portfolio Row ── */
+.watchlist-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .15s}
+.watchlist-row:hover{background:rgba(255,255,255,0.02)}
+.watchlist-row:last-child{border-bottom:none}
+/* ── Loading Skeleton ── */
+.skeleton{background:linear-gradient(90deg,var(--bg4) 25%,var(--bg5) 50%,var(--bg4) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--r)}
+.skeleton-line{height:12px;margin-bottom:8px;border-radius:6px}
+.skeleton-card{height:160px;border-radius:var(--r2)}
+/* ── Pos/Neg ── */
+.pos{color:var(--green)}.neg{color:var(--red)}.neu{color:var(--text3)}.gold{color:var(--gold)}.blue{color:var(--blue)}
+/* ── Section ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.sec-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.sec-count{font-size:11px;font-weight:600;background:var(--bg4);border:1px solid var(--border);color:var(--text3);padding:1px 7px;border-radius:20px}
+/* ── Filters ── */
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filters input,.filters select{width:auto;min-width:130px;padding:7px 10px;font-size:11px}
+/* ── Detail View ── */
+.detail-section{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:14px}
+.detail-section-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.signal-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.signal-row:last-child{border-bottom:none}
+.signal-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.signal-val{font-size:12px;font-weight:700}
+.signal-bar{height:4px;background:var(--bg2);border-radius:2px;flex:1;margin:0 12px;max-width:120px}
+.signal-bar-fill{height:100%;border-radius:2px}
+/* ── Market Overview ── */
+.market-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.market-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px;text-align:center}
+.market-card-label{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.market-card-val{font-size:22px;font-weight:900;letter-spacing:-.5px;margin-bottom:2px}
+.market-card-chg{font-size:12px;font-weight:700}
+/* ── Responsive ── */
+@media(max-width:900px){.content{padding:14px 12px}.stock-grid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:1fr 1fr}.nav{overflow-x:auto}.heatmap-grid{grid-template-columns:repeat(3,1fr)}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef,useMemo} = React;
+
+/* ═══════════════════════════════════════════════
+   CONSTANTS & CONFIGURATION
+   ═══════════════════════════════════════════════ */
+const APP_VERSION = '1.0.0';
+const LS_KEY = 'edgeScanner_v1';
+const CORS_PROXIES = ['https://corsproxy.io/?url=','https://api.allorigins.win/raw?url='];
+
+const DEFAULT_UNIVERSE = ['AAPL','MSFT','GOOGL','AMZN','NVDA','META','TSLA','AMD','NFLX','CRM','ORCL','AVGO','ADBE','INTC','QCOM','MU','UBER','COIN','PLTR','SQ','SHOP','SNOW','NET','DDOG','CRWD','ZS','PANW','ABNB','MARA','RIOT','SOFI','HOOD','MSTR','SMCI','ARM','LLY','UNH','JNJ','PFE','ABBV','MRK','XOM','CVX','JPM','BAC','GS','V','MA','DIS','BA','CAT','DE','HD','WMT','COST','TGT','NKE','SBUX','MCD','KO','PEP'];
+
+const SECTORS = {
+  Technology:['AAPL','MSFT','GOOGL','NVDA','META','AMD','INTC','QCOM','MU','AVGO','ADBE','ORCL','CRM','NFLX','UBER'],
+  Fintech:['SQ','COIN','SOFI','HOOD','MSTR','PLTR'],
+  Cloud:['SNOW','NET','DDOG','CRWD','ZS','PANW','SHOP'],
+  Healthcare:['LLY','UNH','JNJ','PFE','ABBV','MRK'],
+  Energy:['XOM','CVX'],
+  Finance:['JPM','BAC','GS','V','MA'],
+  Consumer:['DIS','HD','WMT','COST','TGT','NKE','SBUX','MCD','KO','PEP','ABNB'],
+  Industrial:['BA','CAT','DE'],
+  Crypto:['MARA','RIOT','COIN','MSTR'],
+  Semiconductor:['NVDA','AMD','INTC','QCOM','MU','AVGO','SMCI','ARM','TSLA']
+};
+const SECTOR_LIST = Object.keys(SECTORS);
+
+const SIGNAL_WEIGHTS_DEFAULT = {
+  rsi:1.2, maVsCross:1.0, volumeSpike:1.3, macdCross:1.1, bollingerSqueeze:0.9,
+  gapFill:0.8, relStrength:1.0, sectorRotation:0.7, peRatio:0.6, insiderBuying:0.8
+};
+
+/* ═══════════════════════════════════════════════
+   HELPER UTILITIES
+   ═══════════════════════════════════════════════ */
+const fmt = (n,d=2) => n==null?'—':Number(n).toFixed(d);
+const fmtPct = (n,d=2) => n==null?'—':(n>=0?'+':'')+Number(n).toFixed(d)+'%';
+const fmtPrice = (n) => n==null?'—':'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtVol = (n) => {if(n==null)return'—';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toString()};
+const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+const corsGet = async (rawUrl, opts={}) => {
+  for(const proxy of CORS_PROXIES){
+    try{
+      const r = await fetch(proxy+encodeURIComponent(rawUrl),{signal:AbortSignal.timeout(12000),...opts});
+      if(r.ok) return r;
+    }catch(e){/* try next */}
+  }
+  throw new Error('All CORS proxies failed for: '+rawUrl);
+};
+
+/* ═══════════════════════════════════════════════
+   LOCAL STORAGE
+   ═══════════════════════════════════════════════ */
+const loadState = () => {
+  try{ return JSON.parse(localStorage.getItem(LS_KEY))||{} }catch{return{}}
+};
+const saveState = (s) => {
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(s)) }catch{}
+};
+
+/* ═══════════════════════════════════════════════
+   YAHOO FINANCE API
+   ═══════════════════════════════════════════════ */
+const fetchQuotes = async (symbols) => {
+  const batches = [];
+  for(let i=0;i<symbols.length;i+=10){
+    batches.push(symbols.slice(i,i+10));
+  }
+  const results = {};
+  for(const batch of batches){
+    try{
+      const sym = batch.join(',');
+      const r = await corsGet(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${sym}`);
+      const d = await r.json();
+      (d.quoteResponse?.result||[]).forEach(q=>{results[q.symbol]=q});
+    }catch(e){console.warn('Quote fetch failed:',e.message)}
+    if(batches.length>1) await sleep(300);
+  }
+  return results;
+};
+
+const fetchChart = async (symbol, range='3mo', interval='1d') => {
+  try{
+    const r = await corsGet(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}&includePrePost=false`);
+    const d = await r.json();
+    const res = d.chart?.result?.[0];
+    if(!res) return null;
+    const ts = res.timestamp||[];
+    const q = res.indicators?.quote?.[0]||{};
+    return ts.map((t,i)=>({
+      date:new Date(t*1000),
+      open:q.open?.[i],
+      high:q.high?.[i],
+      low:q.low?.[i],
+      close:q.close?.[i],
+      volume:q.volume?.[i]
+    })).filter(d=>d.close!=null);
+  }catch(e){console.warn('Chart fetch failed:',symbol,e.message);return null}
+};
+
+const fetchMarketIndices = async () => {
+  return fetchQuotes(['^GSPC','^IXIC','^DJI','^VIX','^RUT']);
+};
+
+/* ═══════════════════════════════════════════════
+   TECHNICAL ANALYSIS ENGINE
+   ═══════════════════════════════════════════════ */
+const calcSMA = (data, period) => {
+  if(data.length<period) return null;
+  const slice = data.slice(-period);
+  return slice.reduce((s,v)=>s+v,0)/period;
+};
+
+const calcEMA = (data, period) => {
+  if(data.length<period) return null;
+  const k = 2/(period+1);
+  let ema = data.slice(0,period).reduce((s,v)=>s+v,0)/period;
+  for(let i=period;i<data.length;i++){
+    ema = data[i]*k + ema*(1-k);
+  }
+  return ema;
+};
+
+const calcRSI = (closes, period=14) => {
+  if(closes.length<period+1) return null;
+  let gains=0, losses=0;
+  for(let i=closes.length-period;i<closes.length;i++){
+    const diff = closes[i]-closes[i-1];
+    if(diff>0) gains+=diff; else losses-=diff;
+  }
+  const avgGain=gains/period, avgLoss=losses/period;
+  if(avgLoss===0) return 100;
+  const rs = avgGain/avgLoss;
+  return 100-(100/(1+rs));
+};
+
+const calcMACD = (closes) => {
+  if(closes.length<26) return null;
+  const ema12 = calcEMA(closes,12);
+  const ema26 = calcEMA(closes,26);
+  if(ema12==null||ema26==null) return null;
+  const macdLine = ema12-ema26;
+  // Simplified signal line
+  const recentMacds = [];
+  for(let i=Math.max(0,closes.length-9);i<closes.length;i++){
+    const e12 = calcEMA(closes.slice(0,i+1),12);
+    const e26 = calcEMA(closes.slice(0,i+1),26);
+    if(e12!=null&&e26!=null) recentMacds.push(e12-e26);
+  }
+  const signal = recentMacds.length>=9 ? calcSMA(recentMacds,9) : macdLine;
+  return {macd:macdLine, signal, histogram:macdLine-signal};
+};
+
+const calcBollingerBands = (closes, period=20, mult=2) => {
+  if(closes.length<period) return null;
+  const slice = closes.slice(-period);
+  const sma = slice.reduce((s,v)=>s+v,0)/period;
+  const variance = slice.reduce((s,v)=>s+Math.pow(v-sma,2),0)/period;
+  const std = Math.sqrt(variance);
+  return {upper:sma+mult*std, middle:sma, lower:sma-mult*std, bandwidth:(mult*std*2)/sma*100, std};
+};
+
+const analyzeStock = (quote, chartData, spyData) => {
+  if(!chartData||chartData.length<50) return null;
+  const closes = chartData.map(d=>d.close);
+  const volumes = chartData.map(d=>d.volume);
+  const price = closes[closes.length-1];
+  const signals = [];
+  let totalScore = 0;
+  let maxScore = 0;
+
+  // 1. RSI
+  const rsi = calcRSI(closes);
+  if(rsi!=null){
+    let s=0, desc='';
+    if(rsi<30){s=2;desc=`RSI ${fmt(rsi,1)} — Oversold territory, potential bounce`}
+    else if(rsi<40){s=1;desc=`RSI ${fmt(rsi,1)} — Approaching oversold`}
+    else if(rsi>70){s=-1;desc=`RSI ${fmt(rsi,1)} — Overbought, caution`}
+    else if(rsi>80){s=-2;desc=`RSI ${fmt(rsi,1)} — Extremely overbought`}
+    else{s=0.5;desc=`RSI ${fmt(rsi,1)} — Neutral range`}
+    signals.push({name:'RSI',value:rsi,score:s,desc,type:'technical',icon:'📊'});
+    totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.rsi;
+    maxScore+=2*SIGNAL_WEIGHTS_DEFAULT.rsi;
+  }
+
+  // 2. Moving Averages
+  const sma50 = calcSMA(closes,50);
+  const sma200 = closes.length>=200?calcSMA(closes,200):null;
+  if(sma50!=null){
+    let s=0,desc='';
+    const above50 = price>sma50;
+    const above200 = sma200?price>sma200:null;
+    if(above50&&above200===true){s=2;desc='Price above both 50 & 200 SMA — Strong uptrend'}
+    else if(above50){s=1;desc=`Price above 50 SMA (${fmtPrice(sma50)})`}
+    else if(!above50&&above200===false){s=-1;desc='Price below both SMAs — Downtrend'}
+    else{s=0;desc=`Price near 50 SMA (${fmtPrice(sma50)})`}
+    // Golden/Death cross
+    if(sma200!=null&&sma50>sma200){s+=0.5;desc+=' | Golden cross pattern'}
+    if(sma200!=null&&sma50<sma200){s-=0.5;desc+=' | Death cross warning'}
+    signals.push({name:'Moving Averages',value:price,score:s,desc,type:'technical',icon:'📈'});
+    totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.maVsCross;
+    maxScore+=2.5*SIGNAL_WEIGHTS_DEFAULT.maVsCross;
+  }
+
+  // 3. Volume Spike
+  const avgVol = calcSMA(volumes.slice(-20),20);
+  const curVol = volumes[volumes.length-1];
+  if(avgVol&&curVol){
+    const ratio = curVol/avgVol;
+    let s=0,desc='';
+    if(ratio>3){s=2;desc=`Volume ${fmt(ratio,1)}x average — Major accumulation`}
+    else if(ratio>2){s=1.5;desc=`Volume ${fmt(ratio,1)}x average — Heavy activity`}
+    else if(ratio>1.5){s=1;desc=`Volume ${fmt(ratio,1)}x average — Above normal`}
+    else{s=0;desc=`Volume at ${fmt(ratio,1)}x average — Normal`}
+    signals.push({name:'Volume',value:ratio,score:s,desc,type:'technical',icon:'📊'});
+    totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.volumeSpike;
+    maxScore+=2*SIGNAL_WEIGHTS_DEFAULT.volumeSpike;
+  }
+
+  // 4. MACD
+  const macd = calcMACD(closes);
+  if(macd){
+    let s=0,desc='';
+    if(macd.histogram>0&&macd.macd>0){s=1.5;desc='MACD bullish — Above signal line and positive'}
+    else if(macd.histogram>0){s=1;desc='MACD crossover — Histogram turning positive'}
+    else if(macd.histogram<0&&macd.macd<0){s=-1;desc='MACD bearish — Below signal line'}
+    else{s=0;desc='MACD neutral'}
+    signals.push({name:'MACD',value:macd.histogram,score:s,desc,type:'technical',icon:'〰️'});
+    totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.macdCross;
+    maxScore+=1.5*SIGNAL_WEIGHTS_DEFAULT.macdCross;
+  }
+
+  // 5. Bollinger Bands
+  const bb = calcBollingerBands(closes);
+  if(bb){
+    let s=0,desc='';
+    if(price<=bb.lower){s=1.5;desc=`Price at lower Bollinger Band — Potential bounce (BW: ${fmt(bb.bandwidth,1)}%)`}
+    else if(price>=bb.upper){s=-0.5;desc=`Price at upper Bollinger Band — Potentially extended`}
+    else if(bb.bandwidth<5){s=1;desc=`Bollinger squeeze detected (BW: ${fmt(bb.bandwidth,1)}%) — Breakout imminent`}
+    else{s=0.3;desc=`Within bands (BW: ${fmt(bb.bandwidth,1)}%)`}
+    signals.push({name:'Bollinger Bands',value:bb.bandwidth,score:s,desc,type:'technical',icon:'📏'});
+    totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.bollingerSqueeze;
+    maxScore+=1.5*SIGNAL_WEIGHTS_DEFAULT.bollingerSqueeze;
+  }
+
+  // 6. Gap Analysis
+  if(chartData.length>=2){
+    const prev = chartData[chartData.length-2];
+    const cur = chartData[chartData.length-1];
+    const gapPct = ((cur.open-prev.close)/prev.close)*100;
+    let s=0,desc='';
+    if(gapPct<-2){s=1.5;desc=`Gap down ${fmt(gapPct,1)}% — Potential gap fill opportunity`}
+    else if(gapPct<-1){s=0.8;desc=`Small gap down ${fmt(gapPct,1)}%`}
+    else if(gapPct>2){s=-0.5;desc=`Gap up ${fmt(gapPct,1)}% — May pull back to fill`}
+    else{s=0;desc='No significant gap'}
+    if(Math.abs(gapPct)>0.5){
+      signals.push({name:'Gap Analysis',value:gapPct,score:s,desc,type:'momentum',icon:'⬇️'});
+      totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.gapFill;
+      maxScore+=1.5*SIGNAL_WEIGHTS_DEFAULT.gapFill;
+    }
+  }
+
+  // 7. Relative Strength vs SPY
+  if(spyData&&spyData.length>=20){
+    const spyCloses = spyData.map(d=>d.close);
+    const stockRet = (closes[closes.length-1]/closes[Math.max(0,closes.length-20)]-1)*100;
+    const spyRet = (spyCloses[spyCloses.length-1]/spyCloses[Math.max(0,spyCloses.length-20)]-1)*100;
+    const relStr = stockRet-spyRet;
+    let s=0,desc='';
+    if(relStr>5){s=1.5;desc=`Outperforming S&P by ${fmt(relStr,1)}% (20d) — Strong relative strength`}
+    else if(relStr>2){s=1;desc=`Beating S&P by ${fmt(relStr,1)}% (20d)`}
+    else if(relStr<-5){s=-1;desc=`Underperforming S&P by ${fmt(relStr,1)}% (20d)`}
+    else{s=0.3;desc=`Tracking S&P ±${fmt(Math.abs(relStr),1)}%`}
+    signals.push({name:'Relative Strength',value:relStr,score:s,desc,type:'momentum',icon:'💪'});
+    totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.relStrength;
+    maxScore+=1.5*SIGNAL_WEIGHTS_DEFAULT.relStrength;
+  }
+
+  // 8. P/E Quick Check (from quote)
+  if(quote?.trailingPE){
+    const pe = quote.trailingPE;
+    let s=0,desc='';
+    if(pe<15){s=1;desc=`P/E ${fmt(pe,1)} — Below market average, potential value`}
+    else if(pe<25){s=0.5;desc=`P/E ${fmt(pe,1)} — Reasonable valuation`}
+    else if(pe>50){s=-0.5;desc=`P/E ${fmt(pe,1)} — Premium valuation, growth priced in`}
+    else{s=0;desc=`P/E ${fmt(pe,1)}`}
+    signals.push({name:'P/E Ratio',value:pe,score:s,desc,type:'fundamental',icon:'💰'});
+    totalScore+=s*SIGNAL_WEIGHTS_DEFAULT.peRatio;
+    maxScore+=1*SIGNAL_WEIGHTS_DEFAULT.peRatio;
+  }
+
+  // Compute normalized Edge Score (1-10)
+  const normalizedScore = maxScore>0 ? clamp(Math.round((totalScore/maxScore)*4.5+5.5),1,10) : 5;
+
+  // Support/Resistance
+  const recentLows = chartData.slice(-20).map(d=>d.low).filter(Boolean);
+  const recentHighs = chartData.slice(-20).map(d=>d.high).filter(Boolean);
+  const support = Math.min(...recentLows);
+  const resistance = Math.max(...recentHighs);
+
+  return {
+    symbol: quote?.symbol||'',
+    name: quote?.shortName||quote?.longName||'',
+    price,
+    change: quote?.regularMarketChangePercent||0,
+    changeAbs: quote?.regularMarketChange||0,
+    volume: curVol,
+    avgVolume: avgVol,
+    marketCap: quote?.marketCap,
+    pe: quote?.trailingPE,
+    sector: getSector(quote?.symbol||''),
+    signals,
+    edgeScore: normalizedScore,
+    totalSignalScore: totalScore,
+    rsi,
+    sma50,
+    sma200,
+    macd,
+    bb,
+    support,
+    resistance,
+    chartData,
+    earningsDate: quote?.earningsTimestamp ? new Date(quote.earningsTimestamp*1000) : null,
+    fiftyTwoWeekHigh: quote?.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: quote?.fiftyTwoWeekLow
+  };
+};
+
+const getSector = (symbol) => {
+  for(const [sector,syms] of Object.entries(SECTORS)){
+    if(syms.includes(symbol)) return sector;
+  }
+  return 'Other';
+};
+
+const generateThesis = (analysis) => {
+  if(!analysis) return {bull:'',bear:''};
+  const bullPoints = analysis.signals.filter(s=>s.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
+  const bearPoints = analysis.signals.filter(s=>s.score<0).sort((a,b)=>a.score-b.score).slice(0,2);
+
+  const bull = bullPoints.length>0
+    ? `${analysis.symbol} showing ${bullPoints.length} converging bullish signals: ${bullPoints.map(s=>s.name.toLowerCase()).join(', ')}. ${bullPoints[0]?.desc||''} With an Edge Score of ${analysis.edgeScore}/10, the setup suggests favorable risk/reward at current levels near ${fmtPrice(analysis.price)}.`
+    : `${analysis.symbol} lacks strong bullish catalysts at ${fmtPrice(analysis.price)}. Signals are mixed — wait for clearer setup.`;
+
+  const bear = bearPoints.length>0
+    ? `Caution: ${bearPoints.map(s=>s.desc).join('. ')}. Key risk is a break below support at ${fmtPrice(analysis.support)}.`
+    : `Primary risk: general market conditions and sector rotation. Support at ${fmtPrice(analysis.support)} — a break below invalidates the setup.`;
+
+  return {bull,bear};
+};
+
+/* ═══════════════════════════════════════════════
+   CLAUDE AI INTEGRATION
+   ═══════════════════════════════════════════════ */
+const callClaude = async (apiKey, messages, systemPrompt) => {
+  if(!apiKey) throw new Error('No Claude API key configured');
+  const r = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1024,
+      system:systemPrompt||'You are a concise stock market analyst. Give analytical, balanced insights. Always mention both bull and bear cases. Never hype — be honest about risks. Keep responses under 200 words.',
+      messages
+    })
+  });
+  if(!r.ok){const e=await r.text();throw new Error(`Claude API error: ${r.status} ${e}`)}
+  const d = await r.json();
+  return d.content?.[0]?.text||'No response';
+};
+
+/* ═══════════════════════════════════════════════
+   MOCK DATA (for initial demo state)
+   ═══════════════════════════════════════════════ */
+const MOCK_MARKET = {
+  '^GSPC':{symbol:'^GSPC',shortName:'S&P 500',regularMarketPrice:5248.32,regularMarketChangePercent:0.47,regularMarketChange:24.56},
+  '^IXIC':{symbol:'^IXIC',shortName:'NASDAQ',regularMarketPrice:16428.82,regularMarketChangePercent:0.72,regularMarketChange:117.43},
+  '^DJI':{symbol:'^DJI',shortName:'DOW',regularMarketPrice:39807.37,regularMarketChangePercent:0.12,regularMarketChange:47.29},
+  '^VIX':{symbol:'^VIX',shortName:'VIX',regularMarketPrice:16.85,regularMarketChangePercent:-3.21,regularMarketChange:-0.56},
+  '^RUT':{symbol:'^RUT',shortName:'Russell 2000',regularMarketPrice:2088.54,regularMarketChangePercent:-0.18,regularMarketChange:-3.76}
+};
+
+/* ═══════════════════════════════════════════════
+   MAIN APP COMPONENT
+   ═══════════════════════════════════════════════ */
+function App(){
+  const saved = useMemo(()=>loadState(),[]);
+
+  // Navigation
+  const [tab,setTab] = useState('watchlist');
+
+  // Settings
+  const [finnhubKey,setFinnhubKey] = useState(saved.finnhubKey||'');
+  const [claudeKey,setClaudeKey] = useState(saved.claudeKey||'');
+  const [universe,setUniverse] = useState(saved.universe||DEFAULT_UNIVERSE.slice(0,30));
+  const [signalWeights,setSignalWeights] = useState(saved.signalWeights||SIGNAL_WEIGHTS_DEFAULT);
+  const [riskTolerance,setRiskTolerance] = useState(saved.riskTolerance||'moderate');
+
+  // Data
+  const [analyses,setAnalyses] = useState([]);
+  const [marketData,setMarketData] = useState(MOCK_MARKET);
+  const [loading,setLoading] = useState(false);
+  const [scanProgress,setScanProgress] = useState({current:0,total:0,symbol:''});
+  const [lastScan,setLastScan] = useState(saved.lastScan||null);
+
+  // Watchlist
+  const [myWatchlist,setMyWatchlist] = useState(saved.myWatchlist||['NVDA','AAPL','TSLA','AMD','META']);
+  const [pickHistory,setPickHistory] = useState(saved.pickHistory||[]);
+
+  // UI State
+  const [selectedStock,setSelectedStock] = useState(null);
+  const [settingsOpen,setSettingsOpen] = useState(false);
+  const [sortBy,setSortBy] = useState('edgeScore');
+  const [filterSector,setFilterSector] = useState('All');
+  const [filterMinScore,setFilterMinScore] = useState(1);
+  const [searchTerm,setSearchTerm] = useState('');
+
+  // AI Chat
+  const [aiMessages,setAiMessages] = useState([{role:'assistant',content:'Welcome to EdgeScanner AI. Ask me about any stock, market conditions, or your watchlist. I\'ll give you balanced analysis — no hype, just data.'}]);
+  const [aiInput,setAiInput] = useState('');
+  const [aiLoading,setAiLoading] = useState(false);
+
+  // Screener
+  const [screenerPresets,setScreenerPresets] = useState(saved.screenerPresets||[]);
+  const [screenerRSI,setScreenerRSI] = useState([0,100]);
+  const [screenerVolMult,setScreenerVolMult] = useState(1);
+  const [screenerMinCap,setScreenerMinCap] = useState(0);
+  const [screenerMaxCap,setScreenerMaxCap] = useState(999999);
+  const [screenerSector,setScreenerSector] = useState('All');
+  const [screenerMinPrice,setScreenerMinPrice] = useState(0);
+  const [screenerMaxPrice,setScreenerMaxPrice] = useState(99999);
+
+  // Sector heatmap timeframe
+  const [heatmapTf,setHeatmapTf] = useState('1d');
+
+  // Save state
+  useEffect(()=>{
+    saveState({finnhubKey,claudeKey,universe,signalWeights,riskTolerance,myWatchlist,pickHistory,screenerPresets,lastScan});
+  },[finnhubKey,claudeKey,universe,signalWeights,riskTolerance,myWatchlist,pickHistory,screenerPresets,lastScan]);
+
+  /* ── SCAN ENGINE ── */
+  const runScan = useCallback(async(tickers=null)=>{
+    const scanList = tickers || universe;
+    setLoading(true);
+    setScanProgress({current:0,total:scanList.length,symbol:''});
+
+    try{
+      // Fetch SPY data for relative strength
+      const spyData = await fetchChart('SPY','3mo','1d');
+
+      // Fetch market indices
+      try{
+        const mkt = await fetchMarketIndices();
+        if(Object.keys(mkt).length>0) setMarketData(mkt);
+      }catch(e){}
+
+      // Fetch all quotes
+      const quotes = await fetchQuotes(scanList);
+
+      // Fetch charts and analyze
+      const results = [];
+      for(let i=0;i<scanList.length;i++){
+        const sym = scanList[i];
+        setScanProgress({current:i+1,total:scanList.length,symbol:sym});
+        try{
+          const chart = await fetchChart(sym,'3mo','1d');
+          const analysis = analyzeStock(quotes[sym]||{symbol:sym},chart,spyData);
+          if(analysis) results.push(analysis);
+        }catch(e){console.warn('Scan failed for',sym,e.message)}
+        if(i%5===4) await sleep(500); // Rate limit
+      }
+
+      setAnalyses(results);
+      setLastScan(new Date().toISOString());
+    }catch(e){
+      console.error('Scan error:',e);
+    }
+    setLoading(false);
+    setScanProgress({current:0,total:0,symbol:''});
+  },[universe]);
+
+  /* ── FILTERED & SORTED ── */
+  const filteredAnalyses = useMemo(()=>{
+    let list = [...analyses];
+
+    // Risk tolerance filter
+    const minScore = riskTolerance==='conservative'?7:riskTolerance==='aggressive'?3:5;
+
+    if(filterSector!=='All') list = list.filter(a=>a.sector===filterSector);
+    if(filterMinScore>1) list = list.filter(a=>a.edgeScore>=filterMinScore);
+    if(searchTerm) list = list.filter(a=>a.symbol.includes(searchTerm.toUpperCase())||a.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    list.sort((a,b)=>{
+      if(sortBy==='edgeScore') return b.edgeScore-a.edgeScore;
+      if(sortBy==='volume') return (b.volume/b.avgVolume)-(a.volume/a.avgVolume);
+      if(sortBy==='change') return b.change-a.change;
+      if(sortBy==='sector') return a.sector.localeCompare(b.sector);
+      return 0;
+    });
+
+    return list;
+  },[analyses,filterSector,filterMinScore,searchTerm,sortBy,riskTolerance]);
+
+  const topPicks = useMemo(()=>filteredAnalyses.slice(0,10),[filteredAnalyses]);
+
+  /* ── AI CHAT ── */
+  const sendAiMessage = useCallback(async()=>{
+    if(!aiInput.trim()||aiLoading) return;
+    const userMsg = aiInput.trim();
+    setAiInput('');
+    setAiMessages(prev=>[...prev,{role:'user',content:userMsg}]);
+    setAiLoading(true);
+
+    try{
+      // Build context
+      const context = analyses.length>0
+        ? `Current scan data (top picks): ${topPicks.slice(0,5).map(a=>`${a.symbol}: $${fmt(a.price)}, Edge ${a.edgeScore}/10, RSI ${fmt(a.rsi,0)}, ${a.signals.filter(s=>s.score>0).length} bullish signals`).join('; ')}. User watchlist: ${myWatchlist.join(',')}.`
+        : 'No scan data loaded yet.';
+
+      const msgs = [...aiMessages.slice(-8),{role:'user',content:userMsg}]
+        .filter(m=>m.role==='user'||m.role==='assistant')
+        .map(m=>({role:m.role,content:m.content}));
+
+      const response = await callClaude(claudeKey,msgs,
+        `You are EdgeScanner AI, an analytical stock assistant. Context: ${context}. Be concise (under 200 words), balanced, and data-driven. Always mention risks. Never say "guaranteed" or use hype language. Format key numbers clearly.`
+      );
+      setAiMessages(prev=>[...prev,{role:'assistant',content:response}]);
+    }catch(e){
+      setAiMessages(prev=>[...prev,{role:'assistant',content:`Error: ${e.message}. Make sure your Claude API key is configured in Settings.`}]);
+    }
+    setAiLoading(false);
+  },[aiInput,aiLoading,claudeKey,analyses,topPicks,aiMessages,myWatchlist]);
+
+  /* ── SECTOR HEAT MAP DATA ── */
+  const sectorHeatData = useMemo(()=>{
+    const data = {};
+    for(const [sector,syms] of Object.entries(SECTORS)){
+      const sectorStocks = analyses.filter(a=>syms.includes(a.symbol));
+      if(sectorStocks.length===0){data[sector]={change:0,count:0,avgScore:0};continue}
+      const avgChange = sectorStocks.reduce((s,a)=>s+a.change,0)/sectorStocks.length;
+      const avgScore = sectorStocks.reduce((s,a)=>s+a.edgeScore,0)/sectorStocks.length;
+      data[sector] = {change:avgChange,count:sectorStocks.length,avgScore};
+    }
+    return data;
+  },[analyses]);
+
+  /* ── SCREENER ── */
+  const screenerResults = useMemo(()=>{
+    return analyses.filter(a=>{
+      if(a.rsi!=null&&(a.rsi<screenerRSI[0]||a.rsi>screenerRSI[1])) return false;
+      if(a.avgVolume&&a.volume/a.avgVolume<screenerVolMult) return false;
+      if(a.marketCap&&(a.marketCap/1e9<screenerMinCap||a.marketCap/1e9>screenerMaxCap)) return false;
+      if(screenerSector!=='All'&&a.sector!==screenerSector) return false;
+      if(a.price<screenerMinPrice||a.price>screenerMaxPrice) return false;
+      return true;
+    }).sort((a,b)=>b.edgeScore-a.edgeScore);
+  },[analyses,screenerRSI,screenerVolMult,screenerMinCap,screenerMaxCap,screenerSector,screenerMinPrice,screenerMaxPrice]);
+
+  /* ── ADD TO WATCHLIST ── */
+  const toggleWatchlist = (symbol) => {
+    setMyWatchlist(prev=>prev.includes(symbol)?prev.filter(s=>s!==symbol):[...prev,symbol]);
+  };
+
+  const addPick = (symbol,action,price) => {
+    setPickHistory(prev=>[{symbol,action,price,date:new Date().toISOString(),id:Date.now()},...prev]);
+  };
+
+  /* ── RENDER HELPERS ── */
+  const edgeClass = (score) => score>=7?'edge-high':score>=4?'edge-med':'edge-low';
+  const changeClass = (v) => v>0?'pos':v<0?'neg':'neu';
+  const heatColor = (pct) => {
+    if(pct>2) return 'rgba(0,230,118,0.35)';
+    if(pct>1) return 'rgba(0,230,118,0.2)';
+    if(pct>0) return 'rgba(0,230,118,0.1)';
+    if(pct>-1) return 'rgba(255,61,87,0.1)';
+    if(pct>-2) return 'rgba(255,61,87,0.2)';
+    return 'rgba(255,61,87,0.35)';
+  };
+
+  /* ═══════════════════════════════════════════════
+     CHART COMPONENT
+     ═══════════════════════════════════════════════ */
+  function PriceChart({data,support,resistance,sma50,sma200,height=220}){
+    const canvasRef = useRef(null);
+    const chartRef = useRef(null);
+
+    useEffect(()=>{
+      if(!canvasRef.current||!data||data.length===0) return;
+      if(chartRef.current) chartRef.current.destroy();
+
+      const labels = data.map(d=>d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+      const prices = data.map(d=>d.close);
+      const minP = Math.min(...prices)*0.98;
+      const maxP = Math.max(...prices)*1.02;
+
+      const datasets = [{
+        label:'Price',
+        data:prices,
+        borderColor:'#22d3ee',
+        backgroundColor:'rgba(34,211,238,0.05)',
+        fill:true,
+        tension:0.3,
+        pointRadius:0,
+        borderWidth:2
+      }];
+
+      if(support){
+        datasets.push({label:'Support',data:Array(prices.length).fill(support),borderColor:'rgba(0,230,118,0.4)',borderWidth:1,borderDash:[5,5],pointRadius:0,fill:false});
+      }
+      if(resistance){
+        datasets.push({label:'Resistance',data:Array(prices.length).fill(resistance),borderColor:'rgba(255,61,87,0.4)',borderWidth:1,borderDash:[5,5],pointRadius:0,fill:false});
+      }
+
+      chartRef.current = new Chart(canvasRef.current,{
+        type:'line',
+        data:{labels,datasets},
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:'rgba(26,30,42,0.95)',titleColor:'#e8ecf4',bodyColor:'#a0a8c0',borderColor:'#2a3045',borderWidth:1}},
+          scales:{
+            x:{display:true,grid:{color:'rgba(30,35,51,0.5)'},ticks:{color:'#3e4563',font:{size:9},maxTicksLimit:8}},
+            y:{display:true,grid:{color:'rgba(30,35,51,0.5)'},ticks:{color:'#3e4563',font:{size:9}},min:minP,max:maxP}
+          },
+          interaction:{mode:'nearest',axis:'x',intersect:false}
+        }
+      });
+
+      return ()=>{if(chartRef.current)chartRef.current.destroy()};
+    },[data,support,resistance]);
+
+    return <div style={{height}}><canvas ref={canvasRef}/></div>;
+  }
+
+  /* ═══════════════════════════════════════════════
+     STOCK DETAIL MODAL
+     ═══════════════════════════════════════════════ */
+  function StockDetail({analysis,onClose}){
+    const thesis = generateThesis(analysis);
+    const [aiThesis,setAiThesis] = useState(null);
+    const [loadingThesis,setLoadingThesis] = useState(false);
+
+    const getAiThesis = async()=>{
+      if(!claudeKey) return;
+      setLoadingThesis(true);
+      try{
+        const context = `Stock: ${analysis.symbol} (${analysis.name}), Price: $${fmt(analysis.price)}, Edge Score: ${analysis.edgeScore}/10, RSI: ${fmt(analysis.rsi,1)}, Signals: ${analysis.signals.map(s=>`${s.name}: ${s.desc}`).join('; ')}. Support: ${fmtPrice(analysis.support)}, Resistance: ${fmtPrice(analysis.resistance)}.`;
+        const response = await callClaude(claudeKey,[{role:'user',content:`Analyze ${analysis.symbol}. Give: 1) Bull case (2-3 sentences), 2) Bear case (2-3 sentences), 3) Suggested entry/exit levels, 4) Risk rating (low/medium/high). Context: ${context}`}],
+          'You are a precise stock analyst. Give balanced, analytical responses. No hype. Format clearly with numbered sections.');
+        setAiThesis(response);
+      }catch(e){setAiThesis('Error: '+e.message)}
+      setLoadingThesis(false);
+    };
+
+    return(
+      <div className="modal-bg" onClick={onClose}>
+        <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:900}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:14}}>
+              <div className={`edge-score ${edgeClass(analysis.edgeScore)}`}>{analysis.edgeScore}</div>
+              <div>
+                <div style={{fontSize:22,fontWeight:900,letterSpacing:'-.5px'}}>{analysis.symbol}</div>
+                <div style={{fontSize:12,color:'var(--text3)'}}>{analysis.name} · {analysis.sector}</div>
+              </div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:24,fontWeight:800}}>{fmtPrice(analysis.price)}</div>
+              <div className={changeClass(analysis.change)} style={{fontSize:13,fontWeight:700}}>{fmtPct(analysis.change)} ({analysis.changeAbs>=0?'+':''}{fmt(analysis.changeAbs)})</div>
+            </div>
+          </div>
+
+          {/* Price Chart */}
+          <div className="detail-section">
+            <div className="detail-section-title">📈 Price Chart (3 Month)</div>
+            <PriceChart data={analysis.chartData} support={analysis.support} resistance={analysis.resistance} height={240}/>
+            <div style={{display:'flex',gap:20,marginTop:12,fontSize:11,color:'var(--text3)'}}>
+              <span>Support: <span className="pos">{fmtPrice(analysis.support)}</span></span>
+              <span>Resistance: <span className="neg">{fmtPrice(analysis.resistance)}</span></span>
+              {analysis.sma50&&<span>50 SMA: {fmtPrice(analysis.sma50)}</span>}
+              {analysis.sma200&&<span>200 SMA: {fmtPrice(analysis.sma200)}</span>}
+              {analysis.fiftyTwoWeekHigh&&<span>52w High: {fmtPrice(analysis.fiftyTwoWeekHigh)}</span>}
+              {analysis.fiftyTwoWeekLow&&<span>52w Low: {fmtPrice(analysis.fiftyTwoWeekLow)}</span>}
+            </div>
+          </div>
+
+          {/* Signals */}
+          <div className="detail-section">
+            <div className="detail-section-title">🎯 Signal Breakdown</div>
+            {analysis.signals.map((s,i)=>(
+              <div key={i} className="signal-row">
+                <div className="signal-name">
+                  <span>{s.icon}</span>
+                  <span>{s.name}</span>
+                  <span className={`badge ${s.type==='technical'?'b-signal':s.type==='momentum'?'b-momentum':'b-neutral'}`}>{s.type}</span>
+                </div>
+                <div className="signal-bar">
+                  <div className="signal-bar-fill" style={{
+                    width:`${Math.abs(s.score)/2*100}%`,
+                    background:s.score>0?'var(--green)':s.score<0?'var(--red)':'var(--text4)'
+                  }}/>
+                </div>
+                <div className={`signal-val ${s.score>0?'pos':s.score<0?'neg':'neu'}`}>
+                  {s.score>0?'+':''}{fmt(s.score,1)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Thesis */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div className="detail-section" style={{borderLeft:'3px solid var(--green)'}}>
+              <div className="detail-section-title" style={{color:'var(--green)'}}>🐂 Bull Case</div>
+              <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>{thesis.bull}</p>
+            </div>
+            <div className="detail-section" style={{borderLeft:'3px solid var(--red)'}}>
+              <div className="detail-section-title" style={{color:'var(--red)'}}>🐻 Bear Case</div>
+              <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>{thesis.bear}</p>
+            </div>
+          </div>
+
+          {/* AI Thesis */}
+          {claudeKey && (
+            <div className="detail-section">
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div className="detail-section-title">🤖 AI Deep Analysis</div>
+                {!aiThesis&&<button className="btn btn-sm btn-secondary" onClick={getAiThesis} disabled={loadingThesis}>
+                  {loadingThesis?<><span className="spin">⟳</span> Analyzing...</>:'Generate AI Thesis'}
+                </button>}
+              </div>
+              {aiThesis&&<p style={{fontSize:12,color:'var(--text2)',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{aiThesis}</p>}
+            </div>
+          )}
+
+          {/* Quick Stats */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+            <div className="detail-section" style={{textAlign:'center',padding:12}}>
+              <div style={{fontSize:10,color:'var(--text4)',textTransform:'uppercase',letterSpacing:'.5px'}}>RSI</div>
+              <div style={{fontSize:20,fontWeight:800,color:analysis.rsi<30?'var(--green)':analysis.rsi>70?'var(--red)':'var(--text)'}}>{fmt(analysis.rsi,1)}</div>
+            </div>
+            <div className="detail-section" style={{textAlign:'center',padding:12}}>
+              <div style={{fontSize:10,color:'var(--text4)',textTransform:'uppercase',letterSpacing:'.5px'}}>Volume</div>
+              <div style={{fontSize:20,fontWeight:800}}>{fmtVol(analysis.volume)}</div>
+              <div style={{fontSize:10,color:'var(--text3)'}}>{analysis.avgVolume?fmt(analysis.volume/analysis.avgVolume,1)+'x avg':''}</div>
+            </div>
+            <div className="detail-section" style={{textAlign:'center',padding:12}}>
+              <div style={{fontSize:10,color:'var(--text4)',textTransform:'uppercase',letterSpacing:'.5px'}}>Mkt Cap</div>
+              <div style={{fontSize:20,fontWeight:800}}>{analysis.marketCap?fmtVol(analysis.marketCap):'—'}</div>
+            </div>
+            <div className="detail-section" style={{textAlign:'center',padding:12}}>
+              <div style={{fontSize:10,color:'var(--text4)',textTransform:'uppercase',letterSpacing:'.5px'}}>P/E</div>
+              <div style={{fontSize:20,fontWeight:800}}>{analysis.pe?fmt(analysis.pe,1):'—'}</div>
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button className="btn btn-secondary" onClick={()=>toggleWatchlist(analysis.symbol)}>
+              {myWatchlist.includes(analysis.symbol)?'★ In Watchlist':'☆ Add to Watchlist'}
+            </button>
+            <button className="btn btn-primary" style={{background:'var(--green)',color:'#000'}} onClick={()=>{addPick(analysis.symbol,'BUY',analysis.price)}}>
+              📝 Log Entry
+            </button>
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════════
+     STOCK CARD
+     ═══════════════════════════════════════════════ */
+  function StockCard({analysis}){
+    const thesis = generateThesis(analysis);
+    const accentColor = analysis.edgeScore>=7?'var(--green)':analysis.edgeScore>=4?'var(--gold)':'var(--red)';
+
+    return(
+      <div className="stock-card fade-in" onClick={()=>setSelectedStock(analysis)}>
+        <div className="stock-card-accent" style={{background:`linear-gradient(90deg,${accentColor},transparent)`}}/>
+        <div className="stock-card-head">
+          <div className={`edge-score ${edgeClass(analysis.edgeScore)}`}>{analysis.edgeScore}</div>
+          <div className="stock-card-info">
+            <div className="stock-ticker">{analysis.symbol}</div>
+            <div className="stock-name">{analysis.name}</div>
+          </div>
+          <div className="stock-price-block">
+            <div className="stock-price">{fmtPrice(analysis.price)}</div>
+            <div className={`stock-change ${changeClass(analysis.change)}`}>{fmtPct(analysis.change)}</div>
+          </div>
+        </div>
+        <div className="stock-signals">
+          {analysis.signals.filter(s=>s.score>0.5).slice(0,4).map((s,i)=>(
+            <span key={i} className="badge b-bull">{s.icon} {s.name}</span>
+          ))}
+          {analysis.signals.filter(s=>s.score<-0.5).slice(0,2).map((s,i)=>(
+            <span key={i} className="badge b-bear">⚠ {s.name}</span>
+          ))}
+        </div>
+        <div className="stock-thesis">{thesis.bull}</div>
+        <div className="stock-meta">
+          <span>{analysis.sector}</span>
+          <span>Vol: {fmtVol(analysis.volume)}</span>
+          <span>RSI: {fmt(analysis.rsi,0)}</span>
+          <span onClick={e=>{e.stopPropagation();toggleWatchlist(analysis.symbol)}} style={{cursor:'pointer'}}>
+            {myWatchlist.includes(analysis.symbol)?'★':'☆'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════════
+     VIEWS
+     ═══════════════════════════════════════════════ */
+
+  // ── Daily Watchlist (Main View) ──
+  function WatchlistView(){
+    return(<>
+      <div className="disclaimer">⚠️ For educational/research purposes only. Not financial advice. Past signals do not guarantee future performance. Always do your own due diligence.</div>
+
+      {/* Scan Controls */}
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
+        <button className="btn btn-primary" onClick={()=>runScan()} disabled={loading}>
+          {loading?<><span className="spin">⟳</span> Scanning {scanProgress.symbol} ({scanProgress.current}/{scanProgress.total})...</>:'🔍 Run Full Scan'}
+        </button>
+        <button className="btn btn-secondary" onClick={()=>runScan(myWatchlist)} disabled={loading||myWatchlist.length===0}>
+          Scan Watchlist Only
+        </button>
+        {lastScan&&<span style={{fontSize:11,color:'var(--text4)'}}>Last scan: {new Date(lastScan).toLocaleString()}</span>}
+        {loading&&(
+          <div style={{flex:1,maxWidth:300}}>
+            <div style={{height:4,background:'var(--bg2)',borderRadius:2,overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${scanProgress.total?scanProgress.current/scanProgress.total*100:0}%`,background:'var(--green)',borderRadius:2,transition:'width .3s'}}/>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Market Overview Strip */}
+      <div className="kpi-grid">
+        {Object.entries(marketData).map(([sym,q])=>(
+          <div key={sym} className={`kpi ${q.regularMarketChangePercent>=0?'kpi-green':'kpi-red'}`}>
+            <div className="kpi-label">{q.shortName||sym}</div>
+            <div className="kpi-val">{sym==='^VIX'?fmt(q.regularMarketPrice,2):Number(q.regularMarketPrice).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            <div className={`kpi-sub ${changeClass(q.regularMarketChangePercent)}`}>{fmtPct(q.regularMarketChangePercent)}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      {analyses.length>0&&(
+        <div className="filters">
+          <input type="text" placeholder="🔍 Search ticker..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} style={{maxWidth:180}}/>
+          <select value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+            <option value="edgeScore">Sort: Edge Score</option>
+            <option value="volume">Sort: Volume Spike</option>
+            <option value="change">Sort: Price Change</option>
+            <option value="sector">Sort: Sector</option>
+          </select>
+          <select value={filterSector} onChange={e=>setFilterSector(e.target.value)}>
+            <option value="All">All Sectors</option>
+            {SECTOR_LIST.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={filterMinScore} onChange={e=>setFilterMinScore(Number(e.target.value))}>
+            <option value={1}>Min Score: 1+</option>
+            <option value={4}>Min Score: 4+</option>
+            <option value={6}>Min Score: 6+</option>
+            <option value={7}>Min Score: 7+</option>
+            <option value={8}>Min Score: 8+</option>
+          </select>
+          <span style={{fontSize:11,color:'var(--text4)'}}>{filteredAnalyses.length} results</span>
+        </div>
+      )}
+
+      {/* Top Picks */}
+      {topPicks.length>0?(
+        <>
+          <div className="sec-hdr">
+            <div className="sec-title">🎯 Top Picks <span className="sec-count">{topPicks.length}</span></div>
+          </div>
+          <div className="stock-grid">
+            {topPicks.map(a=><StockCard key={a.symbol} analysis={a}/>)}
+          </div>
+
+          {/* Full Results Table */}
+          {filteredAnalyses.length>10&&(
+            <>
+              <div className="sec-hdr" style={{marginTop:20}}>
+                <div className="sec-title">📋 All Results <span className="sec-count">{filteredAnalyses.length}</span></div>
+              </div>
+              <div className="tbl-wrap">
+                <table>
+                  <thead><tr>
+                    <th>Ticker</th><th>Price</th><th>Change</th><th>Edge</th><th>RSI</th><th>Volume</th><th>Sector</th><th>Signals</th><th></th>
+                  </tr></thead>
+                  <tbody>
+                    {filteredAnalyses.slice(10).map(a=>(
+                      <tr key={a.symbol} style={{cursor:'pointer'}} onClick={()=>setSelectedStock(a)}>
+                        <td style={{fontWeight:700}}>{a.symbol}</td>
+                        <td>{fmtPrice(a.price)}</td>
+                        <td className={changeClass(a.change)}>{fmtPct(a.change)}</td>
+                        <td><span className={`badge ${a.edgeScore>=7?'b-bull':a.edgeScore>=4?'b-neutral':'b-bear'}`}>{a.edgeScore}/10</span></td>
+                        <td style={{color:a.rsi<30?'var(--green)':a.rsi>70?'var(--red)':'var(--text2)'}}>{fmt(a.rsi,0)}</td>
+                        <td>{fmtVol(a.volume)}{a.avgVolume?` (${fmt(a.volume/a.avgVolume,1)}x)`:''}</td>
+                        <td style={{fontSize:11,color:'var(--text3)'}}>{a.sector}</td>
+                        <td><span style={{fontSize:11,color:'var(--text3)'}}>{a.signals.filter(s=>s.score>0).length}🟢 {a.signals.filter(s=>s.score<0).length}🔴</span></td>
+                        <td><span style={{cursor:'pointer'}} onClick={e=>{e.stopPropagation();toggleWatchlist(a.symbol)}}>{myWatchlist.includes(a.symbol)?'★':'☆'}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      ):(
+        !loading&&(
+          <div style={{textAlign:'center',padding:'60px 20px',color:'var(--text3)'}}>
+            <div style={{fontSize:48,marginBottom:12,opacity:.2}}>🔍</div>
+            <div style={{fontSize:16,fontWeight:700,color:'var(--text2)',marginBottom:6}}>No Scan Data Yet</div>
+            <div style={{fontSize:13,marginBottom:16}}>Hit "Run Full Scan" to analyze {universe.length} stocks for converging bullish signals.</div>
+            <button className="btn btn-primary" onClick={()=>runScan()}>🔍 Run Full Scan</button>
+          </div>
+        )
+      )}
+
+      {loading&&analyses.length===0&&(
+        <div className="stock-grid">
+          {[1,2,3,4,5,6].map(i=><div key={i} className="skeleton skeleton-card"/>)}
+        </div>
+      )}
+    </>);
+  }
+
+  // ── Sector Heat Map ──
+  function SectorView(){
+    return(<>
+      <div className="sec-hdr">
+        <div className="sec-title">🗺️ Sector Heat Map</div>
+        <div className="tab-pills">
+          {['1d','1w','1m'].map(tf=>(
+            <span key={tf} className={`tab-pill ${heatmapTf===tf?'active':''}`} onClick={()=>setHeatmapTf(tf)}>{tf}</span>
+          ))}
+        </div>
+      </div>
+      {analyses.length>0?(
+        <div className="heatmap-grid">
+          {Object.entries(sectorHeatData).map(([sector,data])=>(
+            <div key={sector} className="heatmap-cell" style={{background:heatColor(data.change)}} onClick={()=>{setFilterSector(sector);setTab('watchlist')}}>
+              <div className="heatmap-name">{sector}</div>
+              <div className={`heatmap-val ${changeClass(data.change)}`}>{fmtPct(data.change)}</div>
+              <div className="heatmap-sub">{data.count} stocks · Avg Edge {fmt(data.avgScore,1)}</div>
+            </div>
+          ))}
+        </div>
+      ):(
+        <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>Run a scan first to populate sector data.</div>
+      )}
+
+      {/* Sector Breakdown Table */}
+      {analyses.length>0&&(
+        <div style={{marginTop:20}}>
+          {Object.entries(SECTORS).map(([sector,syms])=>{
+            const sectorStocks = analyses.filter(a=>syms.includes(a.symbol)).sort((a,b)=>b.edgeScore-a.edgeScore);
+            if(sectorStocks.length===0) return null;
+            return(
+              <div key={sector} style={{marginBottom:16}}>
+                <div className="sec-hdr">
+                  <div className="sec-title">{sector} <span className="sec-count">{sectorStocks.length}</span></div>
+                </div>
+                <div className="tbl-wrap">
+                  <table>
+                    <thead><tr><th>Ticker</th><th>Price</th><th>Change</th><th>Edge</th><th>RSI</th></tr></thead>
+                    <tbody>
+                      {sectorStocks.map(a=>(
+                        <tr key={a.symbol} style={{cursor:'pointer'}} onClick={()=>setSelectedStock(a)}>
+                          <td style={{fontWeight:700}}>{a.symbol}</td>
+                          <td>{fmtPrice(a.price)}</td>
+                          <td className={changeClass(a.change)}>{fmtPct(a.change)}</td>
+                          <td><span className={`badge ${a.edgeScore>=7?'b-bull':a.edgeScore>=4?'b-neutral':'b-bear'}`}>{a.edgeScore}/10</span></td>
+                          <td>{fmt(a.rsi,0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>);
+  }
+
+  // ── Screener ──
+  function ScreenerView(){
+    return(<>
+      <div className="sec-hdr">
+        <div className="sec-title">🔬 Custom Screener</div>
+      </div>
+
+      {analyses.length===0?(
+        <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>Run a scan first, then use the screener to filter results.</div>
+      ):(
+        <>
+          <div className="card" style={{marginBottom:16}}>
+            <div className="card-header"><div className="card-title">⚙️ Screener Criteria</div></div>
+            <div className="card-body">
+              <div className="screener-row">
+                <div className="form-group">
+                  <label>RSI Min</label>
+                  <input type="number" value={screenerRSI[0]} onChange={e=>setScreenerRSI([+e.target.value,screenerRSI[1]])} min={0} max={100}/>
+                </div>
+                <div className="form-group">
+                  <label>RSI Max</label>
+                  <input type="number" value={screenerRSI[1]} onChange={e=>setScreenerRSI([screenerRSI[0],+e.target.value])} min={0} max={100}/>
+                </div>
+                <div className="form-group">
+                  <label>Min Volume Multiplier</label>
+                  <input type="number" value={screenerVolMult} onChange={e=>setScreenerVolMult(+e.target.value)} min={0} step={0.5}/>
+                </div>
+                <div className="form-group">
+                  <label>Sector</label>
+                  <select value={screenerSector} onChange={e=>setScreenerSector(e.target.value)}>
+                    <option value="All">All</option>
+                    {SECTOR_LIST.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Min Price ($)</label>
+                  <input type="number" value={screenerMinPrice} onChange={e=>setScreenerMinPrice(+e.target.value)} min={0}/>
+                </div>
+                <div className="form-group">
+                  <label>Max Price ($)</label>
+                  <input type="number" value={screenerMaxPrice} onChange={e=>setScreenerMaxPrice(+e.target.value)} min={0}/>
+                </div>
+                <div className="form-group">
+                  <label>Min Mkt Cap ($B)</label>
+                  <input type="number" value={screenerMinCap} onChange={e=>setScreenerMinCap(+e.target.value)} min={0}/>
+                </div>
+                <div className="form-group">
+                  <label>Max Mkt Cap ($B)</label>
+                  <input type="number" value={screenerMaxCap} onChange={e=>setScreenerMaxCap(+e.target.value)} min={0}/>
+                </div>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <span style={{fontSize:12,color:'var(--text2)'}}>{screenerResults.length} matches</span>
+                <button className="btn btn-sm btn-secondary" onClick={()=>{
+                  const preset = {name:`Preset ${screenerPresets.length+1}`,rsi:screenerRSI,vol:screenerVolMult,sector:screenerSector,minP:screenerMinPrice,maxP:screenerMaxPrice,minCap:screenerMinCap,maxCap:screenerMaxCap,id:Date.now()};
+                  setScreenerPresets(p=>[...p,preset]);
+                }}>💾 Save Preset</button>
+                {screenerPresets.map(p=>(
+                  <button key={p.id} className="btn btn-xs btn-ghost" onClick={()=>{
+                    setScreenerRSI(p.rsi);setScreenerVolMult(p.vol);setScreenerSector(p.sector);
+                    setScreenerMinPrice(p.minP);setScreenerMaxPrice(p.maxP);setScreenerMinCap(p.minCap);setScreenerMaxCap(p.maxCap);
+                  }}>{p.name}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="stock-grid">
+            {screenerResults.slice(0,20).map(a=><StockCard key={a.symbol} analysis={a}/>)}
+          </div>
+        </>
+      )}
+    </>);
+  }
+
+  // ── Portfolio / My Watchlist ──
+  function PortfolioView(){
+    const watchlistAnalyses = analyses.filter(a=>myWatchlist.includes(a.symbol));
+    const [newTicker,setNewTicker] = useState('');
+
+    return(<>
+      <div className="sec-hdr">
+        <div className="sec-title">📋 My Watchlist <span className="sec-count">{myWatchlist.length}</span></div>
+        <div style={{display:'flex',gap:8}}>
+          <input type="text" placeholder="Add ticker..." value={newTicker} onChange={e=>setNewTicker(e.target.value.toUpperCase())} style={{width:120}} onKeyDown={e=>{
+            if(e.key==='Enter'&&newTicker.trim()){
+              if(!myWatchlist.includes(newTicker.trim())){setMyWatchlist(p=>[...p,newTicker.trim()])}
+              setNewTicker('');
+            }
+          }}/>
+          <button className="btn btn-sm btn-primary" onClick={()=>{
+            if(newTicker.trim()&&!myWatchlist.includes(newTicker.trim())){setMyWatchlist(p=>[...p,newTicker.trim()])}
+            setNewTicker('');
+          }}>Add</button>
+          <button className="btn btn-sm btn-secondary" onClick={()=>runScan(myWatchlist)} disabled={loading||myWatchlist.length===0}>
+            🔄 Refresh Watchlist
+          </button>
+        </div>
+      </div>
+
+      {/* Watchlist Cards */}
+      {watchlistAnalyses.length>0?(
+        <div className="stock-grid">
+          {watchlistAnalyses.sort((a,b)=>b.edgeScore-a.edgeScore).map(a=><StockCard key={a.symbol} analysis={a}/>)}
+        </div>
+      ):(
+        myWatchlist.length>0?(
+          <div className="card" style={{marginBottom:16}}>
+            <div className="card-body">
+              <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                {myWatchlist.map(sym=>(
+                  <span key={sym} className="badge b-signal" style={{cursor:'pointer',padding:'4px 10px',fontSize:12}} onClick={()=>setMyWatchlist(p=>p.filter(s=>s!==sym))}>
+                    {sym} ✕
+                  </span>
+                ))}
+              </div>
+              <p style={{fontSize:12,color:'var(--text3)',marginTop:10}}>Run a scan or refresh to see analysis for your watchlist.</p>
+            </div>
+          </div>
+        ):(
+          <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>
+            <div style={{fontSize:36,marginBottom:8,opacity:.2}}>☆</div>
+            <div>Add tickers to your watchlist to track them.</div>
+          </div>
+        )
+      )}
+
+      {/* Pick History */}
+      <div className="sec-hdr" style={{marginTop:24}}>
+        <div className="sec-title">📝 Pick History <span className="sec-count">{pickHistory.length}</span></div>
+        {pickHistory.length>0&&(
+          <div style={{display:'flex',gap:8}}>
+            <button className="btn btn-xs btn-secondary" onClick={()=>{
+              const json = JSON.stringify(pickHistory,null,2);
+              const blob = new Blob([json],{type:'application/json'});
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');a.href=url;a.download='edgescanner-picks.json';a.click();
+            }}>📥 Export JSON</button>
+            <button className="btn btn-xs btn-danger" onClick={()=>setPickHistory([])}>Clear</button>
+          </div>
+        )}
+      </div>
+      {pickHistory.length>0?(
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Ticker</th><th>Action</th><th>Price</th><th>Current</th><th>P&L</th></tr></thead>
+            <tbody>
+              {pickHistory.map(p=>{
+                const current = analyses.find(a=>a.symbol===p.symbol);
+                const pnl = current ? ((current.price-p.price)/p.price*100) : null;
+                return(
+                  <tr key={p.id}>
+                    <td style={{fontSize:11,color:'var(--text3)'}}>{new Date(p.date).toLocaleDateString()}</td>
+                    <td style={{fontWeight:700}}>{p.symbol}</td>
+                    <td><span className={`badge ${p.action==='BUY'?'b-bull':'b-bear'}`}>{p.action}</span></td>
+                    <td>{fmtPrice(p.price)}</td>
+                    <td>{current?fmtPrice(current.price):'—'}</td>
+                    <td className={pnl!=null?(pnl>=0?'pos':'neg'):''}>{pnl!=null?fmtPct(pnl):'—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ):(
+        <div style={{textAlign:'center',padding:30,color:'var(--text4)',fontSize:12}}>No picks logged yet. Open a stock detail and click "Log Entry" to start tracking.</div>
+      )}
+    </>);
+  }
+
+  // ── Market Overview ──
+  function MarketView(){
+    return(<>
+      <div className="sec-hdr">
+        <div className="sec-title">🌍 Market Overview</div>
+        <button className="btn btn-sm btn-secondary" onClick={async()=>{
+          try{const m=await fetchMarketIndices();if(Object.keys(m).length>0)setMarketData(m)}catch{}
+        }}>🔄 Refresh</button>
+      </div>
+
+      <div className="market-cards">
+        {Object.entries(marketData).map(([sym,q])=>(
+          <div key={sym} className="market-card">
+            <div className="market-card-label">{q.shortName||sym}</div>
+            <div className="market-card-val">{sym==='^VIX'?fmt(q.regularMarketPrice,2):Number(q.regularMarketPrice).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            <div className={`market-card-chg ${changeClass(q.regularMarketChangePercent)}`}>
+              {fmtPct(q.regularMarketChangePercent)} ({q.regularMarketChange>=0?'+':''}{fmt(q.regularMarketChange)})
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* VIX Interpretation */}
+      {marketData['^VIX']&&(
+        <div className="card" style={{marginBottom:16}}>
+          <div className="card-header"><div className="card-title">😱 Fear Gauge (VIX)</div></div>
+          <div className="card-body">
+            <div style={{display:'flex',alignItems:'center',gap:16}}>
+              <div style={{fontSize:36,fontWeight:900,color:marketData['^VIX'].regularMarketPrice>25?'var(--red)':marketData['^VIX'].regularMarketPrice>18?'var(--gold)':'var(--green)'}}>
+                {fmt(marketData['^VIX'].regularMarketPrice,2)}
+              </div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>
+                  {marketData['^VIX'].regularMarketPrice>30?'Extreme Fear':marketData['^VIX'].regularMarketPrice>25?'High Fear':marketData['^VIX'].regularMarketPrice>18?'Elevated':marketData['^VIX'].regularMarketPrice>12?'Normal':'Low Volatility / Complacency'}
+                </div>
+                <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>
+                  {marketData['^VIX'].regularMarketPrice>25
+                    ?'High VIX often precedes mean reversion. Contrarian buy signals may emerge, but use tight stops.'
+                    :marketData['^VIX'].regularMarketPrice<13
+                    ?'Low VIX suggests complacency. Watch for sudden spikes — consider hedges.'
+                    :'Normal volatility range. Standard position sizing appropriate.'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sector Performance */}
+      {analyses.length>0&&(
+        <>
+          <div className="sec-hdr" style={{marginTop:16}}>
+            <div className="sec-title">📊 Sector Performance</div>
+          </div>
+          <div className="card">
+            <div className="card-body">
+              {Object.entries(sectorHeatData).sort((a,b)=>b[1].change-a[1].change).map(([sector,data])=>(
+                <div key={sector} style={{display:'flex',alignItems:'center',gap:12,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+                  <div style={{width:120,fontSize:12,fontWeight:600}}>{sector}</div>
+                  <div style={{flex:1,height:6,background:'var(--bg2)',borderRadius:3,overflow:'hidden'}}>
+                    <div style={{
+                      height:'100%',
+                      width:`${Math.min(100,Math.abs(data.change)*20)}%`,
+                      background:data.change>=0?'var(--green)':'var(--red)',
+                      borderRadius:3,
+                      marginLeft:data.change<0?'auto':0
+                    }}/>
+                  </div>
+                  <div className={changeClass(data.change)} style={{width:70,textAlign:'right',fontSize:12,fontWeight:700}}>{fmtPct(data.change)}</div>
+                  <div style={{width:80,textAlign:'right',fontSize:11,color:'var(--text3)'}}>Edge: {fmt(data.avgScore,1)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>);
+  }
+
+  // ── AI Insights ──
+  function AiView(){
+    const messagesEndRef = useRef(null);
+    useEffect(()=>{messagesEndRef.current?.scrollIntoView({behavior:'smooth'})},[aiMessages]);
+
+    const [dailySummary,setDailySummary] = useState(null);
+    const [summaryLoading,setSummaryLoading] = useState(false);
+
+    const getDailySummary = async()=>{
+      if(!claudeKey) return;
+      setSummaryLoading(true);
+      try{
+        const context = analyses.length>0
+          ? `Market: ${Object.entries(marketData).map(([s,q])=>`${q.shortName}: ${q.regularMarketPrice} (${fmtPct(q.regularMarketChangePercent)})`).join(', ')}. Top picks: ${topPicks.slice(0,5).map(a=>`${a.symbol} (Edge ${a.edgeScore})`).join(', ')}. Sector leaders: ${Object.entries(sectorHeatData).sort((a,b)=>b[1].change-a[1].change).slice(0,3).map(([s,d])=>`${s} ${fmtPct(d.change)}`).join(', ')}.`
+          : 'No scan data available.';
+        const r = await callClaude(claudeKey,[{role:'user',content:`Give a daily market summary. What's moving and why? What setups look interesting? Context: ${context}`}],
+          'You are a market analyst. Give a concise (under 250 words) daily briefing. Be analytical, mention both opportunities and risks. No hype.');
+        setDailySummary(r);
+      }catch(e){setDailySummary('Error: '+e.message)}
+      setSummaryLoading(false);
+    };
+
+    return(<>
+      <div className="sec-hdr">
+        <div className="sec-title">🤖 AI Insights</div>
+      </div>
+
+      {!claudeKey?(
+        <div className="disclaimer" style={{borderLeftColor:'var(--blue)',color:'var(--blue)'}}>
+          ℹ️ Configure your Claude API key in Settings to enable AI analysis.
+        </div>
+      ):(
+        <>
+          {/* Daily Summary */}
+          <div className="card" style={{marginBottom:16}}>
+            <div className="card-header">
+              <div className="card-title">📰 Daily Market Brief</div>
+              <button className="btn btn-sm btn-secondary" onClick={getDailySummary} disabled={summaryLoading}>
+                {summaryLoading?<><span className="spin">⟳</span> Generating...</>:'Generate Summary'}
+              </button>
+            </div>
+            <div className="card-body">
+              {dailySummary
+                ?<p style={{fontSize:13,color:'var(--text2)',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{dailySummary}</p>
+                :<p style={{fontSize:12,color:'var(--text4)'}}>Click "Generate Summary" for an AI-powered daily briefing based on your scan data.</p>}
+            </div>
+          </div>
+
+          {/* Chat */}
+          <div className="ai-wrap">
+            <div className="ai-header">
+              <div className="ai-icon">🧠</div>
+              <div>
+                <div style={{fontSize:13,fontWeight:700}}>EdgeScanner AI</div>
+                <div style={{fontSize:11,color:'var(--text3)'}}>Ask about any stock, market condition, or setup</div>
+              </div>
+            </div>
+            <div className="ai-messages">
+              {aiMessages.map((m,i)=>(
+                <div key={i} className={`ai-msg ${m.role}`}>
+                  <div className={`ai-bubble ${m.role}`}>{m.content}</div>
+                </div>
+              ))}
+              {aiLoading&&<div className="ai-msg"><div className="ai-bubble assistant"><span className="spin">⟳</span> Analyzing...</div></div>}
+              <div ref={messagesEndRef}/>
+            </div>
+            <div className="ai-input-row">
+              <textarea className="ai-textarea" placeholder="Ask about a stock, setup, or market conditions..." value={aiInput} onChange={e=>setAiInput(e.target.value)} rows={1} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAiMessage()}}}/>
+              <button className="ai-send" onClick={sendAiMessage} disabled={aiLoading||!aiInput.trim()}>→</button>
+            </div>
+          </div>
+        </>
+      )}
+    </>);
+  }
+
+  // ── Settings ──
+  function SettingsView(){
+    const [universeInput,setUniverseInput] = useState(universe.join(', '));
+    const [importData,setImportData] = useState('');
+
+    return(<>
+      <div className="sec-hdr">
+        <div className="sec-title">⚙️ Settings</div>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,maxWidth:900}}>
+        {/* API Keys */}
+        <div className="card">
+          <div className="card-header"><div className="card-title">🔑 API Keys</div></div>
+          <div className="card-body">
+            <div className="form-group" style={{marginBottom:12}}>
+              <label>Finnhub API Key</label>
+              <input type="password" value={finnhubKey} onChange={e=>setFinnhubKey(e.target.value)} placeholder="Your Finnhub key..."/>
+              <div style={{fontSize:10,color:'var(--text4)',marginTop:2}}>Free at finnhub.io — enables options flow & fundamentals</div>
+            </div>
+            <div className="form-group">
+              <label>Claude API Key</label>
+              <input type="password" value={claudeKey} onChange={e=>setClaudeKey(e.target.value)} placeholder="sk-ant-..."/>
+              <div style={{fontSize:10,color:'var(--text4)',marginTop:2}}>Enables AI thesis generation & chat</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Risk Tolerance */}
+        <div className="card">
+          <div className="card-header"><div className="card-title">🎚️ Risk Tolerance</div></div>
+          <div className="card-body">
+            <div style={{display:'flex',gap:8,marginBottom:16}}>
+              {['conservative','moderate','aggressive'].map(r=>(
+                <button key={r} className={`btn btn-sm ${riskTolerance===r?'btn-primary':'btn-secondary'}`} onClick={()=>setRiskTolerance(r)}>
+                  {r.charAt(0).toUpperCase()+r.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6}}>
+              {riskTolerance==='conservative'&&'Shows only high-conviction picks (Edge 7+). Fewer signals but higher quality.'}
+              {riskTolerance==='moderate'&&'Balanced approach. Shows picks with Edge 5+. Good mix of quality and quantity.'}
+              {riskTolerance==='aggressive'&&'Shows all picks including speculative setups (Edge 3+). More noise but more opportunities.'}
+            </div>
+          </div>
+        </div>
+
+        {/* Scan Universe */}
+        <div className="card" style={{gridColumn:'1/-1'}}>
+          <div className="card-header"><div className="card-title">🌐 Scan Universe</div></div>
+          <div className="card-body">
+            <div className="form-group" style={{marginBottom:12}}>
+              <label>Tickers (comma-separated)</label>
+              <textarea value={universeInput} onChange={e=>setUniverseInput(e.target.value)} rows={3} style={{fontFamily:'monospace',fontSize:11}}/>
+            </div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <button className="btn btn-sm btn-primary" onClick={()=>setUniverse(universeInput.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean))}>
+                Save Universe
+              </button>
+              <button className="btn btn-sm btn-secondary" onClick={()=>{setUniverse(DEFAULT_UNIVERSE);setUniverseInput(DEFAULT_UNIVERSE.join(', '))}}>
+                Reset to Default ({DEFAULT_UNIVERSE.length} tickers)
+              </button>
+              <span style={{fontSize:11,color:'var(--text3)',alignSelf:'center'}}>{universe.length} tickers configured</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Signal Weights */}
+        <div className="card" style={{gridColumn:'1/-1'}}>
+          <div className="card-header"><div className="card-title">⚖️ Signal Weights</div></div>
+          <div className="card-body">
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:10}}>
+              {Object.entries(signalWeights).map(([key,val])=>(
+                <div key={key} className="form-group">
+                  <label>{key.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase())}</label>
+                  <input type="range" min="0" max="2" step="0.1" value={val} onChange={e=>setSignalWeights(p=>({...p,[key]:+e.target.value}))} style={{padding:0}}/>
+                  <span style={{fontSize:11,color:'var(--text3)'}}>{fmt(val,1)}x</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Data Management */}
+        <div className="card" style={{gridColumn:'1/-1'}}>
+          <div className="card-header"><div className="card-title">💾 Data Management</div></div>
+          <div className="card-body">
+            <div style={{display:'flex',gap:8,marginBottom:12}}>
+              <button className="btn btn-sm btn-secondary" onClick={()=>{
+                const data = {watchlist:myWatchlist,pickHistory,screenerPresets,universe,signalWeights,riskTolerance};
+                const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');a.href=url;a.download='edgescanner-backup.json';a.click();
+              }}>📥 Export All Data</button>
+              <button className="btn btn-sm btn-danger" onClick={()=>{
+                if(confirm('Clear all saved data? This cannot be undone.')){
+                  localStorage.removeItem(LS_KEY);
+                  location.reload();
+                }
+              }}>🗑️ Reset All Data</button>
+            </div>
+            <div className="form-group">
+              <label>Import JSON Data</label>
+              <textarea value={importData} onChange={e=>setImportData(e.target.value)} rows={3} placeholder='Paste exported JSON here...' style={{fontFamily:'monospace',fontSize:11}}/>
+              <button className="btn btn-sm btn-secondary" style={{marginTop:6}} onClick={()=>{
+                try{
+                  const d=JSON.parse(importData);
+                  if(d.watchlist) setMyWatchlist(d.watchlist);
+                  if(d.pickHistory) setPickHistory(d.pickHistory);
+                  if(d.screenerPresets) setScreenerPresets(d.screenerPresets);
+                  if(d.universe){setUniverse(d.universe);setUniverseInput(d.universe.join(', '))}
+                  if(d.signalWeights) setSignalWeights(d.signalWeights);
+                  if(d.riskTolerance) setRiskTolerance(d.riskTolerance);
+                  setImportData('');
+                  alert('Data imported successfully!');
+                }catch(e){alert('Invalid JSON: '+e.message)}
+              }}>Import</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>);
+  }
+
+  /* ═══════════════════════════════════════════════
+     MAIN RENDER
+     ═══════════════════════════════════════════════ */
+  return(
+    <div style={{display:'flex',flexDirection:'column',minHeight:'100vh'}}>
+      {/* Header */}
+      <div className="header">
+        <div className="header-left">
+          <div className="logo">
+            <div className="logo-icon">⚡</div>
+            <span className="logo-text">EdgeScanner</span>
+            <span className="logo-badge">v{APP_VERSION}</span>
+          </div>
+          <nav className="nav">
+            {[
+              {id:'watchlist',label:'📊 Watchlist'},
+              {id:'sectors',label:'🗺️ Sectors'},
+              {id:'screener',label:'🔬 Screener'},
+              {id:'portfolio',label:'📋 Portfolio'},
+              {id:'market',label:'🌍 Market'},
+              {id:'ai',label:'🤖 AI'},
+              {id:'settings',label:'⚙️ Settings'}
+            ].map(t=>(
+              <button key={t.id} className={`nav-btn ${tab===t.id?'active':''}`} onClick={()=>setTab(t.id)}>{t.label}</button>
+            ))}
+          </nav>
+        </div>
+        <div className="header-right">
+          {loading&&<div className="live-dot"/>}
+          {analyses.length>0&&<span style={{fontSize:11,color:'var(--text3)'}}>{analyses.length} stocks scanned</span>}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="content">
+        {tab==='watchlist'&&<WatchlistView/>}
+        {tab==='sectors'&&<SectorView/>}
+        {tab==='screener'&&<ScreenerView/>}
+        {tab==='portfolio'&&<PortfolioView/>}
+        {tab==='market'&&<MarketView/>}
+        {tab==='ai'&&<AiView/>}
+        {tab==='settings'&&<SettingsView/>}
+      </div>
+
+      {/* Stock Detail Modal */}
+      {selectedStock&&<StockDetail analysis={selectedStock} onClose={()=>setSelectedStock(null)}/>}
+
+      {/* Footer */}
+      <div style={{borderTop:'1px solid var(--border)',padding:'12px 24px',textAlign:'center',fontSize:10,color:'var(--text4)'}}>
+        EdgeScanner v{APP_VERSION} · For educational/research purposes only · Not financial advice · Built by Aryeh
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

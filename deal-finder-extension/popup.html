@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Finder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 420px;
+      min-height: 200px;
+      max-height: 600px;
+      overflow-y: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 14px 20px;
+      border-bottom: 1px solid #2a2a4a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #00d4aa;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header .version {
+      font-size: 10px;
+      color: #555;
+    }
+
+    /* Product Card */
+    .product-card {
+      padding: 14px 20px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .product-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.4;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .product-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .current-price {
+      font-size: 22px;
+      font-weight: 800;
+      color: #00d4aa;
+    }
+    .product-domain {
+      font-size: 11px;
+      color: #888;
+      background: #2a2a2a;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #2a2a2a;
+      background: #111;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #666;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .tab:hover { color: #aaa; }
+    .tab.active {
+      color: #00d4aa;
+      border-bottom-color: #00d4aa;
+    }
+    .tab .tab-count {
+      display: inline-block;
+      background: #2a2a2a;
+      color: #888;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 8px;
+      margin-left: 4px;
+    }
+    .tab.active .tab-count {
+      background: #003322;
+      color: #00d4aa;
+    }
+
+    /* Tab Panels */
+    .tab-panel { display: none; padding: 12px 20px; }
+    .tab-panel.active { display: block; }
+
+    /* Coupon Cards */
+    .coupon-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.15s ease;
+    }
+    .coupon-card:hover { border-color: #333; }
+    .coupon-card.has-code { border-left: 3px solid #00d4aa; }
+    .coupon-card.deal-only { border-left: 3px solid #ffaa00; }
+
+    .coupon-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .coupon-desc {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ddd;
+      flex: 1;
+      line-height: 1.3;
+    }
+    .coupon-source {
+      font-size: 10px;
+      color: #555;
+      flex-shrink: 0;
+    }
+
+    .coupon-code-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .code-display {
+      flex: 1;
+      font-family: "SF Mono", "Consolas", "Monaco", monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #00d4aa;
+      background: #0a2a20;
+      border: 1px dashed #00d4aa55;
+      padding: 8px 12px;
+      border-radius: 6px;
+      letter-spacing: 1.5px;
+      text-align: center;
+    }
+    .copy-btn {
+      padding: 8px 14px;
+      background: #00d4aa;
+      color: #0f0f0f;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { background: #00eebb; }
+    .copy-btn.copied {
+      background: #00ff88;
+    }
+
+    .coupon-meta {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .meta-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .meta-verified { background: #003322; color: #00ff88; }
+    .meta-rate { background: #2a2a00; color: #ffcc00; }
+    .meta-used { background: #1a1a2e; color: #8888cc; }
+
+    .no-code-label {
+      font-size: 11px;
+      color: #ffaa00;
+      margin-top: 4px;
+    }
+
+    /* Search Links */
+    .search-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      color: #e0e0e0;
+      margin-bottom: 6px;
+    }
+    .search-link:hover {
+      background: #222;
+      border-color: #00d4aa;
+      transform: translateX(2px);
+    }
+    .search-link .icon { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+    .search-link .info { flex: 1; }
+    .search-link .name { font-size: 13px; font-weight: 600; }
+    .search-link .desc { font-size: 11px; color: #666; margin-top: 1px; }
+    .search-link .arrow { color: #444; font-size: 14px; }
+    .search-link:hover .arrow { color: #00d4aa; }
+
+    /* Loading / scanning states */
+    .loading-state {
+      padding: 30px 20px;
+      text-align: center;
+      color: #666;
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid #2a2a2a;
+      border-top: 3px solid #00d4aa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .coupon-scanning {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .coupon-scanning .mini-spinner {
+      width: 16px; height: 16px;
+      border: 2px solid #2a2a2a;
+      border-top: 2px solid #00d4aa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    .coupon-scanning .scan-text {
+      font-size: 12px;
+      color: #888;
+    }
+    .scan-source {
+      color: #00d4aa;
+      font-weight: 600;
+    }
+
+    /* No product state */
+    .no-product {
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .no-product .emoji { font-size: 36px; margin-bottom: 12px; }
+    .no-product p { color: #888; font-size: 13px; line-height: 1.5; }
+    .no-product p strong { color: #ccc; }
+
+    /* Manual search */
+    .manual-search {
+      padding: 12px 20px;
+      border-top: 1px solid #2a2a2a;
+    }
+    .search-input-wrap { display: flex; gap: 8px; }
+    .search-input-wrap input {
+      flex: 1; padding: 9px 12px;
+      background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+      color: #e0e0e0; font-size: 13px; outline: none;
+    }
+    .search-input-wrap input:focus { border-color: #00d4aa; }
+    .search-input-wrap input::placeholder { color: #555; }
+    .search-input-wrap button {
+      padding: 9px 14px; background: #00d4aa; color: #0f0f0f;
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
+    .search-input-wrap button:hover { background: #00eebb; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: #555;
+      font-size: 13px;
+    }
+    .empty-state .empty-icon { font-size: 24px; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ Deal Finder</h1>
+    <span class="version">v2.0</span>
+  </div>
+
+  <div id="loading" class="loading-state">
+    <div class="spinner"></div>
+    <div>Scanning product page...</div>
+  </div>
+
+  <div id="content" style="display: none;"></div>
+
+  <div id="no-product" class="no-product" style="display: none;">
+    <div class="emoji">🔎</div>
+    <p><strong>No product detected on this page.</strong><br/>
+    Navigate to a product page on any retailer, or search manually below.</p>
+  </div>
+
+  <div class="manual-search">
+    <div class="search-input-wrap">
+      <input type="text" id="manualSearch" placeholder="Search any product..." />
+      <button id="searchBtn">Search</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

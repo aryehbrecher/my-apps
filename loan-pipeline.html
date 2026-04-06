@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LoanFlow — Pipeline Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet" />
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --surface2: #334155; --border: #475569; --text: #f1f5f9; --text2: #94a3b8; --accent: #3b82f6; --accent2: #2563eb; --green: #22c55e; --yellow: #eab308; --red: #ef4444; --orange: #f97316; }
+.light { --bg: #f1f5f9; --surface: #ffffff; --surface2: #e2e8f0; --border: #cbd5e1; --text: #0f172a; --text2: #475569; --accent: #3b82f6; --accent2: #2563eb; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; }
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.kanban-col { min-width: 260px; max-width: 260px; }
+.loan-card { transition: transform 0.15s, box-shadow 0.15s; cursor: grab; }
+.loan-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+.loan-card.dragging { opacity: 0.5; transform: rotate(2deg); }
+.kanban-col.drag-over { outline: 2px dashed var(--accent); outline-offset: -2px; border-radius: 12px; }
+.modal-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+input, textarea, select { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; outline: none; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
+button { cursor: pointer; }
+.tab-btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; border: none; transition: all 0.2s; }
+.tab-btn.active { background: var(--accent); color: white; }
+.tab-btn:not(.active) { background: transparent; color: var(--text2); }
+.tab-btn:not(.active):hover { background: var(--surface2); color: var(--text); }
+.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 11px; font-size: 12px; font-weight: 700; padding: 0 6px; }
+.doc-check { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.doc-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.alert-pulse { animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.fade-in { animation: fadeIn 0.2s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } = React;
+
+// ─── Constants ───
+const STAGES = ['Lead','Pre-Approval','Application','Processing','Underwriting','Clear to Close','Funded'];
+const LOAN_TYPES = ['Conventional','FHA','VA','USDA','Jumbo'];
+const DOC_LIST = ['Application','W-2s','Pay Stubs','Bank Statements','Tax Returns','Appraisal','Title','Insurance','Credit Report','VOE','Gift Letter','HOI','Flood Cert','Survey','CD Signed'];
+const STAGE_COLORS = {'Lead':'#6366f1','Pre-Approval':'#8b5cf6','Application':'#3b82f6','Processing':'#0ea5e9','Underwriting':'#f59e0b','Clear to Close':'#22c55e','Funded':'#10b981'};
+
+// ─── Utility ───
+const genId = () => Math.random().toString(36).substr(2, 9);
+const fmt$ = (n) => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
+const daysBetween = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(a)) / 86400000));
+const today = () => new Date().toISOString().split('T')[0];
+
+// ─── Sample Data ───
+function createSampleData() {
+  const now = new Date();
+  const d = (daysAgo) => { const x = new Date(now); x.setDate(x.getDate() - daysAgo); return x.toISOString().split('T')[0]; };
+  return [
+    { id: genId(), borrower: 'Rosenbaum', loanAmount: 485000, propertyAddress: '142 Oak Lane, Lakewood, NJ 08701', loanType: 'Conventional', rate: 6.875, term: 30, loanNumber: '', attorneyName: 'Pinny Heskiel', attorneyEmail: 'pinitrealty@gmail.com', realtorName: 'Nate Rosenberg', realtorEmail: 'nate@rosenberglg.com', stage: 'Processing', stageHistory: [{stage:'Lead',date:d(28)},{stage:'Pre-Approval',date:d(22)},{stage:'Application',date:d(16)},{stage:'Processing',date:d(8)}], docs: {Application:true,'W-2s':true,'Pay Stubs':true,'Bank Statements':true,'Tax Returns':true,Appraisal:false,Title:false,Insurance:false,'Credit Report':true,VOE:false,'Gift Letter':false,'HOI':false,'Flood Cert':false,Survey:false,'CD Signed':false}, notes: 'Waiting for home to be finished', rateLockExpiry: d(-3), created: d(28) },
+    { id: genId(), borrower: 'Herzka', loanAmount: 620000, propertyAddress: '88 Spruce Dr, Toms River, NJ 08753', loanType: 'Jumbo', rate: 7.125, term: 30, loanNumber: '', attorneyName: '', attorneyEmail: '', realtorName: 'David Katz', realtorEmail: 'david@katzhomes.com', stage: 'Underwriting', stageHistory: [{stage:'Lead',date:d(45)},{stage:'Pre-Approval',date:d(38)},{stage:'Application',date:d(30)},{stage:'Processing',date:d(20)},{stage:'Underwriting',date:d(10)}], docs: {Application:true,'W-2s':true,'Pay Stubs':true,'Bank Statements':true,'Tax Returns':true,Appraisal:true,Title:true,Insurance:false,'Credit Report':true,VOE:true,'Gift Letter':false,'HOI':false,'Flood Cert':false,Survey:false,'CD Signed':false}, notes: 'Jumbo — needs extra reserves verification', rateLockExpiry: d(-5), created: d(45) },
+    { id: genId(), borrower: 'Guzman', loanAmount: 310000, propertyAddress: '455 Elm St, Jackson, NJ 08527', loanType: 'FHA', rate: 6.5, term: 30, loanNumber: '', attorneyName: 'Sarah Cohen', attorneyEmail: 'scohen@lawfirm.com', realtorName: 'Nate Rosenberg', realtorEmail: 'nate@rosenberglg.com', stage: 'Application', stageHistory: [{stage:'Lead',date:d(12)},{stage:'Pre-Approval',date:d(8)},{stage:'Application',date:d(4)}], docs: {Application:true,'W-2s':false,'Pay Stubs':true,'Bank Statements':false,'Tax Returns':false,Appraisal:false,Title:false,Insurance:false,'Credit Report':true,VOE:false,'Gift Letter':true,'HOI':false,'Flood Cert':false,Survey:false,'CD Signed':false}, notes: 'First-time homebuyer, gift funds from parents', rateLockExpiry: '', created: d(12) },
+    { id: genId(), borrower: 'Behfar', loanAmount: 275000, propertyAddress: '12 Maple Ave, Howell, NJ 07731', loanType: 'Conventional', rate: 6.75, term: 30, loanNumber: '', attorneyName: '', attorneyEmail: '', realtorName: 'Miriam Feld', realtorEmail: 'miriam@feldrealty.com', stage: 'Lead', stageHistory: [{stage:'Lead',date:d(2)}], docs: {}, notes: 'Refinance inquiry — checking rates', rateLockExpiry: '', created: d(2) },
+    { id: genId(), borrower: 'Woodrow', loanAmount: 425000, propertyAddress: '77 Pine Ct, Brick, NJ 08723', loanType: 'VA', rate: 6.25, term: 30, loanNumber: '', attorneyName: 'Mark Stern', attorneyEmail: 'mstern@sternlaw.com', realtorName: 'David Katz', realtorEmail: 'david@katzhomes.com', stage: 'Clear to Close', stageHistory: [{stage:'Lead',date:d(60)},{stage:'Pre-Approval',date:d(52)},{stage:'Application',date:d(44)},{stage:'Processing',date:d(35)},{stage:'Underwriting',date:d(25)},{stage:'Clear to Close',date:d(5)}], docs: {Application:true,'W-2s':true,'Pay Stubs':true,'Bank Statements':true,'Tax Returns':true,Appraisal:true,Title:true,Insurance:true,'Credit Report':true,VOE:true,'Gift Letter':false,'HOI':true,'Flood Cert':true,Survey:true,'CD Signed':false}, notes: 'VA loan — awaiting final CD signing', rateLockExpiry: d(-1), created: d(60) },
+  ];
+}
+
+function createSampleContacts() {
+  return {
+    realtors: [
+      { id: genId(), name:'Nate Rosenberg', email:'nate@rosenberglg.com', phone:'732-555-0142', company:'Rosenberg Legal Group', referrals: 2 },
+      { id: genId(), name:'David Katz', email:'david@katzhomes.com', phone:'732-555-0198', company:'Katz Homes Realty', referrals: 2 },
+      { id: genId(), name:'Miriam Feld', email:'miriam@feldrealty.com', phone:'732-555-0234', company:'Feld Realty', referrals: 1 },
+    ],
+    attorneys: [
+      { id: genId(), name:'Pinny Heskiel', email:'pinitrealty@gmail.com', phone:'732-555-0311', company:'Heskiel Law' },
+      { id: genId(), name:'Sarah Cohen', email:'scohen@lawfirm.com', phone:'732-555-0422', company:'Cohen & Associates' },
+      { id: genId(), name:'Mark Stern', email:'mstern@sternlaw.com', phone:'732-555-0533', company:'Stern Law Group' },
+    ]
+  };
+}
+
+function createSampleFunded() {
+  const d = (daysAgo) => { const x = new Date(); x.setDate(x.getDate() - daysAgo); return x.toISOString().split('T')[0]; };
+  return [
+    { borrower:'Cheplowitz', loanAmount:340000, loanType:'Conventional', fundedDate:d(45), daysToClose:32, realtorName:'Nate Rosenberg', status:'funded' },
+    { borrower:'Kramer', loanAmount:520000, loanType:'Jumbo', fundedDate:d(30), daysToClose:41, realtorName:'David Katz', status:'funded' },
+    { borrower:'Weisz', loanAmount:290000, loanType:'FHA', fundedDate:d(60), daysToClose:28, realtorName:'Miriam Feld', status:'funded' },
+    { borrower:'Anderson', loanAmount:380000, loanType:'Conventional', fundedDate:d(15), daysToClose:35, realtorName:'David Katz', status:'funded' },
+    { borrower:'Levi', loanAmount:0, loanType:'Conventional', fundedDate:d(20), daysToClose:0, realtorName:'Nate Rosenberg', status:'withdrawn' },
+  ];
+}
+
+// ─── Data Layer ───
+const STORAGE_KEY = 'loanflow_data';
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+// ─── Icons (inline SVG) ───
+const Icons = {
+  sun: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+  moon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>,
+  plus: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>,
+  search: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>,
+  x: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>,
+  alert: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  download: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  upload: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  trash: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
+  edit: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  chevRight: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>,
+  chevLeft: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>,
+  clock: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  user: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  home: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>,
+  dollar: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+  file: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+};
+
+// ─── App ───
+function App() {
+  const [darkMode, setDarkMode] = useState(true);
+  const [tab, setTab] = useState('pipeline');
+  const [loans, setLoans] = useState([]);
+  const [contacts, setContacts] = useState({ realtors: [], attorneys: [] });
+  const [fundedHistory, setFundedHistory] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [showNewLoan, setShowNewLoan] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [filters, setFilters] = useState({ stage: '', loanType: '', realtor: '' });
+  const [alerts, setAlerts] = useState([]);
+
+  // Init
+  useEffect(() => {
+    const saved = loadData();
+    if (saved) {
+      setLoans(saved.loans || []);
+      setContacts(saved.contacts || { realtors: [], attorneys: [] });
+      setFundedHistory(saved.fundedHistory || []);
+    } else {
+      setLoans(createSampleData());
+      setContacts(createSampleContacts());
+      setFundedHistory(createSampleFunded());
+    }
+  }, []);
+
+  // Save on change
+  useEffect(() => {
+    if (loans.length || contacts.realtors.length || fundedHistory.length) {
+      saveData({ loans, contacts, fundedHistory });
+    }
+  }, [loans, contacts, fundedHistory]);
+
+  // Compute alerts
+  useEffect(() => {
+    const a = [];
+    loans.forEach(l => {
+      if (l.stage === 'Funded') return;
+      const hist = l.stageHistory || [];
+      const lastMove = hist.length ? hist[hist.length - 1].date : l.created;
+      const daysInStage = daysBetween(lastMove, today());
+      if (daysInStage >= 14) a.push({ type: 'stale', loan: l, days: daysInStage, msg: `${l.borrower} stuck in ${l.stage} for ${daysInStage} days` });
+      else if (daysInStage >= 7) a.push({ type: 'warning', loan: l, days: daysInStage, msg: `${l.borrower} in ${l.stage} for ${daysInStage} days` });
+      if (l.rateLockExpiry) {
+        const daysToExpiry = daysBetween(today(), l.rateLockExpiry);
+        if (daysToExpiry <= 0) a.push({ type: 'stale', loan: l, msg: `${l.borrower} rate lock EXPIRED` });
+        else if (daysToExpiry <= 7) a.push({ type: 'warning', loan: l, msg: `${l.borrower} rate lock expires in ${daysToExpiry} days` });
+      }
+      const docsDone = DOC_LIST.filter(d => l.docs && l.docs[d]).length;
+      const criticalMissing = ['Application','Credit Report','Appraisal'].filter(d => !(l.docs && l.docs[d]));
+      if (criticalMissing.length > 0 && STAGES.indexOf(l.stage) >= 3) {
+        a.push({ type: 'warning', loan: l, msg: `${l.borrower} missing: ${criticalMissing.join(', ')}` });
+      }
+    });
+    setAlerts(a);
+  }, [loans]);
+
+  useEffect(() => { document.body.className = darkMode ? '' : 'light'; }, [darkMode]);
+
+  const updateLoan = (id, updates) => setLoans(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+  const deleteLoan = (id) => { setLoans(prev => prev.filter(l => l.id !== id)); setSelectedLoan(null); };
+  const moveLoan = (id, newStage) => {
+    setLoans(prev => prev.map(l => {
+      if (l.id !== id) return l;
+      const hist = [...(l.stageHistory || []), { stage: newStage, date: today() }];
+      const updated = { ...l, stage: newStage, stageHistory: hist };
+      if (newStage === 'Funded') {
+        const daysToClose = daysBetween(l.created, today());
+        setFundedHistory(fh => [...fh, { borrower: l.borrower, loanAmount: l.loanAmount, loanType: l.loanType, fundedDate: today(), daysToClose, realtorName: l.realtorName, status: 'funded' }]);
+      }
+      return updated;
+    }));
+  };
+
+  const addLoan = (loan) => {
+    const newLoan = { ...loan, id: genId(), stageHistory: [{ stage: loan.stage || 'Lead', date: today() }], docs: {}, created: today() };
+    setLoans(prev => [...prev, newLoan]);
+    setShowNewLoan(false);
+  };
+
+  const filteredLoans = useMemo(() => {
+    let result = loans;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(l => l.borrower.toLowerCase().includes(q) || (l.realtorName||'').toLowerCase().includes(q) || (l.attorneyName||'').toLowerCase().includes(q) || (l.propertyAddress||'').toLowerCase().includes(q) || (l.loanNumber||'').toLowerCase().includes(q));
+    }
+    if (filters.stage) result = result.filter(l => l.stage === filters.stage);
+    if (filters.loanType) result = result.filter(l => l.loanType === filters.loanType);
+    if (filters.realtor) result = result.filter(l => l.realtorName === filters.realtor);
+    return result;
+  }, [loans, searchQuery, filters]);
+
+  const exportData = () => {
+    const blob = new Blob([JSON.stringify({ loans, contacts, fundedHistory }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'loanflow-backup.json'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (json) => {
+    try {
+      const data = JSON.parse(json);
+      if (data.loans) setLoans(data.loans);
+      if (data.contacts) setContacts(data.contacts);
+      if (data.fundedHistory) setFundedHistory(data.fundedHistory);
+      setShowImport(false);
+    } catch(e) { alert('Invalid JSON'); }
+  };
+
+  const importCSV = (csv) => {
+    try {
+      const lines = csv.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const newLoans = [];
+      for (let i = 1; i < lines.length; i++) {
+        const vals = lines[i].split(',').map(v => v.trim());
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = vals[idx] || ''; });
+        newLoans.push({
+          id: genId(),
+          borrower: obj.borrower || obj.name || obj['loan name'] || obj.loans || '',
+          loanAmount: parseFloat(obj['loan amount'] || obj.amount || obj.loanamount || '0') || 0,
+          propertyAddress: obj.address || obj['property address'] || '',
+          loanType: obj['loan type'] || obj.loantype || 'Conventional',
+          rate: parseFloat(obj.rate || '0') || 0,
+          term: parseInt(obj.term || '30') || 30,
+          loanNumber: obj['loan number'] || obj.loannumber || '',
+          attorneyName: obj['attorney name'] || obj.attorneyname || '',
+          attorneyEmail: obj['attorney email'] || obj.attorneyemail || '',
+          realtorName: obj['realtor name'] || obj.realtorname || '',
+          realtorEmail: obj['realtor email'] || obj.realtoremail || '',
+          stage: obj.stage || 'Lead',
+          stageHistory: [{ stage: obj.stage || 'Lead', date: today() }],
+          docs: {},
+          notes: obj.comments || obj.notes || '',
+          rateLockExpiry: '',
+          created: today()
+        });
+      }
+      setLoans(prev => [...prev, ...newLoans]);
+      setShowImport(false);
+      alert(`Imported ${newLoans.length} loans`);
+    } catch(e) { alert('CSV parse error: ' + e.message); }
+  };
+
+  const realtorNames = useMemo(() => [...new Set(loans.map(l => l.realtorName).filter(Boolean))], [loans]);
+
+  return (
+    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Header */}
+      <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 16 }}>LF</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>LoanFlow</div>
+              <div style={{ fontSize: 11, color: 'var(--text2)' }}>Aryeh Brecher — FM Home Loans</div>
+            </div>
+          </div>
+          <nav style={{ display: 'flex', gap: 4, marginLeft: 32 }}>
+            {[['pipeline','Pipeline'],['analytics','Analytics'],['contacts','Contacts'],['alerts','Alerts']].map(([k,label]) => (
+              <button key={k} className={`tab-btn ${tab===k?'active':''}`} onClick={()=>setTab(k)}>
+                {label}
+                {k === 'alerts' && alerts.length > 0 && <span className="badge" style={{ background: 'var(--red)', color: 'white', marginLeft: 6, fontSize: 11 }}>{alerts.length}</span>}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text2)' }}>{Icons.search}</span>
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search loans..." style={{ paddingLeft: 36, width: 220 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={exportData} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }} title="Export JSON">{Icons.download}<span>Export</span></button>
+            <button onClick={() => setShowImport(true)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }} title="Import">{Icons.upload}<span>Import</span></button>
+          </div>
+          <button onClick={() => setDarkMode(!darkMode)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 8, color: 'var(--text)', display: 'flex' }}>{darkMode ? Icons.sun : Icons.moon}</button>
+        </div>
+      </header>
+
+      {/* Filter bar */}
+      {tab === 'pipeline' && (
+        <div style={{ padding: '10px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 600 }}>Filters:</span>
+          <select value={filters.stage} onChange={e => setFilters(f => ({...f, stage: e.target.value}))} style={{ width: 160 }}>
+            <option value="">All Stages</option>
+            {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={filters.loanType} onChange={e => setFilters(f => ({...f, loanType: e.target.value}))} style={{ width: 160 }}>
+            <option value="">All Types</option>
+            {LOAN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filters.realtor} onChange={e => setFilters(f => ({...f, realtor: e.target.value}))} style={{ width: 180 }}>
+            <option value="">All Realtors</option>
+            {realtorNames.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          {(filters.stage || filters.loanType || filters.realtor) && (
+            <button onClick={() => setFilters({ stage:'', loanType:'', realtor:'' })} style={{ fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none', fontWeight: 600 }}>Clear Filters</button>
+          )}
+          <div style={{ flex: 1 }} />
+          <div style={{ fontSize: 13, color: 'var(--text2)' }}>{filteredLoans.filter(l=>l.stage!=='Funded').length} active loans &middot; {fmt$(filteredLoans.filter(l=>l.stage!=='Funded').reduce((s,l)=>s+l.loanAmount,0))} volume</div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main style={{ padding: tab === 'pipeline' ? '16px' : '24px', overflowX: tab === 'pipeline' ? 'auto' : 'visible' }}>
+        {tab === 'pipeline' && <KanbanBoard loans={filteredLoans} onSelect={setSelectedLoan} onMove={moveLoan} />}
+        {tab === 'analytics' && <Analytics loans={loans} fundedHistory={fundedHistory} />}
+        {tab === 'contacts' && <Contacts contacts={contacts} setContacts={setContacts} loans={loans} />}
+        {tab === 'alerts' && <AlertsPanel alerts={alerts} onSelect={setSelectedLoan} />}
+      </main>
+
+      {/* FAB */}
+      <button onClick={() => setShowNewLoan(true)} style={{ position: 'fixed', bottom: 28, right: 28, width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 30px rgba(59,130,246,0.4)', zIndex: 40, transition: 'transform 0.2s' }} onMouseEnter={e=>e.target.style.transform='scale(1.1)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}>{Icons.plus}</button>
+
+      {/* Modals */}
+      {selectedLoan && <LoanDetailModal loan={selectedLoan} onClose={() => setSelectedLoan(null)} onUpdate={updateLoan} onDelete={deleteLoan} onMove={moveLoan} />}
+      {showNewLoan && <NewLoanModal onClose={() => setShowNewLoan(false)} onAdd={addLoan} />}
+      {showImport && <ImportModal onClose={() => setShowImport(false)} onImportJSON={importData} onImportCSV={importCSV} />}
+    </div>
+  );
+}
+
+// ─── Kanban Board ───
+function KanbanBoard({ loans, onSelect, onMove }) {
+  const [dragId, setDragId] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
+
+  const handleDragStart = (e, id) => { setDragId(id); e.dataTransfer.effectAllowed = 'move'; };
+  const handleDragOver = (e, stage) => { e.preventDefault(); setDragOver(stage); };
+  const handleDrop = (e, stage) => { e.preventDefault(); if (dragId) onMove(dragId, stage); setDragId(null); setDragOver(null); };
+  const handleDragEnd = () => { setDragId(null); setDragOver(null); };
+
+  return (
+    <div className="scrollbar-thin" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 16, minHeight: 'calc(100vh - 160px)' }}>
+      {STAGES.filter(s => s !== 'Funded').map(stage => {
+        const stageLoans = loans.filter(l => l.stage === stage);
+        const volume = stageLoans.reduce((s, l) => s + l.loanAmount, 0);
+        return (
+          <div key={stage} className={`kanban-col ${dragOver === stage ? 'drag-over' : ''}`}
+            onDragOver={e => handleDragOver(e, stage)} onDrop={e => handleDrop(e, stage)} onDragLeave={() => setDragOver(null)}
+            style={{ background: 'var(--surface)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 5, background: STAGE_COLORS[stage] }} />
+                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{stage}</span>
+                <span className="badge" style={{ background: 'var(--surface2)', color: 'var(--text2)', fontSize: 11 }}>{stageLoans.length}</span>
+              </div>
+            </div>
+            {volume > 0 && <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8, marginTop: -4 }}>{fmt$(volume)}</div>}
+            <div className="scrollbar-thin" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {stageLoans.map(loan => <LoanCard key={loan.id} loan={loan} onSelect={onSelect} onDragStart={handleDragStart} onDragEnd={handleDragEnd} dragId={dragId} />)}
+              {stageLoans.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text2)', fontSize: 13, opacity: 0.6 }}>No loans</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LoanCard({ loan, onSelect, onDragStart, onDragEnd, dragId }) {
+  const hist = loan.stageHistory || [];
+  const lastMove = hist.length ? hist[hist.length - 1].date : loan.created;
+  const daysInStage = daysBetween(lastMove, today());
+  const daysTotal = daysBetween(loan.created, today());
+  const statusColor = daysInStage >= 14 ? 'var(--red)' : daysInStage >= 7 ? 'var(--yellow)' : 'var(--green)';
+  const docsDone = DOC_LIST.filter(d => loan.docs && loan.docs[d]).length;
+
+  return (
+    <div className={`loan-card ${dragId === loan.id ? 'dragging' : ''}`} draggable onDragStart={e => onDragStart(e, loan.id)} onDragEnd={onDragEnd} onClick={() => onSelect(loan)}
+      style={{ background: 'var(--bg)', borderRadius: 10, padding: 14, border: '1px solid var(--border)', borderLeft: `4px solid ${statusColor}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{loan.borrower}</div>
+        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: statusColor + '22', color: statusColor }}>{loan.loanType}</span>
+      </div>
+      {loan.loanAmount > 0 && <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)', marginBottom: 6 }}>{fmt$(loan.loanAmount)}</div>}
+      {loan.realtorName && <div style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>{Icons.user} {loan.realtorName}</div>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: statusColor }}>{Icons.clock} {daysInStage}d in stage</div>
+        <div style={{ fontSize: 11, color: 'var(--text2)' }}>{daysTotal}d total</div>
+      </div>
+      <div style={{ marginTop: 8, background: 'var(--surface2)', borderRadius: 4, height: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.min(100, (docsDone / DOC_LIST.length) * 100)}%`, background: 'var(--accent)', borderRadius: 4, transition: 'width 0.3s' }} />
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text2)', marginTop: 4 }}>{docsDone}/{DOC_LIST.length} docs</div>
+    </div>
+  );
+}
+
+// ─── Loan Detail Modal ───
+function LoanDetailModal({ loan, onClose, onUpdate, onDelete, onMove }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ ...loan });
+  const [activeTab, setActiveTab] = useState('details');
+
+  useEffect(() => setForm({ ...loan }), [loan]);
+
+  const save = () => { onUpdate(loan.id, form); setEditing(false); };
+  const stageIdx = STAGES.indexOf(loan.stage);
+
+  return (
+    <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div className="fade-in scrollbar-thin" onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 700, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{loan.borrower}</div>
+            <div style={{ fontSize: 14, color: 'var(--text2)' }}>{loan.loanType} &middot; {fmt$(loan.loanAmount)} &middot; {loan.stage}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setEditing(!editing)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 8, color: 'var(--text)', display: 'flex' }}>{Icons.edit}</button>
+            <button onClick={onClose} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 8, color: 'var(--text)', display: 'flex' }}>{Icons.x}</button>
+          </div>
+        </div>
+
+        {/* Stage Progress */}
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {STAGES.map((s, i) => (
+              <React.Fragment key={s}>
+                <button onClick={() => { if (i !== stageIdx) onMove(loan.id, s); }} style={{ flex: 1, padding: '6px 4px', borderRadius: 6, fontSize: 10, fontWeight: 700, border: 'none', background: i <= stageIdx ? STAGE_COLORS[s] : 'var(--surface2)', color: i <= stageIdx ? 'white' : 'var(--text2)', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`Move to ${s}`}>
+                  {s === 'Clear to Close' ? 'CTC' : s}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+            {stageIdx > 0 && <button onClick={() => onMove(loan.id, STAGES[stageIdx - 1])} style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.chevLeft} Back to {STAGES[stageIdx - 1]}</button>}
+            <div style={{ flex: 1 }} />
+            {stageIdx < STAGES.length - 1 && <button onClick={() => onMove(loan.id, STAGES[stageIdx + 1])} style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>Advance to {STAGES[stageIdx + 1]} {Icons.chevRight}</button>}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ padding: '0 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 0 }}>
+          {['details','documents','history','notes'].map(t => (
+            <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, border: 'none', background: 'none', color: activeTab === t ? 'var(--accent)' : 'var(--text2)', borderBottom: activeTab === t ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', textTransform: 'capitalize' }}>{t}</button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div style={{ padding: 24 }}>
+          {activeTab === 'details' && (
+            editing ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <LabelInput label="Borrower" value={form.borrower} onChange={v => setForm(f => ({...f, borrower: v}))} />
+                <LabelInput label="Loan Amount" value={form.loanAmount} onChange={v => setForm(f => ({...f, loanAmount: parseFloat(v) || 0}))} type="number" />
+                <LabelInput label="Property Address" value={form.propertyAddress} onChange={v => setForm(f => ({...f, propertyAddress: v}))} span={2} />
+                <LabelSelect label="Loan Type" value={form.loanType} options={LOAN_TYPES} onChange={v => setForm(f => ({...f, loanType: v}))} />
+                <LabelInput label="Rate (%)" value={form.rate} onChange={v => setForm(f => ({...f, rate: parseFloat(v) || 0}))} type="number" />
+                <LabelInput label="Term (years)" value={form.term} onChange={v => setForm(f => ({...f, term: parseInt(v) || 30}))} type="number" />
+                <LabelInput label="Loan Number" value={form.loanNumber} onChange={v => setForm(f => ({...f, loanNumber: v}))} />
+                <LabelInput label="Attorney Name" value={form.attorneyName} onChange={v => setForm(f => ({...f, attorneyName: v}))} />
+                <LabelInput label="Attorney Email" value={form.attorneyEmail} onChange={v => setForm(f => ({...f, attorneyEmail: v}))} />
+                <LabelInput label="Realtor Name" value={form.realtorName} onChange={v => setForm(f => ({...f, realtorName: v}))} />
+                <LabelInput label="Realtor Email" value={form.realtorEmail} onChange={v => setForm(f => ({...f, realtorEmail: v}))} />
+                <LabelInput label="Rate Lock Expiry" value={form.rateLockExpiry} onChange={v => setForm(f => ({...f, rateLockExpiry: v}))} type="date" />
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+                  <button onClick={() => { if(confirm('Delete this loan?')) onDelete(loan.id); }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--red)', color: 'white', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>{Icons.trash} Delete</button>
+                  <button onClick={() => setEditing(false)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 600, fontSize: 13 }}>Cancel</button>
+                  <button onClick={save} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'white', fontWeight: 600, fontSize: 13 }}>Save Changes</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <InfoRow icon={Icons.home} label="Property" value={loan.propertyAddress || '—'} span={2} />
+                <InfoRow icon={Icons.dollar} label="Amount" value={fmt$(loan.loanAmount)} />
+                <InfoRow label="Type" value={loan.loanType} />
+                <InfoRow label="Rate" value={loan.rate ? `${loan.rate}%` : '—'} />
+                <InfoRow label="Term" value={loan.term ? `${loan.term} years` : '—'} />
+                <InfoRow label="Loan #" value={loan.loanNumber || '—'} />
+                <InfoRow label="Rate Lock Expiry" value={loan.rateLockExpiry || '—'} />
+                <InfoRow icon={Icons.user} label="Realtor" value={loan.realtorName ? `${loan.realtorName} (${loan.realtorEmail || ''})` : '—'} span={2} />
+                <InfoRow label="Attorney" value={loan.attorneyName ? `${loan.attorneyName} (${loan.attorneyEmail || ''})` : '—'} span={2} />
+                <InfoRow icon={Icons.clock} label="Days in Pipeline" value={`${daysBetween(loan.created, today())} days (since ${loan.created})`} span={2} />
+              </div>
+            )
+          )}
+
+          {activeTab === 'documents' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+              {DOC_LIST.map(doc => (
+                <div key={doc} className="doc-check" style={{ borderBottom: '1px solid var(--border)', padding: '10px 0' }}>
+                  <input type="checkbox" checked={!!(loan.docs && loan.docs[doc])} onChange={e => {
+                    const newDocs = { ...(loan.docs || {}), [doc]: e.target.checked };
+                    onUpdate(loan.id, { docs: newDocs });
+                  }} />
+                  <span style={{ fontSize: 14, color: loan.docs && loan.docs[doc] ? 'var(--green)' : 'var(--text2)' }}>{doc}</span>
+                </div>
+              ))}
+              <div style={{ gridColumn: '1 / -1', marginTop: 16, padding: 12, borderRadius: 8, background: 'var(--bg)' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>Completion</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${(DOC_LIST.filter(d => loan.docs && loan.docs[d]).length / DOC_LIST.length * 100)}%`, background: 'var(--green)', borderRadius: 4, transition: 'width 0.3s' }} />
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{DOC_LIST.filter(d => loan.docs && loan.docs[d]).length}/{DOC_LIST.length}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div>
+              {(loan.stageHistory || []).slice().reverse().map((h, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 5, background: STAGE_COLORS[h.stage], flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{h.stage}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>{h.date}</div>
+                  </div>
+                  {i < (loan.stageHistory || []).length - 1 && (
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>{daysBetween(h.date, (loan.stageHistory || []).slice().reverse()[i - 1]?.date || today())} days</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'notes' && (
+            <div>
+              <textarea value={form.notes || ''} onChange={e => setForm(f => ({...f, notes: e.target.value}))} rows={8} placeholder="Add notes..." style={{ width: '100%', resize: 'vertical' }} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                <button onClick={() => onUpdate(loan.id, { notes: form.notes })} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'white', fontWeight: 600, fontSize: 13 }}>Save Notes</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ icon, label, value, span }) {
+  return (
+    <div style={{ gridColumn: span === 2 ? '1 / -1' : undefined }}>
+      <div style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}>{icon} {label}</div>
+      <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{value}</div>
+    </div>
+  );
+}
+
+function LabelInput({ label, value, onChange, type = 'text', span }) {
+  return (
+    <div style={{ gridColumn: span === 2 ? '1 / -1' : undefined }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>{label}</label>
+      <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function LabelSelect({ label, value, options, onChange }) {
+  return (
+    <div>
+      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>{label}</label>
+      <select value={value} onChange={e => onChange(e.target.value)}>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
+// ─── New Loan Modal ───
+function NewLoanModal({ onClose, onAdd }) {
+  const [form, setForm] = useState({ borrower:'', loanAmount:'', propertyAddress:'', loanType:'Conventional', rate:'', term:30, loanNumber:'', attorneyName:'', attorneyEmail:'', realtorName:'', realtorEmail:'', stage:'Lead', notes:'', rateLockExpiry:'' });
+
+  const submit = () => {
+    if (!form.borrower.trim()) { alert('Borrower name required'); return; }
+    onAdd({ ...form, loanAmount: parseFloat(form.loanAmount) || 0, rate: parseFloat(form.rate) || 0, term: parseInt(form.term) || 30 });
+  };
+
+  return (
+    <div className="modal-overlay" style={{ position:'fixed',inset:0,zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }} onClick={onClose}>
+      <div className="fade-in scrollbar-thin" onClick={e=>e.stopPropagation()} style={{ background:'var(--surface)',borderRadius:16,width:'100%',maxWidth:600,maxHeight:'90vh',overflow:'auto',boxShadow:'0 25px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ padding:'20px 24px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+          <div style={{ fontSize:20,fontWeight:800,color:'var(--text)' }}>New Loan</div>
+          <button onClick={onClose} style={{ background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:8,color:'var(--text)',display:'flex' }}>{Icons.x}</button>
+        </div>
+        <div style={{ padding:24,display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
+          <LabelInput label="Borrower Name *" value={form.borrower} onChange={v=>setForm(f=>({...f,borrower:v}))} span={2} />
+          <LabelInput label="Loan Amount ($)" value={form.loanAmount} onChange={v=>setForm(f=>({...f,loanAmount:v}))} type="number" />
+          <LabelSelect label="Loan Type" value={form.loanType} options={LOAN_TYPES} onChange={v=>setForm(f=>({...f,loanType:v}))} />
+          <LabelInput label="Property Address" value={form.propertyAddress} onChange={v=>setForm(f=>({...f,propertyAddress:v}))} span={2} />
+          <LabelInput label="Rate (%)" value={form.rate} onChange={v=>setForm(f=>({...f,rate:v}))} type="number" />
+          <LabelInput label="Term (years)" value={form.term} onChange={v=>setForm(f=>({...f,term:v}))} type="number" />
+          <LabelInput label="Loan Number" value={form.loanNumber} onChange={v=>setForm(f=>({...f,loanNumber:v}))} />
+          <LabelSelect label="Starting Stage" value={form.stage} options={STAGES} onChange={v=>setForm(f=>({...f,stage:v}))} />
+          <LabelInput label="Attorney Name" value={form.attorneyName} onChange={v=>setForm(f=>({...f,attorneyName:v}))} />
+          <LabelInput label="Attorney Email" value={form.attorneyEmail} onChange={v=>setForm(f=>({...f,attorneyEmail:v}))} />
+          <LabelInput label="Realtor Name" value={form.realtorName} onChange={v=>setForm(f=>({...f,realtorName:v}))} />
+          <LabelInput label="Realtor Email" value={form.realtorEmail} onChange={v=>setForm(f=>({...f,realtorEmail:v}))} />
+          <LabelInput label="Rate Lock Expiry" value={form.rateLockExpiry} onChange={v=>setForm(f=>({...f,rateLockExpiry:v}))} type="date" />
+          <div>
+            <label style={{ fontSize:12,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:4 }}>Notes</label>
+            <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={3} placeholder="Optional notes..." />
+          </div>
+          <div style={{ gridColumn:'1 / -1',display:'flex',gap:8,justifyContent:'flex-end',marginTop:8 }}>
+            <button onClick={onClose} style={{ padding:'10px 20px',borderRadius:8,border:'1px solid var(--border)',background:'var(--surface2)',color:'var(--text)',fontWeight:600,fontSize:14 }}>Cancel</button>
+            <button onClick={submit} style={{ padding:'10px 24px',borderRadius:8,border:'none',background:'var(--accent)',color:'white',fontWeight:700,fontSize:14 }}>Add Loan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Import Modal ───
+function ImportModal({ onClose, onImportJSON, onImportCSV }) {
+  const [mode, setMode] = useState('json');
+  const [text, setText] = useState('');
+  const fileRef = useRef(null);
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setText(ev.target.result);
+    reader.readAsText(file);
+    if (file.name.endsWith('.csv')) setMode('csv');
+    else setMode('json');
+  };
+
+  return (
+    <div className="modal-overlay" style={{ position:'fixed',inset:0,zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }} onClick={onClose}>
+      <div className="fade-in" onClick={e=>e.stopPropagation()} style={{ background:'var(--surface)',borderRadius:16,width:'100%',maxWidth:550,boxShadow:'0 25px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ padding:'20px 24px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+          <div style={{ fontSize:20,fontWeight:800,color:'var(--text)' }}>Import Data</div>
+          <button onClick={onClose} style={{ background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:8,color:'var(--text)',display:'flex' }}>{Icons.x}</button>
+        </div>
+        <div style={{ padding:24 }}>
+          <div style={{ display:'flex',gap:8,marginBottom:16 }}>
+            <button onClick={()=>setMode('json')} className={`tab-btn ${mode==='json'?'active':''}`}>JSON</button>
+            <button onClick={()=>setMode('csv')} className={`tab-btn ${mode==='csv'?'active':''}`}>CSV</button>
+          </div>
+          <input type="file" ref={fileRef} onChange={handleFile} accept=".json,.csv" style={{ marginBottom:12 }} />
+          <textarea value={text} onChange={e=>setText(e.target.value)} rows={10} placeholder={mode === 'csv' ? 'borrower,loan amount,loan type,address,realtor name,...' : 'Paste JSON backup...'} style={{ width:'100%',fontFamily:'monospace',fontSize:12 }} />
+          <div style={{ display:'flex',gap:8,justifyContent:'flex-end',marginTop:12 }}>
+            <button onClick={onClose} style={{ padding:'8px 16px',borderRadius:8,border:'1px solid var(--border)',background:'var(--surface2)',color:'var(--text)',fontWeight:600 }}>Cancel</button>
+            <button onClick={()=>mode==='csv'?onImportCSV(text):onImportJSON(text)} style={{ padding:'8px 20px',borderRadius:8,border:'none',background:'var(--accent)',color:'white',fontWeight:700 }}>Import</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Analytics ───
+function Analytics({ loans, fundedHistory }) {
+  const chartRef1 = useRef(null);
+  const chartRef2 = useRef(null);
+  const chart1 = useRef(null);
+  const chart2 = useRef(null);
+
+  const activeLoans = loans.filter(l => l.stage !== 'Funded');
+  const totalVolume = activeLoans.reduce((s,l) => s + l.loanAmount, 0);
+  const fundedLoans = fundedHistory.filter(f => f.status === 'funded');
+  const withdrawn = fundedHistory.filter(f => f.status !== 'funded');
+  const avgDaysToClose = fundedLoans.length ? Math.round(fundedLoans.reduce((s,f) => s + f.daysToClose, 0) / fundedLoans.length) : 0;
+  const winRate = fundedHistory.length ? Math.round(fundedLoans.length / fundedHistory.length * 100) : 0;
+
+  const stageData = STAGES.filter(s => s !== 'Funded').map(s => ({ stage: s, count: activeLoans.filter(l => l.stage === s).length }));
+
+  // Monthly funded
+  const monthlyData = useMemo(() => {
+    const months = {};
+    fundedLoans.forEach(f => {
+      const m = f.fundedDate.substring(0, 7);
+      months[m] = (months[m] || 0) + f.loanAmount;
+    });
+    const sorted = Object.entries(months).sort().slice(-6);
+    return sorted.map(([m, v]) => ({ month: m, volume: v }));
+  }, [fundedLoans]);
+
+  // Top realtors
+  const topRealtors = useMemo(() => {
+    const counts = {};
+    [...loans, ...fundedHistory].forEach(l => {
+      if (l.realtorName) counts[l.realtorName] = (counts[l.realtorName] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count }));
+  }, [loans, fundedHistory]);
+
+  useEffect(() => {
+    if (chart1.current) chart1.current.destroy();
+    if (chartRef1.current) {
+      chart1.current = new Chart(chartRef1.current, {
+        type: 'bar',
+        data: { labels: stageData.map(d => d.stage === 'Clear to Close' ? 'CTC' : d.stage), datasets: [{ label: 'Loans', data: stageData.map(d => d.count), backgroundColor: stageData.map(d => STAGE_COLORS[d.stage]), borderRadius: 6, barThickness: 32 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { color: '#334155' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } }
+      });
+    }
+  }, [stageData]);
+
+  useEffect(() => {
+    if (chart2.current) chart2.current.destroy();
+    if (chartRef2.current && monthlyData.length) {
+      chart2.current = new Chart(chartRef2.current, {
+        type: 'line',
+        data: { labels: monthlyData.map(d => d.month), datasets: [{ label: 'Volume', data: monthlyData.map(d => d.volume), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#3b82f6' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#94a3b8', callback: v => '$' + (v/1000) + 'K' }, grid: { color: '#334155' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } }
+      });
+    }
+  }, [monthlyData]);
+
+  return (
+    <div className="fade-in" style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'Active Loans', value: activeLoans.length, color: '#3b82f6' },
+          { label: 'Pipeline Volume', value: fmt$(totalVolume), color: '#8b5cf6' },
+          { label: 'Avg Days to Close', value: avgDaysToClose + ' days', color: '#f59e0b' },
+          { label: 'Win Rate', value: winRate + '%', color: '#22c55e' },
+          { label: 'Total Funded', value: fundedLoans.length, color: '#10b981' },
+        ].map(stat => (
+          <div key={stat.label} style={{ background: 'var(--surface)', borderRadius: 12, padding: 20, borderLeft: `4px solid ${stat.color}` }}>
+            <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginTop: 4 }}>{stat.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 20 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>Loans by Stage</div>
+          <div style={{ height: 250 }}><canvas ref={chartRef1} /></div>
+        </div>
+        <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 20 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>Monthly Funded Volume</div>
+          <div style={{ height: 250 }}>{monthlyData.length ? <canvas ref={chartRef2} /> : <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'var(--text2)'}}>No funded loans yet</div>}</div>
+        </div>
+      </div>
+
+      {/* Top Realtors */}
+      <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 20 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>Top Referring Realtors</div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid var(--border)' }}>
+              <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 12, color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase' }}>Realtor</th>
+              <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: 12, color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase' }}>Referrals</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topRealtors.map((r, i) => (
+              <tr key={r.name} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '12px', fontSize: 14, color: 'var(--text)' }}><span style={{ fontWeight: 700, marginRight: 8, color: 'var(--text2)' }}>#{i+1}</span>{r.name}</td>
+                <td style={{ textAlign: 'right', padding: '12px', fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{r.count}</td>
+              </tr>
+            ))}
+            {topRealtors.length === 0 && <tr><td colSpan={2} style={{ padding: 20, textAlign: 'center', color: 'var(--text2)' }}>No data yet</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Contacts ───
+function Contacts({ contacts, setContacts, loans }) {
+  const [cTab, setCTab] = useState('realtors');
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+
+  const startAdd = () => { setForm({ id: genId(), name:'', email:'', phone:'', company:'' }); setEditing('new'); };
+  const saveContact = () => {
+    if (!form.name.trim()) return;
+    setContacts(prev => {
+      const list = [...prev[cTab]];
+      const idx = list.findIndex(c => c.id === form.id);
+      if (idx >= 0) list[idx] = form;
+      else list.push(form);
+      return { ...prev, [cTab]: list };
+    });
+    setEditing(null);
+  };
+  const deleteContact = (id) => {
+    setContacts(prev => ({ ...prev, [cTab]: prev[cTab].filter(c => c.id !== id) }));
+  };
+
+  const filtered = (contacts[cTab] || []).filter(c => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return c.name.toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q) || (c.company||'').toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="fade-in" style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setCTab('realtors')} className={`tab-btn ${cTab==='realtors'?'active':''}`}>Realtors</button>
+          <button onClick={() => setCTab('attorneys')} className={`tab-btn ${cTab==='attorneys'?'active':''}`}>Attorneys</button>
+        </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text2)' }}>{Icons.search}</span>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search contacts..." style={{ paddingLeft: 36, width: 220 }} />
+          </div>
+          <button onClick={startAdd} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'white', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>{Icons.plus} Add</button>
+        </div>
+      </div>
+
+      <div style={{ background: 'var(--surface)', borderRadius: 12, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid var(--border)' }}>
+              {['Name','Email','Phone','Company', cTab === 'realtors' ? 'Referrals' : '', ''].filter(Boolean).map(h => (
+                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(c => {
+              const referrals = loans.filter(l => l.realtorName === c.name).length;
+              return (
+                <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text)' }}>{c.name}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--accent)' }}>{c.email || '—'}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--text2)' }}>{c.phone || '—'}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--text2)' }}>{c.company || '—'}</td>
+                  {cTab === 'realtors' && <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--accent)' }}>{referrals}</td>}
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => { setForm({...c}); setEditing(c.id); }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: 6, color: 'var(--text2)', display: 'flex' }}>{Icons.edit}</button>
+                      <button onClick={() => { if(confirm('Delete?')) deleteContact(c.id); }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: 6, color: 'var(--red)', display: 'flex' }}>{Icons.trash}</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--text2)' }}>No contacts found</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Edit/Add Inline Modal */}
+      {editing && (
+        <div className="modal-overlay" style={{ position:'fixed',inset:0,zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }} onClick={()=>setEditing(null)}>
+          <div className="fade-in" onClick={e=>e.stopPropagation()} style={{ background:'var(--surface)',borderRadius:16,width:'100%',maxWidth:450,boxShadow:'0 25px 60px rgba(0,0,0,0.5)',padding:24 }}>
+            <div style={{ fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:16 }}>{editing==='new'?'Add':'Edit'} {cTab === 'realtors' ? 'Realtor' : 'Attorney'}</div>
+            <div style={{ display:'grid',gap:12 }}>
+              <LabelInput label="Name" value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} />
+              <LabelInput label="Email" value={form.email} onChange={v=>setForm(f=>({...f,email:v}))} />
+              <LabelInput label="Phone" value={form.phone} onChange={v=>setForm(f=>({...f,phone:v}))} />
+              <LabelInput label="Company" value={form.company} onChange={v=>setForm(f=>({...f,company:v}))} />
+              <div style={{ display:'flex',gap:8,justifyContent:'flex-end',marginTop:8 }}>
+                <button onClick={()=>setEditing(null)} style={{ padding:'8px 16px',borderRadius:8,border:'1px solid var(--border)',background:'var(--surface2)',color:'var(--text)',fontWeight:600 }}>Cancel</button>
+                <button onClick={saveContact} style={{ padding:'8px 20px',borderRadius:8,border:'none',background:'var(--accent)',color:'white',fontWeight:700 }}>Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Alerts ───
+function AlertsPanel({ alerts, onSelect }) {
+  return (
+    <div className="fade-in" style={{ maxWidth: 800, margin: '0 auto' }}>
+      <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 16 }}>Alerts & Notifications</div>
+      {alerts.length === 0 ? (
+        <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 40, textAlign: 'center', color: 'var(--text2)' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>&#10004;</div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>All clear — no alerts right now</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {alerts.map((a, i) => (
+            <div key={i} onClick={() => onSelect(a.loan)} style={{ background: 'var(--surface)', borderRadius: 10, padding: '14px 18px', borderLeft: `4px solid ${a.type === 'stale' ? 'var(--red)' : 'var(--yellow)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background='var(--surface2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+              <span style={{ color: a.type === 'stale' ? 'var(--red)' : 'var(--yellow)' }} className={a.type === 'stale' ? 'alert-pulse' : ''}>{Icons.alert}</span>
+              <span style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>{a.msg}</span>
+              <span style={{ fontSize: 12, color: 'var(--text2)' }}>{Icons.chevRight}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Mount ───
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>

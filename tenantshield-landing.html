@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Google Analytics — replace UA-XXXXXXXXX-X with your tracking ID -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script> -->
+<title>TenantShield AI — AI-Powered Legal Analysis for NYC Tenants</title>
+<meta name="description" content="Three AI legal agents analyze your landlord-tenant case under New York law. Get your defense strategy, anticipate arguments, and see a judicial assessment.">
+<meta name="keywords" content="tenant rights NYC, landlord tenant AI, housing court help, rent stabilization, tenant defense, AI legal analysis, lease review">
+<link rel="canonical" href="https://aryehbrecher.github.io/my-apps/tenantshield-landing.html">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2L4 7v9c0 8.4 5.12 13.24 12 16 6.88-2.76 12-7.6 12-16V7L16 2z' fill='%23C87533'/%3E%3Cpath d='M16 5L7 8.8v7.2c0 6.72 3.84 10.56 9 12.8 5.16-2.24 9-6.08 9-12.8V8.8L16 5z' fill='%23faf7f4'/%3E%3Cpath d='M12 16l3 3 5-6' stroke='%23C87533' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="TenantShield AI — Your Landlord Has Lawyers. Now You Have AI.">
+<meta property="og:description" content="Three AI agents analyze your case from every angle. Free for NYC tenants.">
+<meta property="og:url" content="https://aryehbrecher.github.io/my-apps/tenantshield-landing.html">
+<meta property="og:site_name" content="TenantShield AI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TenantShield AI — Your Landlord Has Lawyers. Now You Have AI.">
+<meta name="twitter:description" content="Three AI agents analyze your landlord situation for free.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "TenantShield AI",
+  "applicationCategory": "LegalService",
+  "operatingSystem": "Web",
+  "description": "AI-powered legal analysis tool for New York tenants facing landlord disputes",
+  "offers": [
+    { "@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free tier — 1 case analysis" },
+    { "@type": "Offer", "price": "19", "priceCurrency": "USD", "description": "Pro tier — unlimited analyses", "priceSpecification": { "@type": "UnitPriceSpecification", "billingDuration": "P1M" }}
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@700;800;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #0a1628;
+  --navy-light: #0f1d32;
+  --navy-mid: #162544;
+  --accent: #C87533;
+  --accent-hover: #a8612a;
+  --green: #16a34a;
+  --green-light: #22c55e;
+  --purple: #7c3aed;
+  --surface: #faf7f4;
+  --surface-raised: #f5f0eb;
+  --surface-inset: #efe8e0;
+  --border: #e0d6cc;
+  --border-subtle: #ebe3da;
+  --gray-500: #8a7e72;
+  --gray-600: #6b5f53;
+  --gray-700: #4a3f35;
+  --text: #2d2419;
+  --text-secondary: #6b5f53;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif; background: var(--surface); color: var(--text); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+.fade-up { opacity: 0; transform: translateY(24px); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); }
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+
+/* NAV */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 18px 0; transition: all 0.3s; }
+.nav.scrolled { background: rgba(10,22,40,0.97); backdrop-filter: blur(16px); padding: 12px 0; box-shadow: 0 1px 0 rgba(255,255,255,0.06); }
+.nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; }
+.nav-logo { font-family: 'Crimson Pro', Georgia, serif; font-size: 20px; font-weight: 800; color: white; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo svg { width: 28px; height: 28px; }
+.nav-links { display: flex; gap: 32px; align-items: center; }
+.nav-link { color: rgba(255,255,255,0.65); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; cursor: pointer; }
+.nav-link:hover { color: white; }
+.nav-cta { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+.nav-cta:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.hamburger { display: none; background: none; border: none; cursor: pointer; padding: 12px; min-width: 48px; min-height: 48px; align-items: center; justify-content: center; }
+.hamburger span { display: block; width: 22px; height: 2px; background: white; margin: 5px 0; transition: all 0.3s; border-radius: 1px; }
+
+/* HERO */
+.hero { min-height: 100vh; display: flex; align-items: center; background: var(--navy); color: white; position: relative; overflow: hidden; padding: 120px 0 80px; }
+.hero::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(200,117,51,0.06), transparent); pointer-events: none; }
+.hero .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+.hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+.hero-badge { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 100px; padding: 6px 16px; font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 600; margin-bottom: 32px; letter-spacing: 0.5px; text-transform: uppercase; }
+.hero-badge-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+.hero h1 { font-family: 'Crimson Pro', Georgia, serif; font-size: clamp(40px, 5.5vw, 72px); font-weight: 900; line-height: 1.05; margin-bottom: 24px; letter-spacing: -0.035em; }
+.hero h1 .accent { color: var(--accent); }
+.hero-sub { font-size: 18px; color: rgba(255,255,255,0.6); line-height: 1.7; margin-bottom: 40px; max-width: 480px; }
+.hero-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn-primary { background: var(--accent); color: white; border: none; padding: 16px 36px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s var(--ease-out); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+.btn-primary:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,117,51,0.3); }
+.btn-secondary { background: transparent; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.15); padding: 16px 36px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; }
+.btn-secondary:hover { color: white; border-color: rgba(255,255,255,0.3); }
+.hero-proof { margin-top: 48px; display: flex; gap: 32px; flex-wrap: wrap; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.06); }
+.hero-proof-item { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 500; }
+.hero-proof-item svg { color: var(--green-light); flex-shrink: 0; }
+
+/* Hero visual */
+.hero-visual { position: relative; }
+.hero-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; backdrop-filter: blur(8px); }
+.hero-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.hero-card-title { font-family: 'Crimson Pro', Georgia, serif; font-size: 18px; font-weight: 800; color: white; }
+.hero-card-badge { background: rgba(22,163,74,0.15); color: #4ade80; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
+.agent-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.agent-row:last-child { border-bottom: none; }
+.agent-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.agent-dot.defense { background: #22c55e; }
+.agent-dot.opposing { background: #ef4444; }
+.agent-dot.judge { background: #8b5cf6; }
+.agent-name { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); flex: 1; }
+.agent-status { font-size: 12px; color: rgba(255,255,255,0.4); }
+.hero-score { margin-top: 20px; text-align: center; padding: 20px; background: rgba(200,117,51,0.08); border-radius: 12px; border: 1px solid rgba(200,117,51,0.15); }
+.hero-score-num { font-family: 'Crimson Pro', Georgia, serif; font-size: 56px; font-weight: 900; color: var(--accent); line-height: 1; }
+.hero-score-label { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+/* TRUST BAR */
+.trust-bar { padding: 40px 0; background: var(--surface-raised); border-bottom: 1px solid var(--border-subtle); }
+.trust-bar .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.trust-label { text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--gray-500); margin-bottom: 20px; }
+.trust-items { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; }
+.trust-item { font-size: 14px; font-weight: 600; color: var(--gray-500); white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+.trust-item svg { width: 16px; height: 16px; color: var(--accent); }
+
+/* SECTIONS */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.section { padding: 96px 0; }
+.section-label { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+.section-title { font-family: 'Crimson Pro', Georgia, serif; font-size: clamp(28px, 4vw, 44px); font-weight: 800; line-height: 1.1; margin-bottom: 16px; letter-spacing: -0.02em; }
+.section-sub { color: var(--text-secondary); font-size: 17px; line-height: 1.6; max-width: 540px; }
+.section-header { text-align: center; margin-bottom: 56px; }
+.section-header .section-sub { margin: 0 auto; }
+
+/* HOW IT WORKS */
+.how-section { background: var(--surface); }
+.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; position: relative; }
+.steps-grid::before { content: ''; position: absolute; top: 48px; left: 15%; right: 15%; height: 2px; background: linear-gradient(90deg, var(--border), var(--accent), var(--border)); z-index: 0; }
+.step-card { text-align: center; position: relative; z-index: 1; }
+.step-num { width: 96px; height: 96px; border-radius: 50%; background: var(--surface-raised); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; transition: all 0.3s; }
+.step-card:hover .step-num { border-color: var(--accent); box-shadow: 0 8px 32px rgba(200,117,51,0.12); transform: translateY(-4px); }
+.step-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.step-desc { font-size: 15px; color: var(--text-secondary); line-height: 1.6; max-width: 280px; margin: 0 auto; }
+
+/* FEATURES */
+.features-section { background: var(--surface-raised); }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 32px 28px; transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), border-color 0.35s var(--ease-out); }
+.feature-card:hover { box-shadow: 0 16px 40px rgba(45,36,25,0.1); border-color: var(--accent); transform: translateY(-6px); }
+.feature-card:hover .feature-icon { transform: scale(1.1); background: var(--accent); color: white; }
+.feature-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 22px; background: var(--surface-raised); transition: transform 0.35s var(--ease-out), background 0.35s var(--ease-out), color 0.3s; }
+.feature-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.feature-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+
+/* PRICING */
+.pricing-section { background: var(--navy); color: white; padding: 96px 0 112px; }
+.pricing-section .section-label { color: var(--accent); }
+.pricing-section .section-title { color: white; }
+.pricing-section .section-sub { color: rgba(255,255,255,0.5); }
+.pricing-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 800px; margin: 0 auto; }
+.pricing-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 40px 32px; transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), border-color 0.35s var(--ease-out), background 0.35s; }
+.pricing-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-6px); box-shadow: 0 16px 48px rgba(0,0,0,0.25); background: rgba(255,255,255,0.06); }
+.pricing-card.popular { border: 2px solid var(--accent); background: rgba(200,117,51,0.06); position: relative; }
+.pricing-card.popular:hover { border-color: var(--accent); box-shadow: 0 16px 48px rgba(200,117,51,0.2); background: rgba(200,117,51,0.1); }
+.pricing-badge { position: absolute; top: -14px; left: 28px; background: var(--accent); color: white; font-size: 11px; font-weight: 700; padding: 5px 16px; border-radius: 100px; letter-spacing: 0.5px; text-transform: uppercase; }
+.pricing-name { font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.pricing-price { font-family: 'Crimson Pro', Georgia, serif; font-size: 56px; font-weight: 900; color: white; line-height: 1; margin-bottom: 4px; }
+.pricing-price span { font-size: 18px; font-weight: 500; color: rgba(255,255,255,0.4); }
+.pricing-desc { font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 32px; }
+.pricing-features { list-style: none; margin-bottom: 36px; }
+.pricing-features li { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; font-size: 15px; color: rgba(255,255,255,0.75); border-bottom: 1px solid rgba(255,255,255,0.04); }
+.pricing-features li:last-child { border-bottom: none; }
+.pricing-features li svg { width: 18px; height: 18px; color: var(--green-light); flex-shrink: 0; margin-top: 2px; }
+.pricing-features li.locked svg { color: rgba(255,255,255,0.15); }
+.pricing-features li.locked { color: rgba(255,255,255,0.3); }
+.pricing-btn { display: block; width: 100%; text-align: center; padding: 16px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-decoration: none; border: none; font-family: inherit; }
+.pricing-btn-free { background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.15); }
+.pricing-btn-free:hover { background: rgba(255,255,255,0.12); }
+.pricing-btn-pro { background: linear-gradient(135deg, var(--accent), #e08a3a); color: white; font-size: 17px; padding: 18px; box-shadow: 0 4px 16px rgba(200,117,51,0.35); animation: btnPulse 2.5s ease-in-out infinite; position: relative; }
+.pricing-btn-pro:hover { background: linear-gradient(135deg, var(--accent-hover), var(--accent)); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(200,117,51,0.5); animation: none; }
+@keyframes btnPulse { 0%, 100% { box-shadow: 0 4px 16px rgba(200,117,51,0.35); } 50% { box-shadow: 0 4px 24px rgba(200,117,51,0.55); } }
+.pricing-trial { text-align: center; margin-top: 12px; font-size: 13px; color: rgba(255,255,255,0.4); }
+
+/* TESTIMONIALS */
+.testimonials-section { background: var(--surface-raised); padding: 96px 0; }
+.testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.testimonial-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 28px 24px; display: flex; flex-direction: column; transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), border-color 0.35s; }
+.testimonial-card:hover { box-shadow: 0 12px 32px rgba(45,36,25,0.1); transform: translateY(-4px); border-color: var(--border); }
+.testimonial-stars { color: var(--accent); font-size: 14px; letter-spacing: 2px; margin-bottom: 16px; }
+.testimonial-text { font-size: 15px; line-height: 1.7; color: var(--text-secondary); flex: 1; margin-bottom: 20px; }
+.testimonial-author { display: flex; align-items: center; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+.testimonial-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; }
+.testimonial-name { font-weight: 600; font-size: 14px; }
+.testimonial-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+/* FAQ */
+.faq-section { padding: 96px 0; background: var(--surface); }
+.faq-list { max-width: 720px; margin: 48px auto 0; }
+.faq-item { border-bottom: 1px solid var(--border-subtle); }
+.faq-q { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; cursor: pointer; transition: color 0.2s; min-height: 48px; -webkit-tap-highlight-color: transparent; }
+.faq-q:hover { color: var(--accent); }
+.faq-q h3 { font-size: 16px; font-weight: 600; line-height: 1.4; flex: 1; padding-right: 16px; }
+.faq-chevron { width: 20px; height: 20px; transition: transform 0.3s; flex-shrink: 0; color: var(--gray-500); }
+.faq-chevron.open { transform: rotate(180deg); color: var(--accent); }
+.faq-a { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s; }
+.faq-a.open { max-height: 300px; padding-bottom: 20px; }
+.faq-a p { color: var(--text-secondary); font-size: 15px; line-height: 1.7; }
+
+/* CTA */
+.cta-section { background: var(--navy); padding: 96px 0; text-align: center; color: white; position: relative; overflow: hidden; }
+.cta-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at center, rgba(200,117,51,0.08), transparent 70%); }
+.cta-section .container { position: relative; z-index: 1; }
+.cta-title { font-family: 'Crimson Pro', Georgia, serif; font-size: clamp(32px, 5vw, 52px); font-weight: 900; margin-bottom: 16px; letter-spacing: -0.03em; }
+.cta-sub { font-size: 18px; color: rgba(255,255,255,0.5); margin-bottom: 40px; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+
+/* FOOTER */
+.footer { background: var(--navy); border-top: 1px solid rgba(255,255,255,0.06); padding: 48px 0 32px; color: rgba(255,255,255,0.4); }
+.footer-inner { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 32px; }
+.footer-brand { max-width: 300px; }
+.footer-brand-name { font-family: 'Crimson Pro', Georgia, serif; font-size: 18px; font-weight: 800; color: white; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.footer-brand-desc { font-size: 13px; line-height: 1.6; }
+.footer-links { display: flex; gap: 48px; }
+.footer-col h4 { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 16px; }
+.footer-col a { display: block; font-size: 14px; color: rgba(255,255,255,0.4); text-decoration: none; margin-bottom: 10px; transition: color 0.2s; }
+.footer-col a:hover { color: white; }
+.footer-bottom { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 12px; line-height: 1.6; }
+.footer-disclaimer { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.12); border-radius: 8px; padding: 14px 18px; font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; margin-top: 24px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.footer-disclaimer strong { color: #fbbf24; }
+
+/* MOBILE */
+.mobile-menu { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10,22,40,0.98); z-index: 99; padding: 80px 24px 24px; flex-direction: column; gap: 4px; }
+.mobile-menu.open { display: flex; }
+.mobile-menu a { display: block; font-size: 18px; color: rgba(255,255,255,0.7); text-decoration: none; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 500; min-height: 48px; display: flex; align-items: center; }
+.mobile-menu a:hover, .mobile-menu a:active { color: white; }
+.mobile-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: white; font-size: 28px; cursor: pointer; padding: 12px; min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; }
+
+@media (max-width: 960px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .testimonial-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .hamburger { display: flex; }
+  .hero-grid { grid-template-columns: 1fr; gap: 40px; text-align: left; }
+  .hero-visual { order: -1; }
+  .hero { padding: 100px 0 60px; min-height: auto; }
+  .hero-sub { font-size: 16px; }
+  .steps-grid { grid-template-columns: 1fr; gap: 40px; }
+  .steps-grid::before { display: none; }
+  .features-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
+  .testimonial-grid { grid-template-columns: 1fr; }
+  .trust-items { gap: 24px; }
+  .footer-inner { flex-direction: column; }
+  .footer-links { flex-direction: column; gap: 32px; }
+  .hero-proof { flex-direction: column; gap: 12px; }
+  .btn-primary, .btn-secondary { padding: 14px 28px; font-size: 16px; min-height: 48px; justify-content: center; }
+  .pricing-btn { min-height: 48px; }
+  .section { padding: 72px 0; }
+  .section-title { font-size: clamp(26px, 6vw, 36px); }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <svg viewBox="0 0 32 32" width="28" height="28"><path d="M16 2L4 7v9c0 8.4 5.12 13.24 12 16 6.88-2.76 12-7.6 12-16V7L16 2z" fill="#C87533"/><path d="M16 5L7 8.8v7.2c0 6.72 3.84 10.56 9 12.8 5.16-2.24 9-6.08 9-12.8V8.8L16 5z" fill="#faf7f4"/><path d="M12 16l3 3 5-6" stroke="#C87533" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      TenantShield AI
+    </a>
+    <div class="nav-links">
+      <a href="#how" class="nav-link">How It Works</a>
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#pricing" class="nav-link">Pricing</a>
+      <a href="#faq" class="nav-link">FAQ</a>
+      <a href="https://aryehbrecher.github.io/my-apps/tenant-defender.html" class="nav-cta">Get Started</a>
+    </div>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <button class="mobile-close" onclick="toggleMenu()">&times;</button>
+  <a href="#how" onclick="toggleMenu()">How It Works</a>
+  <a href="#features" onclick="toggleMenu()">Features</a>
+  <a href="#pricing" onclick="toggleMenu()">Pricing</a>
+  <a href="#faq" onclick="toggleMenu()">FAQ</a>
+  <a href="https://aryehbrecher.github.io/my-apps/tenant-defender.html" style="color:var(--accent);font-weight:700;">Get Started Free</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge"><span class="hero-badge-dot"></span> AI-Powered Legal Analysis</div>
+        <h1>Your Landlord Has Lawyers. <span class="accent">Now You Have AI.</span></h1>
+        <p class="hero-sub">Three AI agents dissect your case — building your defense, stress-testing the landlord's arguments, and delivering a judicial verdict. Know exactly where you stand before court.</p>
+        <div class="hero-buttons">
+          <a href="https://aryehbrecher.github.io/my-apps/tenant-defender.html" class="btn-primary">Analyze My Case Free <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a href="#pricing" class="btn-secondary">See Pricing</a>
+        </div>
+        <div class="hero-proof">
+          <div class="hero-proof-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.3 4L6 11.3 2.7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Cites 15+ NY statutes
+          </div>
+          <div class="hero-proof-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.3 4L6 11.3 2.7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            3 AI agents, 3 perspectives
+          </div>
+          <div class="hero-proof-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.3 4L6 11.3 2.7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Results in under 5 minutes
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-card">
+          <div class="hero-card-header">
+            <div class="hero-card-title">Case Analysis</div>
+            <div class="hero-card-badge">Live</div>
+          </div>
+          <div class="agent-row"><div class="agent-dot defense"></div><div class="agent-name">Defense Agent</div><div class="agent-status">Building your case...</div></div>
+          <div class="agent-row"><div class="agent-dot opposing"></div><div class="agent-name">Opposing Counsel</div><div class="agent-status">Anticipating arguments...</div></div>
+          <div class="agent-row"><div class="agent-dot judge"></div><div class="agent-name">Judicial Assessment</div><div class="agent-status">Evaluating merits...</div></div>
+          <div class="hero-score">
+            <div class="hero-score-num">87</div>
+            <div class="hero-score-label">Case Strength Score</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<section class="trust-bar">
+  <div class="container">
+    <div class="trust-label">Backed by New York Law</div>
+    <div class="trust-items">
+      <div class="trust-item"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1L1 4v4c0 5.6 3 8.8 7 10.7C11.9 16.8 15 13.6 15 8V4L8 1z" stroke="currentColor" stroke-width="1.5"/></svg> NY Real Property Law</div>
+      <div class="trust-item"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1L1 4v4c0 5.6 3 8.8 7 10.7C11.9 16.8 15 13.6 15 8V4L8 1z" stroke="currentColor" stroke-width="1.5"/></svg> HSTPA 2019</div>
+      <div class="trust-item"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1L1 4v4c0 5.6 3 8.8 7 10.7C11.9 16.8 15 13.6 15 8V4L8 1z" stroke="currentColor" stroke-width="1.5"/></svg> NYC Admin Code</div>
+      <div class="trust-item"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1L1 4v4c0 5.6 3 8.8 7 10.7C11.9 16.8 15 13.6 15 8V4L8 1z" stroke="currentColor" stroke-width="1.5"/></svg> NYC Housing Court</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section how-section" id="how">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">How It Works</div>
+      <div class="section-title">Three steps to know your rights</div>
+      <p class="section-sub">No lawyer needed. No legal jargon. Just clear answers about your situation.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card fade-up">
+        <div class="step-num">1</div>
+        <div class="step-title">Describe Your Situation</div>
+        <p class="step-desc">Answer a few plain-English questions about your landlord situation. No legal knowledge needed — our guided wizard handles the rest.</p>
+      </div>
+      <div class="step-card fade-up">
+        <div class="step-num">2</div>
+        <div class="step-title">AI Agents Debate Your Case</div>
+        <p class="step-desc">Three AI agents go to work: one builds your defense, one attacks it from the landlord's side, and one delivers an impartial judicial ruling.</p>
+      </div>
+      <div class="step-card fade-up">
+        <div class="step-num">3</div>
+        <div class="step-title">Get Your Action Plan</div>
+        <p class="step-desc">Get a case strength score, a step-by-step action plan with deadlines, the exact statutes in your favor, and a ready-to-send demand letter.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section features-section" id="features">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">Features</div>
+      <div class="section-title">Everything you need to fight back</div>
+      <p class="section-sub">Professional-grade legal analysis tools, powered by AI and New York law.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon">&#x2696;</div>
+        <div class="feature-title">Three-Agent Analysis</div>
+        <p class="feature-desc">Your defense attorney, opposing counsel, and a judge — all AI-powered, all analyzing your specific situation under NY law.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">&#x1F4C4;</div>
+        <div class="feature-title">Lease Red-Lining</div>
+        <p class="feature-desc">Upload your lease and our AI highlights illegal clauses, unenforceable terms, and provisions that violate your rights under HSTPA.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">&#x2709;</div>
+        <div class="feature-title">Demand Letter Generator</div>
+        <p class="feature-desc">Generate a professional demand letter citing specific NY statutes. Download, print, and send via certified mail.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">&#x1F3AF;</div>
+        <div class="feature-title">Case Strength Score</div>
+        <p class="feature-desc">Get a 0-100 score on your case strength based on the facts, applicable law, and precedent. Know where you stand before taking action.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">&#x1F4CB;</div>
+        <div class="feature-title">Action Plan Timeline</div>
+        <p class="feature-desc">A step-by-step plan with deadlines, who to contact, what to file, and how long each step takes. No guessing.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">&#x1F4E4;</div>
+        <div class="feature-title">Share & Export</div>
+        <p class="feature-desc">Share your analysis via text, email, or link. Export your action plan and demand letter for your records or your lawyer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">Pricing</div>
+      <div class="section-title" style="color:white;">Simple, transparent pricing</div>
+      <p class="section-sub" style="color:rgba(255,255,255,0.5);">Start free. Upgrade when you need more.</p>
+    </div>
+    <div class="pricing-grid">
+      <!-- FREE -->
+      <div class="pricing-card fade-up">
+        <div class="pricing-name">Free</div>
+        <div class="pricing-price">$0</div>
+        <div class="pricing-desc">See what AI finds in your case</div>
+        <ul class="pricing-features">
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> 1 full case analysis</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Three-agent debate</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Case strength score</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Basic action plan</li>
+          <li class="locked"><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Lease red-lining</li>
+          <li class="locked"><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Demand letter generator</li>
+        </ul>
+        <a href="https://aryehbrecher.github.io/my-apps/tenant-defender.html" class="pricing-btn pricing-btn-free">Start Free</a>
+      </div>
+      <!-- PRO -->
+      <div class="pricing-card popular fade-up">
+        <div class="pricing-badge">Most Popular</div>
+        <div class="pricing-name">Pro</div>
+        <div class="pricing-price">$19<span>/month</span></div>
+        <div class="pricing-desc">Full arsenal to fight back and win</div>
+        <ul class="pricing-features">
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Unlimited case analyses</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Lease upload & red-lining</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Demand letter generator</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Priority AI processing</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Export & share reports</li>
+          <li><svg viewBox="0 0 18 18" fill="none"><path d="M15 5L7 13l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Email support</li>
+        </ul>
+        <a href="https://buy.stripe.com/test_PLACEHOLDER" target="_blank" rel="noopener" class="pricing-btn pricing-btn-pro" data-stripe-link="true">Start Pro — 7 Days Free</a>
+        <div class="pricing-trial">Cancel anytime. No questions asked.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section testimonials-section" id="testimonials">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">Use Cases</div>
+      <div class="section-title">What TenantShield analyzes</div>
+      <p class="section-sub">Real scenarios NYC tenants face every day — and how TenantShield helps.</p>
+    </div>
+    <div class="testimonial-grid">
+      <div class="testimonial-card fade-up">
+        <div class="testimonial-stars" style="color:#16a34a;letter-spacing:0;">&#9679; Security Deposit</div>
+        <p class="testimonial-text">Your landlord kept your deposit claiming "damage" that's really normal wear and tear. TenantShield analyzes your rights under General Obligations Law, generates a demand letter citing the 14-day return deadline, and walks you through Small Claims Court.</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:#16a34a;">$</div>
+          <div><div class="testimonial-name">Deposit Recovery</div><div class="testimonial-meta">Average NYC deposit: $1,500-3,000</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card fade-up">
+        <div class="testimonial-stars" style="color:#7c3aed;letter-spacing:0;">&#9679; Rent Overcharge</div>
+        <p class="testimonial-text">You suspect your rent-stabilized apartment has been illegally increased. TenantShield explains how to request your DHCR rent history, identifies potential overcharges under HSTPA, and outlines the complaint process — including triple damages for willful violations.</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:#7c3aed;">%</div>
+          <div><div class="testimonial-name">Overcharge Analysis</div><div class="testimonial-meta">HSTPA allows 6-year lookback</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card fade-up">
+        <div class="testimonial-stars" style="color:#C87533;letter-spacing:0;">&#9679; Illegal Lockout</div>
+        <p class="testimonial-text">Your landlord changed the locks while you were at work. TenantShield scores this as a strong case under RPL &#167;768, explains your right to emergency restoration of possession, and provides the exact steps to file in Housing Court — including calling 911.</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:#C87533;">!</div>
+          <div><div class="testimonial-name">Emergency Response</div><div class="testimonial-meta">Illegal lockout = criminal offense in NYC</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section faq-section" id="faq">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">FAQ</div>
+      <div class="section-title">Common questions</div>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <h3>Is this actual legal advice?</h3>
+          <svg class="faq-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="faq-a"><p>No. TenantShield provides legal information and analysis based on New York statutes and case law. We are not a law firm and do not create an attorney-client relationship. For complex cases, we recommend consulting with a tenant rights attorney — and our analysis can help you have a more informed conversation with one.</p></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <h3>Is my data safe?</h3>
+          <svg class="faq-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="faq-a"><p>Yes. Your case details are analyzed in real time and never stored on our servers. We do not sell, share, or monetize your data. All data is encrypted in transit using TLS. You can request deletion of any submitted data at any time.</p></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <h3>Can I cancel my Pro subscription anytime?</h3>
+          <svg class="faq-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="faq-a"><p>Absolutely. Cancel anytime with one click — no questions asked, no hoops to jump through. Your Pro access continues until the end of your billing period. Plus, you get a full 7-day free trial to try everything risk-free.</p></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <h3>What areas of NYC law does TenantShield cover?</h3>
+          <svg class="faq-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="faq-a"><p>TenantShield covers New York Real Property Law (including warranty of habitability and anti-retaliation protections), HSTPA 2019 rent stabilization rules, NYC Administrative Code housing provisions, NYC Housing Court procedures, and security deposit laws. We cover illegal lockouts, rent overcharges, repair issues, harassment, lease reviews, and deposit disputes.</p></div>
+      </div>
+      <div class="faq-item fade-up">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <h3>How accurate is the AI analysis?</h3>
+          <svg class="faq-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="faq-a"><p>Our AI agents are trained on current New York tenant protection statutes and reference specific sections of the law. The three-agent debate format catches blind spots that a single analysis would miss. However, every case is unique — use our analysis as a starting point, especially for complex situations.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-title fade-up">Stop Wondering.<br>Start Knowing.</div>
+    <p class="cta-sub fade-up">Your landlord won't tell you your rights. Three AI agents will — free, in under 5 minutes.</p>
+    <a href="https://aryehbrecher.github.io/my-apps/tenant-defender.html" class="btn-primary fade-up" style="font-size:18px;padding:18px 44px;">Analyze My Case Free <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="footer-brand-name">
+          <svg viewBox="0 0 32 32" width="20" height="20"><path d="M16 2L4 7v9c0 8.4 5.12 13.24 12 16 6.88-2.76 12-7.6 12-16V7L16 2z" fill="#C87533"/><path d="M16 5L7 8.8v7.2c0 6.72 3.84 10.56 9 12.8 5.16-2.24 9-6.08 9-12.8V8.8L16 5z" fill="#faf7f4"/><path d="M12 16l3 3 5-6" stroke="#C87533" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          TenantShield AI
+        </div>
+        <p class="footer-brand-desc">AI-powered legal analysis for NYC tenants. Know your rights. Fight back.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="mailto:aryehbrecher@gmail.com">Contact</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-disclaimer">
+        <strong>Legal Disclaimer:</strong> TenantShield AI provides legal information and analysis, not legal advice. No attorney-client relationship is created. For complex legal matters, consult a licensed attorney. TenantShield is not a law firm.
+      </div>
+      <p style="margin-top:16px;">&copy; 2026 TenantShield AI. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Nav scroll
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// Mobile menu
+function toggleMenu() {
+  document.getElementById('mobileMenu').classList.toggle('open');
+}
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+// FAQ accordion
+function toggleFaq(el) {
+  const answer = el.nextElementSibling;
+  const chevron = el.querySelector('.faq-chevron');
+  const isOpen = answer.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+  document.querySelectorAll('.faq-chevron').forEach(c => c.classList.remove('open'));
+  // Open clicked if was closed
+  if (!isOpen) {
+    answer.classList.add('open');
+    chevron.classList.add('open');
+  }
+}
+
+// Intersection Observer for fade-up
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

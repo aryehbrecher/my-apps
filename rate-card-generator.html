@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FM Rate Card Generator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#f0f0f5;color:#1a1a2e;min-height:100vh}
+
+/* Layout */
+.app-header{background:linear-gradient(135deg,#2d1b4e 0%,#5b2d8e 50%,#7b3fa0 100%);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;color:white}
+.app-header h1{font-size:18px;font-weight:800;letter-spacing:-0.02em}
+.app-header p{font-size:12px;opacity:0.7}
+.layout{display:flex;gap:24px;padding:24px;max-width:1200px;margin:0 auto;align-items:flex-start}
+.edit-panel{flex:1;min-width:0}
+.preview-panel{position:sticky;top:24px;flex-shrink:0}
+
+/* Edit sections */
+.section{background:white;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.section h2{font-size:14px;font-weight:700;margin-bottom:14px;color:#5b2d8e;text-transform:uppercase;letter-spacing:0.5px}
+.input-row{display:flex;gap:10px;margin-bottom:10px;align-items:center}
+.input-group{display:flex;flex-direction:column;gap:4px;flex:1}
+.input-group label{font-size:11px;font-weight:600;color:#666}
+.input-group input,.input-group select{padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:13px;background:#fafafa}
+.input-group input:focus,.input-group select:focus{outline:none;border-color:#5b2d8e;background:white}
+.input-group input[type="number"]{-moz-appearance:textfield}
+.input-group input::-webkit-outer-spin-button,.input-group input::-webkit-inner-spin-button{-webkit-appearance:none}
+.rate-type-label{font-size:13px;font-weight:600;min-width:90px;padding-top:18px}
+.direction-toggle{display:flex;gap:4px}
+.direction-toggle button{padding:6px 10px;border:1px solid #ddd;background:white;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.15s;font-family:inherit}
+.direction-toggle button.active-up{background:#fee;border-color:#e74c3c;color:#e74c3c}
+.direction-toggle button.active-down{background:#efd;border-color:#27ae60;color:#27ae60}
+
+/* Buttons */
+.btn{padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all 0.15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:linear-gradient(135deg,#5b2d8e,#7b3fa0);color:white;width:100%}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.btn-secondary{background:white;color:#5b2d8e;border:2px solid #5b2d8e}
+.btn-secondary:hover{background:#f8f4fc}
+.btn-row{display:flex;gap:10px;margin-top:8px}
+.btn-row .btn{flex:1;justify-content:center}
+
+/* Photo upload */
+.photo-upload{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.photo-preview{width:52px;height:52px;border-radius:50%;background:#e8e0f0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#5b2d8e;overflow:hidden;flex-shrink:0;border:2px solid #ddd}
+.photo-preview img{width:100%;height:100%;object-fit:cover}
+.photo-upload-btn{font-size:12px;color:#5b2d8e;cursor:pointer;font-weight:600;text-decoration:underline}
+.photo-upload-btn:hover{color:#7b3fa0}
+
+/* ============================================ */
+/* RATE CARD (pixel-matched to reference image) */
+/* ============================================ */
+.card-wrapper{width:400px}
+.rate-card{width:400px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);font-family:'Inter',system-ui,sans-serif}
+
+/* Card header */
+.card-header{background:linear-gradient(160deg,#2d1b4e 0%,#5b2d8e 40%,#8b4fb8 100%);padding:24px 28px 28px;position:relative}
+.card-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.card-logo{display:flex;align-items:center;gap:10px}
+.card-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,#8b2040,#a83050);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.card-logo-icon svg{width:24px;height:24px;fill:white}
+.card-logo-text{display:flex;flex-direction:column}
+.card-logo-text .fm{font-size:18px;font-weight:900;color:white;letter-spacing:1px;line-height:1.1}
+.card-logo-text .sub{font-size:9px;font-weight:600;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase}
+.card-date{font-size:13px;color:rgba(255,255,255,0.8);font-weight:500;font-style:italic}
+.card-title{font-size:26px;font-weight:900;color:white;letter-spacing:-0.02em;text-align:center}
+
+/* Card body */
+.card-body{padding:20px 24px 16px}
+.rate-row{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid #f0f0f0;gap:14px}
+.rate-row:last-child{border-bottom:none}
+.rate-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rate-icon svg{width:20px;height:20px;fill:white}
+.rate-icon.fixed30{background:linear-gradient(135deg,#8b2040,#a83050)}
+.rate-icon.fixed15{background:linear-gradient(135deg,#0d9488,#14b8a6)}
+.rate-icon.jumbo{background:linear-gradient(135deg,#2563eb,#3b82f6)}
+.rate-icon.fha{background:linear-gradient(135deg,#ea580c,#f97316)}
+.rate-name{font-size:16px;font-weight:600;color:#1a1a2e;flex:1}
+.rate-bps{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:3px;flex-shrink:0}
+.rate-bps.up{background:#fee2e2;color:#dc2626}
+.rate-bps.down{background:#dcfce7;color:#16a34a}
+.rate-bps .arrow{font-size:10px}
+.rate-value{font-size:22px;font-weight:800;color:#1a1a2e;min-width:70px;text-align:right}
+
+/* Card footer */
+.card-footer{padding:16px 24px 20px;border-top:1px solid #f0f0f0}
+.card-contact{display:flex;align-items:center;gap:14px}
+.card-photo{width:48px;height:48px;border-radius:50%;background:#e8e0f0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#5b2d8e;overflow:hidden;flex-shrink:0}
+.card-photo img{width:100%;height:100%;object-fit:cover}
+.card-contact-info{flex:1}
+.card-contact-name{font-size:15px;font-weight:800;color:#1a1a2e}
+.card-contact-title{font-size:11px;color:#666;margin-top:1px}
+.card-contact-details{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+.card-contact-detail{display:flex;align-items:center;gap:6px;font-size:11px;color:#444;font-weight:500}
+.card-contact-detail svg{width:12px;height:12px;fill:#5b2d8e;flex-shrink:0}
+.card-disclaimer{text-align:center;font-size:10px;color:#999;margin-top:14px;font-style:italic;padding:0 8px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:all 0.3s;z-index:100;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* Responsive */
+@media(max-width:860px){
+  .layout{flex-direction:column;align-items:center}
+  .preview-panel{position:static}
+  .edit-panel{max-width:420px;width:100%}
+}
+@media(max-width:440px){
+  .card-wrapper{width:100%;min-width:320px}
+  .rate-card{width:100%}
+  .layout{padding:12px}
+  .section{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <h1>Rate Card Generator</h1>
+    <p>Generate and download branded rate cards</p>
+  </div>
+</div>
+
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useRef, useCallback } = React;
+
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function getDateStr() {
+  const d = new Date();
+  return DAYS[d.getDay()] + ", " + MONTHS[d.getMonth()] + " " + d.getDate();
+}
+
+const DEFAULT_RATES = [
+  { id: "fixed30", label: "30 Yr Fixed", rate: "6.41", bps: "12", direction: "up" },
+  { id: "fixed15", label: "15 Yr Fixed", rate: "6.01", bps: "11", direction: "up" },
+  { id: "jumbo",   label: "Jumbo",       rate: "6.60", bps: "5",  direction: "up" },
+  { id: "fha",     label: "FHA",         rate: "5.87", bps: "4",  direction: "up" },
+];
+
+const DEFAULT_CONTACT = {
+  name: "Aryeh Brecher",
+  title: "Senior Loan Officer | NMLS # 1401181",
+  phone: "718.877.5160",
+  email: "AryehB@fmm.com",
+};
+
+/* SVG Icons */
+const HouseIcon = () => (
+  <svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/></svg>
+);
+const ChartIcon = () => (
+  <svg viewBox="0 0 24 24"><path d="M3 17l4-4 4 4 4-6 6 7H3zm0-3l4-4 4 4 4-6 6 7v3H3v-4z"/></svg>
+);
+const BuildingIcon = () => (
+  <svg viewBox="0 0 24 24"><path d="M5 3v18h6v-4h2v4h6V3H5zm2 2h2v2H7V5zm4 0h2v2h-2V5zm4 0h2v2h-2V5zM7 9h2v2H7V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9zM7 13h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/></svg>
+);
+const ShieldIcon = () => (
+  <svg viewBox="0 0 24 24"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"/></svg>
+);
+const PhoneIcon = () => (
+  <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z"/></svg>
+);
+const EmailIcon = () => (
+  <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+);
+
+const ICONS = { fixed30: HouseIcon, fixed15: ChartIcon, jumbo: BuildingIcon, fha: ShieldIcon };
+
+function App() {
+  const [rates, setRates] = useState(DEFAULT_RATES);
+  const [contact, setContact] = useState(DEFAULT_CONTACT);
+  const [photo, setPhoto] = useState(null);
+  const [dateStr, setDateStr] = useState(getDateStr());
+  const [toast, setToast] = useState("");
+  const cardRef = useRef(null);
+  const fileRef = useRef(null);
+
+  const updateRate = (idx, field, value) => {
+    setRates(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+  };
+
+  const handlePhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhoto(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
+  };
+
+  const downloadCard = useCallback(async () => {
+    if (!cardRef.current) return;
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+        width: cardRef.current.offsetWidth,
+        height: cardRef.current.offsetHeight,
+      });
+      const link = document.createElement("a");
+      link.download = "rate-card-" + new Date().toISOString().slice(0, 10) + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      showToast("Card downloaded!");
+    } catch (err) {
+      showToast("Download failed — try again");
+    }
+  }, []);
+
+  const shareCard = useCallback(async () => {
+    if (!cardRef.current || !navigator.share) {
+      downloadCard();
+      return;
+    }
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3, useCORS: true, backgroundColor: null, logging: false,
+        width: cardRef.current.offsetWidth, height: cardRef.current.offsetHeight,
+      });
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], "rate-card.png", { type: "image/png" });
+        await navigator.share({ title: "Today's Rates", files: [file] });
+        showToast("Shared!");
+      }, "image/png");
+    } catch (err) {
+      if (err.name !== "AbortError") downloadCard();
+    }
+  }, [downloadCard]);
+
+  const initials = contact.name.split(" ").map(n => n[0]).join("").toUpperCase();
+
+  return (
+    <div className="layout">
+      {/* EDIT PANEL */}
+      <div className="edit-panel">
+        <div className="section">
+          <h2>Rates</h2>
+          {rates.map((r, i) => (
+            <div key={r.id} className="input-row">
+              <span className="rate-type-label">{r.label}</span>
+              <div className="input-group" style={{maxWidth: 90}}>
+                <label>Rate %</label>
+                <input type="text" inputMode="decimal" value={r.rate}
+                  onChange={e => updateRate(i, "rate", e.target.value)} />
+              </div>
+              <div className="input-group" style={{maxWidth: 70}}>
+                <label>BPS</label>
+                <input type="text" inputMode="numeric" value={r.bps}
+                  onChange={e => updateRate(i, "bps", e.target.value)} />
+              </div>
+              <div className="input-group" style={{maxWidth: 80}}>
+                <label>Direction</label>
+                <div className="direction-toggle">
+                  <button className={r.direction === "up" ? "active-up" : ""}
+                    onClick={() => updateRate(i, "direction", "up")}>▲</button>
+                  <button className={r.direction === "down" ? "active-down" : ""}
+                    onClick={() => updateRate(i, "direction", "down")}>▼</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="section">
+          <h2>Contact Info</h2>
+          <div className="photo-upload">
+            <div className="photo-preview">
+              {photo ? <img src={photo} alt="Profile" /> : initials}
+            </div>
+            <div>
+              <span className="photo-upload-btn" onClick={() => fileRef.current?.click()}>
+                {photo ? "Change Photo" : "Upload Photo"}
+              </span>
+              <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{display: "none"}} />
+            </div>
+          </div>
+          <div className="input-row">
+            <div className="input-group">
+              <label>Name</label>
+              <input type="text" value={contact.name}
+                onChange={e => setContact(prev => ({...prev, name: e.target.value}))} />
+            </div>
+          </div>
+          <div className="input-row">
+            <div className="input-group">
+              <label>Title</label>
+              <input type="text" value={contact.title}
+                onChange={e => setContact(prev => ({...prev, title: e.target.value}))} />
+            </div>
+          </div>
+          <div className="input-row">
+            <div className="input-group">
+              <label>Phone</label>
+              <input type="tel" value={contact.phone}
+                onChange={e => setContact(prev => ({...prev, phone: e.target.value}))} />
+            </div>
+            <div className="input-group">
+              <label>Email</label>
+              <input type="email" value={contact.email}
+                onChange={e => setContact(prev => ({...prev, email: e.target.value}))} />
+            </div>
+          </div>
+        </div>
+
+        <div className="section">
+          <h2>Date</h2>
+          <div className="input-row">
+            <div className="input-group">
+              <label>Display Date</label>
+              <input type="text" value={dateStr}
+                onChange={e => setDateStr(e.target.value)} />
+            </div>
+            <button className="btn btn-secondary" style={{marginTop: 14, padding: "8px 14px", fontSize: 12}}
+              onClick={() => setDateStr(getDateStr())}>Today</button>
+          </div>
+        </div>
+
+        <div className="btn-row">
+          <button className="btn btn-primary" onClick={downloadCard}>
+            <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download PNG
+          </button>
+          <button className="btn btn-secondary" onClick={shareCard} style={{flex: "0 0 auto", padding: "12px 18px"}}>
+            <svg width="16" height="16" fill="#5b2d8e" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0018 8c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81A2.99 2.99 0 006 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+            Share
+          </button>
+        </div>
+      </div>
+
+      {/* CARD PREVIEW */}
+      <div className="preview-panel">
+        <div className="card-wrapper" ref={cardRef}>
+          <div className="rate-card">
+            {/* Header */}
+            <div className="card-header">
+              <div className="card-brand">
+                <div className="card-logo">
+                  <div className="card-logo-icon">
+                    <HouseIcon />
+                  </div>
+                  <div className="card-logo-text">
+                    <span className="fm">FM</span>
+                    <span className="sub">Home Loans</span>
+                  </div>
+                </div>
+                <div className="card-date">{dateStr}</div>
+              </div>
+              <div className="card-title">Today's Average Rates</div>
+            </div>
+
+            {/* Rates */}
+            <div className="card-body">
+              {rates.map(r => {
+                const Icon = ICONS[r.id];
+                return (
+                  <div key={r.id} className="rate-row">
+                    <div className={`rate-icon ${r.id}`}><Icon /></div>
+                    <span className="rate-name">{r.label}</span>
+                    <span className={`rate-bps ${r.direction}`}>
+                      <span className="arrow">{r.direction === "up" ? "▲" : "▼"}</span>
+                      {r.bps}bps
+                    </span>
+                    <span className="rate-value">{r.rate}%</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="card-footer">
+              <div className="card-contact">
+                <div className="card-photo">
+                  {photo ? <img src={photo} alt="" /> : initials}
+                </div>
+                <div className="card-contact-info">
+                  <div className="card-contact-name">{contact.name}</div>
+                  <div className="card-contact-title">{contact.title}</div>
+                </div>
+                <div className="card-contact-details">
+                  <span className="card-contact-detail"><PhoneIcon /> {contact.phone}</span>
+                  <span className="card-contact-detail"><EmailIcon /> {contact.email}</span>
+                </div>
+              </div>
+              <div className="card-disclaimer">Rates are averages. Subject to change. Not a commitment to lend.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Toast */}
+      <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

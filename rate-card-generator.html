@@ -52,49 +52,50 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0f0f5;color:#1a1a2e;m
 .ocr-status.loading{background:#fefce8;color:#92400e}
 
 /* Rate Card */
-.card-wrapper{width:400px}
-.rate-card{width:400px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);font-family:'Inter',system-ui,sans-serif}
-.card-header{background:linear-gradient(160deg,#2d1b4e 0%,#5b2d8e 40%,#8b4fb8 100%);padding:24px 28px 28px;position:relative}
-.card-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.card-logo{display:flex;align-items:center;gap:10px}
-.card-logo-icon{width:42px;height:42px;border-radius:10px;overflow:hidden;flex-shrink:0}
+.card-wrapper{width:420px}
+.rate-card{width:420px;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 12px 40px rgba(45,27,78,0.18),0 2px 8px rgba(0,0,0,0.06);font-family:'Inter',system-ui,sans-serif}
+.card-header{background:linear-gradient(160deg,#1e1240 0%,#3d1d6e 30%,#6b35a8 70%,#8b4fb8 100%);padding:28px 28px 32px;position:relative;overflow:hidden}
+.card-header::after{content:"";position:absolute;top:-60px;right:-60px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%);border-radius:50%}
+.card-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;position:relative;z-index:1}
+.card-logo{display:flex;align-items:center;gap:12px}
+.card-logo-icon{width:46px;height:46px;border-radius:12px;overflow:hidden;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
 .card-logo-icon img{width:100%;height:100%;object-fit:cover}
 .card-logo-text{display:flex;flex-direction:column}
-.card-logo-text .fm{font-size:18px;font-weight:900;color:white;letter-spacing:1px;line-height:1.1}
-.card-logo-text .sub{font-size:9px;font-weight:600;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase}
-.card-date{font-size:13px;color:rgba(255,255,255,0.8);font-weight:500;font-style:italic}
-.card-title{font-size:26px;font-weight:900;color:white;letter-spacing:-0.02em;text-align:center}
-.card-body{padding:20px 24px 16px}
-.rate-row{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid #f0f0f0;gap:14px}
-.rate-row:last-child{border-bottom:none}
-.rate-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.rate-icon svg{width:20px;height:20px;fill:white}
-.rate-icon.fixed30{background:linear-gradient(135deg,#8b2040,#a83050)}
+.card-logo-text .fm{font-size:20px;font-weight:900;color:white;letter-spacing:1.5px;line-height:1.1}
+.card-logo-text .sub{font-size:9px;font-weight:600;color:rgba(255,255,255,0.65);letter-spacing:2.5px;text-transform:uppercase}
+.card-date{font-size:13px;color:rgba(255,255,255,0.75);font-weight:500;font-style:italic}
+.card-title{font-size:28px;font-weight:900;color:white;letter-spacing:-0.02em;text-align:center;position:relative;z-index:1;text-shadow:0 2px 12px rgba(0,0,0,0.15)}
+.card-body{padding:8px 20px 8px}
+.rate-row{display:flex;align-items:center;padding:16px 16px;margin:6px 0;border-radius:14px;gap:14px;background:#fafafe;transition:background 0.15s}
+.rate-row:hover{background:#f4f0fa}
+.rate-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 8px rgba(0,0,0,0.12)}
+.rate-icon svg{width:22px;height:22px;fill:white}
+.rate-icon.fixed30{background:linear-gradient(135deg,#7b1d3e,#b82d58)}
 .rate-icon.fixed15{background:linear-gradient(135deg,#0d9488,#14b8a6)}
-.rate-icon.jumbo{background:linear-gradient(135deg,#2563eb,#3b82f6)}
-.rate-icon.fha{background:linear-gradient(135deg,#ea580c,#f97316)}
-.rate-name{font-size:16px;font-weight:600;color:#1a1a2e;flex:1}
-.rate-bps{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:3px;flex-shrink:0}
+.rate-icon.jumbo{background:linear-gradient(135deg,#1d4ed8,#3b82f6)}
+.rate-icon.fha{background:linear-gradient(135deg,#c2410c,#ea580c)}
+.rate-name{font-size:16px;font-weight:700;color:#1a1a2e;flex:1}
+.rate-bps{padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:3px;flex-shrink:0}
 .rate-bps.up{background:#fee2e2;color:#dc2626}
 .rate-bps.down{background:#dcfce7;color:#16a34a}
 .rate-bps .arrow{font-size:10px}
-.rate-value{font-size:22px;font-weight:800;color:#1a1a2e;min-width:70px;text-align:right}
-.card-footer{padding:16px 24px 12px;border-top:1px solid #f0f0f0}
+.rate-value{font-size:24px;font-weight:900;color:#1a1a2e;min-width:75px;text-align:right;letter-spacing:-0.02em}
+.card-footer{padding:18px 24px 14px;border-top:2px solid #f0edf5}
 .card-contact{display:flex;align-items:center;gap:14px}
-.card-photo{width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0}
+.card-photo{width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid #e8e0f0;box-shadow:0 2px 6px rgba(91,45,142,0.12)}
 .card-photo img{width:100%;height:100%;object-fit:cover}
 .card-contact-info{flex:1}
 .card-contact-name{font-size:15px;font-weight:800;color:#1a1a2e}
-.card-contact-title{font-size:11px;color:#666;margin-top:1px}
-.card-contact-details{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
-.card-contact-detail{display:flex;align-items:center;gap:6px;font-size:11px;color:#444;font-weight:500}
+.card-contact-title{font-size:11px;color:#666;margin-top:2px}
+.card-contact-details{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.card-contact-detail{display:flex;align-items:center;gap:6px;font-size:11px;color:#444;font-weight:600}
 .card-contact-detail svg{width:12px;height:12px;fill:#5b2d8e;flex-shrink:0}
-.card-bottom{display:flex;align-items:center;justify-content:space-between;padding:8px 24px 16px;gap:10px}
+.card-bottom{display:flex;align-items:center;justify-content:space-between;padding:10px 24px 16px;gap:10px}
 .card-source{font-size:10px;color:#999;font-style:italic}
 .card-ehl{display:flex;align-items:center;gap:6px}
 .card-ehl svg{width:18px;height:18px}
 .card-ehl span{font-size:8px;color:#999;font-weight:600;text-transform:uppercase;line-height:1.1}
-.card-disclaimer{text-align:center;font-size:9px;color:#bbb;padding:0 24px 14px;font-style:italic}
+.card-disclaimer{text-align:center;font-size:9px;color:#bbb;padding:0 24px 16px;font-style:italic}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:all 0.3s;z-index:100;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 @media(max-width:860px){
@@ -102,7 +103,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0f0f5;color:#1a1a2e;m
   .preview-panel{position:static}
   .edit-panel{max-width:420px;width:100%}
 }
-@media(max-width:440px){
+@media(max-width:460px){
   .card-wrapper{width:100%;min-width:320px}
   .rate-card{width:100%}
   .layout{padding:12px}
@@ -138,16 +139,16 @@ function getDateStr() {
 
 const DEFAULT_RATES = [
   { id: "fixed30", label: "30 Yr Fixed", rate: "", bps: "", direction: "up" },
+  { id: "fha",     label: "FHA",         rate: "", bps: "", direction: "up" },
   { id: "fixed15", label: "15 Yr Fixed", rate: "", bps: "", direction: "up" },
   { id: "jumbo",   label: "Jumbo",       rate: "", bps: "", direction: "up" },
-  { id: "fha",     label: "FHA",         rate: "", bps: "", direction: "up" },
 ];
 
 const DEFAULT_CONTACT = {
   name: "Aryeh Brecher",
   title: "Senior Loan Officer | NMLS # 1401181",
   phone: "718.877.5160",
-  email: "AryehB@fmm.com",
+  email: "aryehb@fmm.com",
 };
 
 const HouseIcon = () => <svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/></svg>;
@@ -195,7 +196,12 @@ function App() {
       setOcrMsg("Reading rates from screenshot...");
       try {
         const worker = await Tesseract.createWorker("eng");
+        await worker.setParameters({
+          tessedit_char_whitelist: "0123456789.%+-abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ /()-",
+          tessedit_pageseg_mode: "6", // Assume uniform block of text
+        });
         const { data: { text } } = await worker.recognize(imgData);
+        console.log("[OCR raw]", text);
         await worker.terminate();
         parseRatesFromText(text);
       } catch (err) {
@@ -208,81 +214,139 @@ function App() {
   };
 
   const parseRatesFromText = (text) => {
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-    const allText = lines.join(" ");
+    // Clean OCR artifacts: normalize whitespace, fix common misreads
+    const cleaned = text
+      .replace(/[|l]/g, (m, offset, str) => {
+        // Only replace isolated | or l that look like 1 next to digits
+        const before = str[offset - 1] || "";
+        const after = str[offset + 1] || "";
+        if (/\d/.test(before) || /\d/.test(after)) return m === "|" ? "1" : m;
+        return m;
+      })
+      .replace(/\u2019/g, "'")
+      .replace(/\u2014/g, "-")
+      .replace(/\s+/g, " ");
 
-    // Find rate patterns: look for percentages near keywords
-    const ratePattern = /(\d\.\d{2,3})\s*%/g;
+    const lines = cleaned.split("\n").map(l => l.trim()).filter(Boolean);
+    const allText = lines.join(" ");
+    console.log("[OCR debug] Text:", allText);
+
+    // Find rate patterns — broader matching:
+    // 1. With % sign: 6.41%, 6.41 %, etc
+    // 2. Without % but decimal with 2-3 digits after dot: matches like "6.41" near loan keywords
+    // 3. Handle OCR reading % as 96 or similar
     const allRates = [];
     let m;
-    while ((m = ratePattern.exec(allText)) !== null) {
+
+    // Pattern 1: explicit percentage
+    const pctPattern = /(\d{1,2}\.\d{2,3})\s*%/g;
+    while ((m = pctPattern.exec(allText)) !== null) {
       const val = parseFloat(m[1]);
-      if (val > 2 && val < 12) allRates.push({ val, idx: m.index });
+      if (val > 2 && val < 12) allRates.push({ val, idx: m.index, source: "pct" });
     }
 
-    // Find bps patterns
-    const bpsPattern = /([+-]?\s*\d{1,3})\s*(?:bps|BPS|bp)/gi;
+    // Pattern 2: decimal numbers that look like rates (if we didn't find enough with %)
+    if (allRates.length < 2) {
+      const decPattern = /(?<!\d)(\d{1,2}\.\d{2,3})(?!\d)/g;
+      while ((m = decPattern.exec(allText)) !== null) {
+        const val = parseFloat(m[1]);
+        if (val > 2 && val < 12) {
+          // Don't double-count ones already found with %
+          const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 5);
+          if (!isDup) allRates.push({ val, idx: m.index, source: "dec" });
+        }
+      }
+    }
+
+    // Find bps patterns — also look for +/- followed by small numbers
+    const bpsPattern = /([+-]?\s*\d{1,3})\s*(?:bps|BPS|bp|Bps)/gi;
     const allBps = [];
     while ((m = bpsPattern.exec(allText)) !== null) {
       allBps.push({ val: m[1].replace(/\s/g, ""), idx: m.index });
     }
 
-    // Try to match rates to loan types by proximity in text
+    // Keywords — expanded for OCR misreads
     const keywords = [
-      { id: "fixed30", patterns: ["30.yr", "30-yr", "30 yr", "30yr", "30-year", "30 year"] },
-      { id: "fixed15", patterns: ["15.yr", "15-yr", "15 yr", "15yr", "15-year", "15 year"] },
-      { id: "jumbo",   patterns: ["jumbo"] },
-      { id: "fha",     patterns: ["fha"] },
+      { id: "fixed30", patterns: ["30.yr", "30-yr", "30 yr", "30yr", "30-year", "30 year", "30yr.", "30 yr.", "30-yr.", "30 year fixed", "30yr fixed", "30-year fixed"] },
+      { id: "fha",     patterns: ["fha", "f.h.a", "fha/va", "fha 30"] },
+      { id: "fixed15", patterns: ["15.yr", "15-yr", "15 yr", "15yr", "15-year", "15 year", "15yr.", "15 yr.", "15-yr.", "15 year fixed", "15yr fixed", "15-year fixed"] },
+      { id: "jumbo",   patterns: ["jumbo", "jumbo 30"] },
     ];
 
     let updated = [...rates];
     let foundCount = 0;
     const lowerText = allText.toLowerCase();
+    const usedRates = new Set();
 
+    // First pass: match by keyword proximity
     keywords.forEach((kw) => {
       const rateIdx = updated.findIndex(r => r.id === kw.id);
       if (rateIdx === -1) return;
 
-      // Find keyword position in text
+      // Find keyword position in text — try longer patterns first
       let kwPos = -1;
-      for (const p of kw.patterns) {
+      const sortedPatterns = [...kw.patterns].sort((a, b) => b.length - a.length);
+      for (const p of sortedPatterns) {
         const pos = lowerText.indexOf(p.toLowerCase());
         if (pos !== -1) { kwPos = pos; break; }
       }
       if (kwPos === -1) return;
 
-      // Find closest rate to this keyword
+      // Find closest unused rate to this keyword — prefer rates AFTER the keyword
       let closestRate = null;
       let closestDist = Infinity;
-      for (const r of allRates) {
-        const dist = Math.abs(r.idx - kwPos);
-        if (dist < closestDist) { closestDist = dist; closestRate = r; }
+      for (let i = 0; i < allRates.length; i++) {
+        if (usedRates.has(i)) continue;
+        const r = allRates[i];
+        // Prefer rates that come after the keyword (typical layout: label then value)
+        const rawDist = r.idx - kwPos;
+        const dist = rawDist >= 0 ? rawDist : Math.abs(rawDist) * 1.5; // penalize rates before keyword
+        if (dist < closestDist && dist < 300) { closestDist = dist; closestRate = { ...r, arrayIdx: i }; }
       }
-      if (closestRate && closestDist < 150) {
+      if (closestRate) {
         updated[rateIdx] = { ...updated[rateIdx], rate: closestRate.val.toFixed(2) };
+        usedRates.add(closestRate.arrayIdx);
         foundCount++;
-        // Remove used rate
-        const idx = allRates.indexOf(closestRate);
-        if (idx > -1) allRates.splice(idx, 1);
+
+        // Try to find bps for this rate
+        let closestBps = null;
+        let bpsDist = Infinity;
+        for (const b of allBps) {
+          const d = Math.abs(b.idx - closestRate.idx);
+          if (d < bpsDist && d < 100) { bpsDist = d; closestBps = b; }
+        }
+        if (closestBps) {
+          const bpsVal = parseInt(closestBps.val);
+          if (!isNaN(bpsVal)) {
+            updated[rateIdx] = { ...updated[rateIdx], bps: Math.abs(bpsVal).toString(), direction: bpsVal >= 0 ? "up" : "down" };
+          }
+        }
       }
     });
+
+    // Second pass: if we found some by keyword but not all, try line-by-line matching
+    if (foundCount > 0 && foundCount < 4) {
+      // Already found some — keep what we have
+    } else if (foundCount === 0 && allRates.length >= 2) {
+      // Couldn't match to keywords but found rates — assign in order
+      const sortedRates = [...allRates].sort((a, b) => a.idx - b.idx);
+      sortedRates.slice(0, 4).forEach((r, i) => {
+        if (i < updated.length) updated[i] = { ...updated[i], rate: r.val.toFixed(2) };
+      });
+      foundCount = Math.min(sortedRates.length, 4);
+      setRates(updated);
+      setOcrStatus("success");
+      setOcrMsg("Found " + foundCount + " rate(s) — assigned in order. Please verify.");
+      return;
+    }
 
     setRates(updated);
     if (foundCount > 0) {
       setOcrStatus("success");
       setOcrMsg("Found " + foundCount + " rate(s). Verify and fill in any missing values.");
-    } else if (allRates.length > 0) {
-      // Couldn't match to keywords but found rates — assign in order
-      const fallback = [...rates];
-      allRates.slice(0, 4).forEach((r, i) => {
-        if (i < fallback.length) fallback[i] = { ...fallback[i], rate: r.val.toFixed(2) };
-      });
-      setRates(fallback);
-      setOcrStatus("success");
-      setOcrMsg("Found " + Math.min(allRates.length, 4) + " rate(s) — assigned in order. Please verify.");
     } else {
       setOcrStatus("error");
-      setOcrMsg("Could not find rates in screenshot. Enter them manually.");
+      setOcrMsg("Could not find rates in screenshot. Try a clearer image or enter rates manually.");
     }
   };
 

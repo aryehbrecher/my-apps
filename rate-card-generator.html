@@ -225,193 +225,231 @@ function App() {
   };
 
   const parseRatesFromText = (text) => {
-    // Clean OCR artifacts: normalize whitespace, fix common misreads
+    // Clean OCR artifacts
     const cleaned = text
-      .replace(/[|l]/g, (m, offset, str) => {
-        // Only replace isolated | or l that look like 1 next to digits
+      .replace(/[|]/g, (m, offset, str) => {
         const before = str[offset - 1] || "";
         const after = str[offset + 1] || "";
-        if (/\d/.test(before) || /\d/.test(after)) return m === "|" ? "1" : m;
+        if (/\d/.test(before) || /\d/.test(after)) return "1";
         return m;
       })
       .replace(/\u2019/g, "'")
-      .replace(/\u2014/g, "-")
-      .replace(/\s+/g, " ");
+      .replace(/\u2014/g, "-");
 
     const lines = cleaned.split("\n").map(l => l.trim()).filter(Boolean);
-    const allText = lines.join(" ");
-    console.log("[OCR debug] Text:", allText);
-    setOcrDebugText(allText);
+    console.log("[OCR debug] Lines:", JSON.stringify(lines));
+    setOcrDebugText(lines.join("\n"));
 
-    // Find ALL rate patterns — run every pattern, deduplicate by position
-    // Tesseract sometimes drops decimals: "6.39%" → "639%", but not always consistently
-    const allRates = [];
-    let m;
-
-    // Pattern 1: explicit decimal percentage (6.39%)
-    const pctPattern = /(\d{1,2}\.\d{2,3})\s*%/g;
-    while ((m = pctPattern.exec(allText)) !== null) {
-      const val = parseFloat(m[1]);
-      if (val > 2 && val < 12) allRates.push({ val, idx: m.index, source: "pct" });
-    }
-
-    // Pattern 2: 3-digit integer + % where OCR dropped the decimal (639% → 6.39%)
-    // ALWAYS run — Tesseract may drop decimal for some rates but not others
-    const intPctPattern = /(?<!\d)(\d{3})\s*%/g;
-    while ((m = intPctPattern.exec(allText)) !== null) {
-      const raw = parseInt(m[1]);
-      if (raw >= 200 && raw <= 1200) {
-        const val = raw / 100;
-        const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 8);
-        if (!isDup) allRates.push({ val, idx: m.index, source: "intpct" });
+    // === HELPER: extract first mortgage rate (2.00-12.00) from a string ===
+    const extractRate = (str) => {
+      let m;
+      // decimal percentage: 6.39%
+      const p1 = /(\d{1,2}\.\d{2,3})\s*%/g;
+      while ((m = p1.exec(str)) !== null) {
+        const v = parseFloat(m[1]);
+        if (v > 2 && v < 12) return v;
       }
-    }
-
-    // Pattern 3: decimal numbers without % sign (6.39 near a keyword)
-    const decPattern = /(?<!\d)(\d{1,2}\.\d{2,3})(?!\d)/g;
-    while ((m = decPattern.exec(allText)) !== null) {
-      const val = parseFloat(m[1]);
-      if (val > 2 && val < 12) {
-        const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 8);
-        if (!isDup) allRates.push({ val, idx: m.index, source: "dec" });
+      // 3-digit integer %: 639%
+      const p2 = /(?<!\d)(\d{3})\s*%/g;
+      while ((m = p2.exec(str)) !== null) {
+        const raw = parseInt(m[1]);
+        if (raw >= 200 && raw <= 1200) return raw / 100;
       }
-    }
-
-    // Pattern 4: 3-digit integers without % near loan keywords (639 → 6.39)
-    const intPattern = /(?<!\d)(\d{3})(?!\d)/g;
-    while ((m = intPattern.exec(allText)) !== null) {
-      const raw = parseInt(m[1]);
-      if (raw >= 200 && raw <= 1200) {
-        const val = raw / 100;
-        const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 10);
-        if (!isDup) allRates.push({ val, idx: m.index, source: "int" });
+      // decimal without %: 6.39
+      const p3 = /(?<!\d)(\d{1,2}\.\d{2,3})(?!\d)/g;
+      while ((m = p3.exec(str)) !== null) {
+        const v = parseFloat(m[1]);
+        if (v > 2 && v < 12) return v;
       }
-    }
+      return null;
+    };
 
-    console.log("[OCR debug] Found rates:", JSON.stringify(allRates));
-
-    // Find bps/change patterns
-    const allBps = [];
-    // Explicit bps format
-    const bpsPattern = /([+-]?\s*\d{1,3})\s*(?:bps|BPS|bp|Bps)/gi;
-    while ((m = bpsPattern.exec(allText)) !== null) {
-      allBps.push({ val: m[1].replace(/\s/g, ""), idx: m.index });
-    }
-    // MortgageNewsDaily format: +0.01% or -0.03% (change as percentage)
-    const chgPattern = /([+-]\d+\.\d{2,3})\s*%/g;
-    while ((m = chgPattern.exec(allText)) !== null) {
-      const pctChange = parseFloat(m[1]);
-      // Convert to bps: 0.01% = 1bps, 0.04% = 4bps
-      const bpsVal = Math.round(pctChange * 100);
-      if (Math.abs(bpsVal) <= 200) { // sanity check
-        allBps.push({ val: (bpsVal >= 0 ? "+" : "") + bpsVal, idx: m.index });
+    // === HELPER: extract bps change from a string ===
+    const extractBps = (str) => {
+      let m;
+      const p1 = /([+-]?\s*\d{1,3})\s*(?:bps|BPS|bp)/gi;
+      if ((m = p1.exec(str)) !== null) return parseInt(m[1].replace(/\s/g, ""));
+      const p2 = /([+-]\d+\.\d{2,3})\s*%/g;
+      while ((m = p2.exec(str)) !== null) {
+        const bps = Math.round(parseFloat(m[1]) * 100);
+        if (Math.abs(bps) <= 200) return bps;
       }
-    }
+      return null;
+    };
 
-    // Keywords — expanded for OCR misreads and MortgageNewsDaily format
-    // IMPORTANT: fixed30 is LAST — fha/jumbo/fixed15 claim their rates first,
-    // then fixed30 can safely use broad "30 yr" patterns without collision
-    const keywords = [
-      { id: "fha",     patterns: ["30 yr.fha", "30 yr. fha", "30 yr fha", "yr.fha", "yr. fha", "fha", "f.h.a"] },
-      { id: "jumbo",   patterns: ["30 yr. jumbo", "30 yr.jumbo", "30 yr jumbo", "yr. jumbo", "yr.jumbo", "jumbo"] },
-      { id: "fixed15", patterns: ["15 yr. fixed", "15 yr.fixed", "15 yr fixed", "15.yr. fixed", "15.yr.fixed", "15-yr fixed", "15-year fixed", "15 year fixed", "15yr fixed", "15.yr", "15-yr", "15 yr", "15yr"] },
-      { id: "fixed30", patterns: ["30 yr. fixed", "30 yr.fixed", "30 yr fixed", "30.yr. fixed", "30.yr.fixed", "30-yr fixed", "30-year fixed", "30 year fixed", "30yr fixed", "30yr. fixed", "30 yr,fixed", "30 yr, fixed", "30 yrfixed", "30 yr. fi", "30 yr.fi", "30yr.fi", "30 yr fi", "30yr fi", "30 yr.", "30 yr", "30yr.", "30yr"] },
-    ];
+    // === HELPER: check if line contains any pattern from list ===
+    const lineHasPattern = (lowerLine, patterns) => {
+      for (const p of patterns) { if (lowerLine.includes(p)) return true; }
+      return false;
+    };
+
+    // Keyword patterns for identification
+    const fhaPatterns = ["fha", "f.h.a"];
+    const jumboPatterns = ["jumbo"];
+    const fixed15Patterns = ["15 yr", "15yr", "15-yr", "15.yr", "15 year", "15-year"];
+    // fixed30 is identified by having "30 yr"/"30yr" BUT NOT fha/jumbo/15yr
 
     let updated = [...rates];
     let foundCount = 0;
-    const lowerText = allText.toLowerCase();
-    const usedRates = new Set();
+    const matchedIds = new Set();
+    const usedLines = new Set();
 
-    // First pass: match by keyword proximity
-    keywords.forEach((kw) => {
-      const rateIdx = updated.findIndex(r => r.id === kw.id);
-      if (rateIdx === -1) return;
+    // === PRIMARY STRATEGY: Line-by-line matching ===
+    // Each OCR line should contain a label + rate on the same line
+    // Process distinctive keywords first: fha, jumbo, fixed15, then fixed30
 
-      // Find keyword position in text — try longer patterns first
-      let kwPos = -1;
-      const sortedPatterns = [...kw.patterns].sort((a, b) => b.length - a.length);
-      for (const p of sortedPatterns) {
-        const pos = lowerText.indexOf(p.toLowerCase());
-        if (pos !== -1) { kwPos = pos; break; }
+    // Pass 1: FHA — lines containing "fha" or "f.h.a"
+    for (let li = 0; li < lines.length; li++) {
+      if (usedLines.has(li)) continue;
+      const lower = lines[li].toLowerCase();
+      if (!lineHasPattern(lower, fhaPatterns)) continue;
+      const rate = extractRate(lines[li]);
+      if (rate === null) continue;
+      const idx = updated.findIndex(r => r.id === "fha");
+      if (idx !== -1) {
+        updated[idx] = { ...updated[idx], rate: rate.toFixed(2) };
+        const bps = extractBps(lines[li]);
+        if (bps !== null) updated[idx] = { ...updated[idx], bps: Math.abs(bps).toString(), direction: bps >= 0 ? "up" : "down" };
+        matchedIds.add("fha"); usedLines.add(li); foundCount++;
+        console.log("[OCR] FHA =", rate, "from line:", lines[li]);
       }
-      if (kwPos === -1) return;
+      break;
+    }
 
-      // Find closest unused rate to this keyword — prefer rates AFTER the keyword
-      let closestRate = null;
-      let closestDist = Infinity;
-      for (let i = 0; i < allRates.length; i++) {
-        if (usedRates.has(i)) continue;
-        const r = allRates[i];
-        // Prefer rates that come after the keyword (typical layout: label then value)
-        const rawDist = r.idx - kwPos;
-        const dist = rawDist >= 0 ? rawDist : Math.abs(rawDist) * 1.5; // penalize rates before keyword
-        if (dist < closestDist && dist < 300) { closestDist = dist; closestRate = { ...r, arrayIdx: i }; }
+    // Pass 2: Jumbo — lines containing "jumbo"
+    for (let li = 0; li < lines.length; li++) {
+      if (usedLines.has(li)) continue;
+      const lower = lines[li].toLowerCase();
+      if (!lineHasPattern(lower, jumboPatterns)) continue;
+      const rate = extractRate(lines[li]);
+      if (rate === null) continue;
+      const idx = updated.findIndex(r => r.id === "jumbo");
+      if (idx !== -1) {
+        updated[idx] = { ...updated[idx], rate: rate.toFixed(2) };
+        const bps = extractBps(lines[li]);
+        if (bps !== null) updated[idx] = { ...updated[idx], bps: Math.abs(bps).toString(), direction: bps >= 0 ? "up" : "down" };
+        matchedIds.add("jumbo"); usedLines.add(li); foundCount++;
+        console.log("[OCR] Jumbo =", rate, "from line:", lines[li]);
       }
-      if (closestRate) {
-        updated[rateIdx] = { ...updated[rateIdx], rate: closestRate.val.toFixed(2) };
-        usedRates.add(closestRate.arrayIdx);
-        foundCount++;
+      break;
+    }
 
-        // Try to find bps for this rate
-        let closestBps = null;
-        let bpsDist = Infinity;
-        for (const b of allBps) {
-          const d = Math.abs(b.idx - closestRate.idx);
-          if (d < bpsDist && d < 100) { bpsDist = d; closestBps = b; }
-        }
-        if (closestBps) {
-          const bpsVal = parseInt(closestBps.val);
-          if (!isNaN(bpsVal)) {
-            updated[rateIdx] = { ...updated[rateIdx], bps: Math.abs(bpsVal).toString(), direction: bpsVal >= 0 ? "up" : "down" };
-          }
-        }
+    // Pass 3: 15 Yr Fixed — lines containing "15 yr"/"15yr" etc
+    for (let li = 0; li < lines.length; li++) {
+      if (usedLines.has(li)) continue;
+      const lower = lines[li].toLowerCase();
+      if (!lineHasPattern(lower, fixed15Patterns)) continue;
+      const rate = extractRate(lines[li]);
+      if (rate === null) continue;
+      const idx = updated.findIndex(r => r.id === "fixed15");
+      if (idx !== -1) {
+        updated[idx] = { ...updated[idx], rate: rate.toFixed(2) };
+        const bps = extractBps(lines[li]);
+        if (bps !== null) updated[idx] = { ...updated[idx], bps: Math.abs(bps).toString(), direction: bps >= 0 ? "up" : "down" };
+        matchedIds.add("fixed15"); usedLines.add(li); foundCount++;
+        console.log("[OCR] Fixed15 =", rate, "from line:", lines[li]);
       }
-    });
+      break;
+    }
 
-    // Second pass: if fixed30 is still empty but others matched, assign by position
-    // 30yr fixed is ALWAYS the first rate on MortgageNewsDaily — find the unused rate
-    // closest to the earliest matched keyword position (i.e. near top of page)
-    if (foundCount > 0 && !updated.find(r => r.id === "fixed30")?.rate) {
-      const unusedRates = allRates.filter((_, i) => !usedRates.has(i)).sort((a, b) => a.idx - b.idx);
-      // Filter to rates that appear BEFORE the first matched rate (30yr fixed is always first)
-      const firstMatchedIdx = Math.min(...[...usedRates].map(i => allRates[i].idx));
-      const beforeRates = unusedRates.filter(r => r.idx < firstMatchedIdx);
-      const bestRate = beforeRates.length > 0 ? beforeRates[0] : (unusedRates.length > 0 ? unusedRates[0] : null);
-      if (bestRate) {
-        const fix30Idx = updated.findIndex(r => r.id === "fixed30");
-        if (fix30Idx !== -1) {
-          updated[fix30Idx] = { ...updated[fix30Idx], rate: bestRate.val.toFixed(2) };
-          foundCount++;
-          console.log("[OCR debug] Fixed30 fallback: assigned", bestRate.val, "from position", bestRate.idx, "(before first match at", firstMatchedIdx, ")");
-          let closestBps = null;
-          let bpsDist = Infinity;
-          for (const b of allBps) {
-            const d = Math.abs(b.idx - bestRate.idx);
-            if (d < bpsDist && d < 100) { bpsDist = d; closestBps = b; }
-          }
-          if (closestBps) {
-            const bpsVal = parseInt(closestBps.val);
-            if (!isNaN(bpsVal)) {
-              updated[fix30Idx] = { ...updated[fix30Idx], bps: Math.abs(bpsVal).toString(), direction: bpsVal >= 0 ? "up" : "down" };
+    // Pass 4: 30 Yr Fixed — lines with "30 yr"/"30yr" that do NOT contain fha/jumbo keywords
+    for (let li = 0; li < lines.length; li++) {
+      if (usedLines.has(li)) continue;
+      const lower = lines[li].toLowerCase();
+      // Must have a "30 yr" variant
+      const has30 = lineHasPattern(lower, ["30 yr", "30yr", "30-yr", "30.yr", "30 year", "30-year"]);
+      if (!has30) continue;
+      // Must NOT have fha, jumbo, va, or arm keywords (those are different loan types)
+      if (lineHasPattern(lower, ["fha", "f.h.a", "jumbo", " va ", " va\t", ".va ", "va.", "v.a.", "arm", "sofr"])) continue;
+      // Should contain "fixed" or "fix" or just be "30 yr" without other qualifiers
+      const rate = extractRate(lines[li]);
+      if (rate === null) continue;
+      const idx = updated.findIndex(r => r.id === "fixed30");
+      if (idx !== -1) {
+        updated[idx] = { ...updated[idx], rate: rate.toFixed(2) };
+        const bps = extractBps(lines[li]);
+        if (bps !== null) updated[idx] = { ...updated[idx], bps: Math.abs(bps).toString(), direction: bps >= 0 ? "up" : "down" };
+        matchedIds.add("fixed30"); usedLines.add(li); foundCount++;
+        console.log("[OCR] Fixed30 =", rate, "from line:", lines[li]);
+      }
+      break;
+    }
+
+    console.log("[OCR] Line-by-line found", foundCount, "of 4. Matched:", [...matchedIds].join(", "));
+
+    // === FALLBACK: proximity matching on flattened text for any unmatched rates ===
+    if (foundCount < 4) {
+      const allText = lines.join(" ");
+      const lowerText = allText.toLowerCase();
+      let m;
+
+      // Collect all rates from flattened text
+      const allRates = [];
+      const pctP = /(\d{1,2}\.\d{2,3})\s*%/g;
+      while ((m = pctP.exec(allText)) !== null) {
+        const v = parseFloat(m[1]); if (v > 2 && v < 12) allRates.push({ val: v, idx: m.index });
+      }
+      const decP = /(?<!\d)(\d{1,2}\.\d{2,3})(?!\d)/g;
+      while ((m = decP.exec(allText)) !== null) {
+        const v = parseFloat(m[1]);
+        if (v > 2 && v < 12 && !allRates.some(r => Math.abs(r.idx - m.index) < 8)) allRates.push({ val: v, idx: m.index });
+      }
+
+      // Collect bps
+      const allBps = [];
+      const chgP = /([+-]\d+\.\d{2,3})\s*%/g;
+      while ((m = chgP.exec(allText)) !== null) {
+        const bps = Math.round(parseFloat(m[1]) * 100);
+        if (Math.abs(bps) <= 200) allBps.push({ val: (bps >= 0 ? "+" : "") + bps, idx: m.index });
+      }
+
+      // Mark rates already used by line-by-line matching
+      const usedRateIndices = new Set();
+      for (const id of matchedIds) {
+        const r = updated.find(x => x.id === id);
+        if (r && r.rate) {
+          const rateVal = parseFloat(r.rate);
+          for (let i = 0; i < allRates.length; i++) {
+            if (Math.abs(allRates[i].val - rateVal) < 0.005 && !usedRateIndices.has(i)) {
+              usedRateIndices.add(i); break;
             }
           }
         }
       }
-    }
 
-    // Third pass: if no keywords matched at all, assign rates in order
-    if (foundCount === 0 && allRates.length >= 2) {
-      // Couldn't match to keywords but found rates — assign in order
-      const sortedRates = [...allRates].sort((a, b) => a.idx - b.idx);
-      sortedRates.slice(0, 4).forEach((r, i) => {
-        if (i < updated.length) updated[i] = { ...updated[i], rate: r.val.toFixed(2) };
-      });
-      foundCount = Math.min(sortedRates.length, 4);
-      setRates(updated);
-      setOcrStatus("success");
-      setOcrMsg("Found " + foundCount + " rate(s) — assigned in order. Please verify.");
-      return;
+      const fallbackKws = [
+        { id: "fha",     patterns: ["fha", "f.h.a"] },
+        { id: "jumbo",   patterns: ["jumbo"] },
+        { id: "fixed15", patterns: ["15 yr", "15yr", "15-yr", "15.yr"] },
+        { id: "fixed30", patterns: ["30 yr. fixed", "30 yr.fixed", "30 yr fixed", "30 yr.", "30 yr", "30yr"] },
+      ];
+
+      for (const kw of fallbackKws) {
+        if (matchedIds.has(kw.id)) continue;
+        const sortedP = [...kw.patterns].sort((a, b) => b.length - a.length);
+        let kwPos = -1;
+        for (const p of sortedP) { const pos = lowerText.indexOf(p); if (pos !== -1) { kwPos = pos; break; } }
+        if (kwPos === -1) continue;
+
+        let best = null, bestDist = Infinity;
+        for (let i = 0; i < allRates.length; i++) {
+          if (usedRateIndices.has(i)) continue;
+          const raw = allRates[i].idx - kwPos;
+          const d = raw >= 0 ? raw : Math.abs(raw) * 1.5;
+          if (d < bestDist && d < 300) { bestDist = d; best = { ...allRates[i], ai: i }; }
+        }
+        if (best) {
+          const ri = updated.findIndex(r => r.id === kw.id);
+          if (ri !== -1) {
+            updated[ri] = { ...updated[ri], rate: best.val.toFixed(2) };
+            usedRateIndices.add(best.ai); foundCount++; matchedIds.add(kw.id);
+            let cb = null, cbd = Infinity;
+            for (const b of allBps) { const d = Math.abs(b.idx - best.idx); if (d < cbd && d < 100) { cbd = d; cb = b; } }
+            if (cb) { const bv = parseInt(cb.val); if (!isNaN(bv)) updated[ri] = { ...updated[ri], bps: Math.abs(bv).toString(), direction: bv >= 0 ? "up" : "down" }; }
+            console.log("[OCR] Fallback:", kw.id, "=", best.val);
+          }
+        }
+      }
     }
 
     setRates(updated);

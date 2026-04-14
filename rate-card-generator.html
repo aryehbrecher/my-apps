@@ -51,56 +51,56 @@ body{font-family:'Inter',system-ui,sans-serif;background:#eef1f5;color:#0f172a;m
 .ocr-status.error{background:#fee2e2;color:#dc2626}
 .ocr-status.loading{background:#fefce8;color:#92400e}
 
-/* Rate Card — V3 Complete Redesign */
+/* Rate Card — V4 Premium Dark */
 .card-wrapper{width:420px}
-.rate-card{width:420px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(15,23,42,0.04),0 20px 40px -4px rgba(15,23,42,0.06);font-family:'Inter',system-ui,sans-serif;font-variant-numeric:tabular-nums}
-.card-header{background:#0c1829;padding:28px 28px 24px;position:relative;overflow:hidden}
-.card-header::before{content:"";position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle at top right,rgba(59,130,246,0.08) 0%,transparent 70%)}
-.card-header::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.2),transparent)}
-.card-brand{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+.rate-card{width:420px;background:#0f172a;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.25);font-family:'Inter',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.card-header{padding:24px 24px 0;position:relative}
+.card-header::before{content:none}
+.card-header::after{content:none}
+.card-brand{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
 .card-logo{display:flex;align-items:center;gap:10px;flex:1}
-.card-logo-icon{width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0}
+.card-logo-icon{width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0}
 .card-logo-icon img{width:100%;height:100%;object-fit:cover}
 .card-logo-text{display:flex;flex-direction:column}
-.card-logo-text .fm{font-size:15px;font-weight:800;color:#ffffff;letter-spacing:1px;line-height:1}
-.card-logo-text .sub{font-size:7px;font-weight:500;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
-.card-date{font-size:11px;color:rgba(255,255,255,0.35);font-weight:500;position:relative;z-index:1;text-align:right}
-.card-title{font-size:15px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:0.15em;text-transform:uppercase;position:relative;z-index:1;margin-top:20px}
+.card-logo-text .fm{font-size:14px;font-weight:800;color:#ffffff;letter-spacing:1px;line-height:1}
+.card-logo-text .sub{font-size:6.5px;font-weight:500;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.card-date{font-size:11px;color:rgba(255,255,255,0.4);font-weight:500;position:relative;z-index:1;text-align:right}
+.card-title{font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;position:relative;z-index:1;margin:20px 0 4px;padding:0 0 20px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .card-subtitle{display:none}
 .card-body{padding:0}
-.rate-row{display:flex;align-items:center;padding:18px 28px;gap:16px;background:#ffffff;border-bottom:1px solid #f1f5f9}
+.rate-row{display:flex;align-items:center;padding:16px 24px;gap:12px;background:transparent;border-bottom:1px solid rgba(255,255,255,0.06)}
 .rate-row:last-child{border-bottom:none}
-.rate-indicator{width:3px;height:36px;border-radius:2px;flex-shrink:0}
+.rate-indicator{width:3px;height:40px;border-radius:2px;flex-shrink:0}
 .rate-indicator.fixed30{background:#3b82f6}
 .rate-indicator.fixed15{background:#10b981}
 .rate-indicator.fha{background:#f59e0b}
-.rate-indicator.jumbo{background:#8b5cf6}
+.rate-indicator.jumbo{background:#a78bfa}
 .rate-icon{display:none}
-.rate-info{flex:1;display:flex;flex-direction:column;gap:2px}
-.rate-name{font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:0.06em;text-transform:uppercase}
-.rate-value-inline{font-size:26px;font-weight:700;color:#0f172a;letter-spacing:-0.03em;line-height:1}
+.rate-info{flex:1;display:flex;flex-direction:column;gap:1px}
+.rate-name{font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.05em;text-transform:uppercase}
+.rate-value-inline{font-size:28px;font-weight:700;color:#ffffff;letter-spacing:-0.03em;line-height:1.1}
 .rate-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-.rate-bps{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:3px;flex-shrink:0;letter-spacing:0.03em}
-.rate-bps.up{background:#fef2f2;color:#ef4444}
-.rate-bps.down{background:#ecfdf5;color:#059669}
+.rate-bps{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:3px;flex-shrink:0;letter-spacing:0.02em}
+.rate-bps.up{background:rgba(239,68,68,0.12);color:#f87171}
+.rate-bps.down{background:rgba(16,185,129,0.12);color:#34d399}
 .rate-bps .arrow{font-size:8px}
 .rate-value{display:none}
-.card-footer{padding:20px 28px 16px;background:#f8fafc;border-top:1px solid #f1f5f9}
+.card-footer{padding:16px 24px 12px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.06)}
 .card-contact{display:flex;align-items:center;gap:12px}
-.card-photo{width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 0 0 2px #ffffff,0 0 0 3px #e2e8f0}
+.card-photo{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,255,255,0.1)}
 .card-photo img{width:100%;height:100%;object-fit:cover}
 .card-contact-info{flex:1}
-.card-contact-name{font-size:13px;font-weight:700;color:#0f172a;letter-spacing:-0.01em}
-.card-contact-title{font-size:10px;color:#64748b;margin-top:1px;font-weight:400}
+.card-contact-name{font-size:13px;font-weight:600;color:#ffffff;letter-spacing:-0.01em}
+.card-contact-title{font-size:9.5px;color:rgba(255,255,255,0.4);margin-top:1px;font-weight:400}
 .card-contact-details{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
-.card-contact-detail{display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;font-weight:500}
+.card-contact-detail{display:flex;align-items:center;gap:4px;font-size:10px;color:rgba(255,255,255,0.6);font-weight:500}
 .card-contact-detail svg{width:10px;height:10px;fill:#3b82f6;flex-shrink:0}
-.card-bottom{display:flex;align-items:center;justify-content:space-between;padding:12px 28px;background:#ffffff;border-top:1px solid #f1f5f9}
-.card-source{font-size:9px;color:#cbd5e1}
+.card-bottom{display:flex;align-items:center;justify-content:space-between;padding:10px 24px 12px;background:transparent}
+.card-source{font-size:9px;color:rgba(255,255,255,0.25)}
 .card-ehl{display:flex;align-items:center;gap:4px}
-.card-ehl svg{width:12px;height:12px;opacity:0.3}
-.card-ehl span{font-size:7px;color:#cbd5e1;font-weight:500;text-transform:uppercase;line-height:1.1}
-.card-disclaimer{text-align:center;font-size:8px;color:#cbd5e1;padding:0 28px 16px;background:#ffffff}
+.card-ehl svg{width:13px;height:13px;opacity:0.35;fill:rgba(255,255,255,0.5)}
+.card-ehl span{font-size:7px;color:rgba(255,255,255,0.3);font-weight:500;text-transform:uppercase;line-height:1.1}
+.card-disclaimer{text-align:center;font-size:8px;color:rgba(255,255,255,0.25);padding:0 24px 16px;background:transparent}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1a2e;color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:all 0.3s;z-index:100;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 @media(max-width:860px){
@@ -236,9 +236,8 @@ function App() {
     const allText = lines.join(" ");
     console.log("[OCR debug] Text:", allText);
 
-    // Find rate patterns — broader matching:
-    // Tesseract often drops the decimal point: "6.39%" becomes "639%"
-    // So we need to handle: 6.39%, 639%, 6.39, 639
+    // Find ALL rate patterns — run every pattern, deduplicate by position
+    // Tesseract sometimes drops decimals: "6.39%" → "639%", but not always consistently
     const allRates = [];
     let m;
 
@@ -250,43 +249,39 @@ function App() {
     }
 
     // Pattern 2: 3-digit integer + % where OCR dropped the decimal (639% → 6.39%)
-    if (allRates.length < 2) {
-      const intPctPattern = /(?<!\d)(\d{3})\s*%/g;
-      while ((m = intPctPattern.exec(allText)) !== null) {
-        const raw = parseInt(m[1]);
-        // 200-1200 → insert decimal after first digit: 639 → 6.39
-        if (raw >= 200 && raw <= 1200) {
-          const val = raw / 100;
-          const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 5);
-          if (!isDup) allRates.push({ val, idx: m.index, source: "intpct" });
-        }
+    // ALWAYS run — Tesseract may drop decimal for some rates but not others
+    const intPctPattern = /(?<!\d)(\d{3})\s*%/g;
+    while ((m = intPctPattern.exec(allText)) !== null) {
+      const raw = parseInt(m[1]);
+      if (raw >= 200 && raw <= 1200) {
+        const val = raw / 100;
+        const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 8);
+        if (!isDup) allRates.push({ val, idx: m.index, source: "intpct" });
       }
     }
 
     // Pattern 3: decimal numbers without % sign (6.39 near a keyword)
-    if (allRates.length < 2) {
-      const decPattern = /(?<!\d)(\d{1,2}\.\d{2,3})(?!\d)/g;
-      while ((m = decPattern.exec(allText)) !== null) {
-        const val = parseFloat(m[1]);
-        if (val > 2 && val < 12) {
-          const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 5);
-          if (!isDup) allRates.push({ val, idx: m.index, source: "dec" });
-        }
+    const decPattern = /(?<!\d)(\d{1,2}\.\d{2,3})(?!\d)/g;
+    while ((m = decPattern.exec(allText)) !== null) {
+      const val = parseFloat(m[1]);
+      if (val > 2 && val < 12) {
+        const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 8);
+        if (!isDup) allRates.push({ val, idx: m.index, source: "dec" });
       }
     }
 
     // Pattern 4: 3-digit integers without % near loan keywords (639 → 6.39)
-    if (allRates.length < 2) {
-      const intPattern = /(?<!\d)(\d{3})(?!\d)/g;
-      while ((m = intPattern.exec(allText)) !== null) {
-        const raw = parseInt(m[1]);
-        if (raw >= 200 && raw <= 1200) {
-          const val = raw / 100;
-          const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 10);
-          if (!isDup) allRates.push({ val, idx: m.index, source: "int" });
-        }
+    const intPattern = /(?<!\d)(\d{3})(?!\d)/g;
+    while ((m = intPattern.exec(allText)) !== null) {
+      const raw = parseInt(m[1]);
+      if (raw >= 200 && raw <= 1200) {
+        const val = raw / 100;
+        const isDup = allRates.some(r => Math.abs(r.idx - m.index) < 10);
+        if (!isDup) allRates.push({ val, idx: m.index, source: "int" });
       }
     }
+
+    console.log("[OCR debug] Found rates:", JSON.stringify(allRates));
 
     // Find bps/change patterns
     const allBps = [];
@@ -308,7 +303,7 @@ function App() {
 
     // Keywords — expanded for OCR misreads and MortgageNewsDaily format
     const keywords = [
-      { id: "fixed30", patterns: ["30 yr. fixed", "30 yr.fixed", "30 yr fixed", "30.yr. fixed", "30.yr.fixed", "30-yr fixed", "30-year fixed", "30 year fixed", "30yr fixed"] },
+      { id: "fixed30", patterns: ["30 yr. fixed", "30 yr.fixed", "30 yr fixed", "30.yr. fixed", "30.yr.fixed", "30-yr fixed", "30-year fixed", "30 year fixed", "30yr fixed", "30yr. fixed", "30 yr,fixed", "30 yr, fixed", "30 yrfixed"] },
       { id: "fixed15", patterns: ["15 yr. fixed", "15 yr.fixed", "15 yr fixed", "15.yr. fixed", "15.yr.fixed", "15-yr fixed", "15-year fixed", "15 year fixed", "15yr fixed", "15.yr", "15-yr", "15 yr", "15yr"] },
       { id: "fha",     patterns: ["30 yr.fha", "30 yr. fha", "30 yr fha", "yr.fha", "yr. fha", "fha", "f.h.a"] },
       { id: "jumbo",   patterns: ["30 yr. jumbo", "30 yr.jumbo", "30 yr jumbo", "yr. jumbo", "yr.jumbo", "jumbo"] },

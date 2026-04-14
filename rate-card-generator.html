@@ -309,11 +309,13 @@ function App() {
     }
 
     // Keywords — expanded for OCR misreads and MortgageNewsDaily format
+    // IMPORTANT: fixed30 is LAST — fha/jumbo/fixed15 claim their rates first,
+    // then fixed30 can safely use broad "30 yr" patterns without collision
     const keywords = [
-      { id: "fixed30", patterns: ["30 yr. fixed", "30 yr.fixed", "30 yr fixed", "30.yr. fixed", "30.yr.fixed", "30-yr fixed", "30-year fixed", "30 year fixed", "30yr fixed", "30yr. fixed", "30 yr,fixed", "30 yr, fixed", "30 yrfixed", "30 yr. fi", "30 yr.fi", "30yr.fi", "30 yr fi", "30yr fi"] },
-      { id: "fixed15", patterns: ["15 yr. fixed", "15 yr.fixed", "15 yr fixed", "15.yr. fixed", "15.yr.fixed", "15-yr fixed", "15-year fixed", "15 year fixed", "15yr fixed", "15.yr", "15-yr", "15 yr", "15yr"] },
       { id: "fha",     patterns: ["30 yr.fha", "30 yr. fha", "30 yr fha", "yr.fha", "yr. fha", "fha", "f.h.a"] },
       { id: "jumbo",   patterns: ["30 yr. jumbo", "30 yr.jumbo", "30 yr jumbo", "yr. jumbo", "yr.jumbo", "jumbo"] },
+      { id: "fixed15", patterns: ["15 yr. fixed", "15 yr.fixed", "15 yr fixed", "15.yr. fixed", "15.yr.fixed", "15-yr fixed", "15-year fixed", "15 year fixed", "15yr fixed", "15.yr", "15-yr", "15 yr", "15yr"] },
+      { id: "fixed30", patterns: ["30 yr. fixed", "30 yr.fixed", "30 yr fixed", "30.yr. fixed", "30.yr.fixed", "30-yr fixed", "30-year fixed", "30 year fixed", "30yr fixed", "30yr. fixed", "30 yr,fixed", "30 yr, fixed", "30 yrfixed", "30 yr. fi", "30 yr.fi", "30yr.fi", "30 yr fi", "30yr fi", "30 yr.", "30 yr", "30yr.", "30yr"] },
     ];
 
     let updated = [...rates];
@@ -367,19 +369,21 @@ function App() {
       }
     });
 
-    // Second pass: if fixed30 is still empty but others matched, assign the leftover rate
-    // This handles Tesseract mangling "Fixed" — 30yr fixed is typically the first line
+    // Second pass: if fixed30 is still empty but others matched, assign by position
+    // 30yr fixed is ALWAYS the first rate on MortgageNewsDaily — find the unused rate
+    // closest to the earliest matched keyword position (i.e. near top of page)
     if (foundCount > 0 && !updated.find(r => r.id === "fixed30")?.rate) {
-      // fixed30 didn't match — find unused rates
       const unusedRates = allRates.filter((_, i) => !usedRates.has(i)).sort((a, b) => a.idx - b.idx);
-      if (unusedRates.length > 0) {
+      // Filter to rates that appear BEFORE the first matched rate (30yr fixed is always first)
+      const firstMatchedIdx = Math.min(...[...usedRates].map(i => allRates[i].idx));
+      const beforeRates = unusedRates.filter(r => r.idx < firstMatchedIdx);
+      const bestRate = beforeRates.length > 0 ? beforeRates[0] : (unusedRates.length > 0 ? unusedRates[0] : null);
+      if (bestRate) {
         const fix30Idx = updated.findIndex(r => r.id === "fixed30");
         if (fix30Idx !== -1) {
-          const bestRate = unusedRates[0]; // first unused rate (earliest in text = 30yr fixed)
           updated[fix30Idx] = { ...updated[fix30Idx], rate: bestRate.val.toFixed(2) };
           foundCount++;
-          console.log("[OCR debug] Fixed30 fallback: assigned", bestRate.val, "from position", bestRate.idx);
-          // Try to find bps for this rate
+          console.log("[OCR debug] Fixed30 fallback: assigned", bestRate.val, "from position", bestRate.idx, "(before first match at", firstMatchedIdx, ")");
           let closestBps = null;
           let bpsDist = Infinity;
           for (const b of allBps) {

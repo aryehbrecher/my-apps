@@ -466,12 +466,12 @@ function App() {
     if (!cardRef.current) return;
     try {
       const canvas = await html2canvas(cardRef.current, {
-        scale: 3, useCORS: true, backgroundColor: null, logging: false,
+        scale: 3, useCORS: true, backgroundColor: "#0a1222", logging: false,
         width: cardRef.current.offsetWidth, height: cardRef.current.offsetHeight,
       });
       const link = document.createElement("a");
-      link.download = "rate-card-" + new Date().toISOString().slice(0, 10) + ".png";
-      link.href = canvas.toDataURL("image/png");
+      link.download = "rate-card-" + new Date().toISOString().slice(0, 10) + ".jpg";
+      link.href = canvas.toDataURL("image/jpeg", 0.95);
       link.click();
       showToast("Card downloaded!");
     } catch (err) { showToast("Download failed — try again"); }
@@ -481,15 +481,15 @@ function App() {
     if (!cardRef.current || !navigator.share) { downloadCard(); return; }
     try {
       const canvas = await html2canvas(cardRef.current, {
-        scale: 3, useCORS: true, backgroundColor: null, logging: false,
+        scale: 3, useCORS: true, backgroundColor: "#0a1222", logging: false,
         width: cardRef.current.offsetWidth, height: cardRef.current.offsetHeight,
       });
       canvas.toBlob(async (blob) => {
         if (!blob) return;
-        const file = new File([blob], "rate-card.png", { type: "image/png" });
+        const file = new File([blob], "rate-card.jpg", { type: "image/jpeg" });
         await navigator.share({ title: "Today's Average Rates", files: [file] });
         showToast("Shared!");
-      }, "image/png");
+      }, "image/jpeg", 0.95);
     } catch (err) { if (err.name !== "AbortError") downloadCard(); }
   }, [downloadCard]);
 
@@ -564,7 +564,7 @@ function App() {
         <div className="btn-row">
           <button className="btn btn-primary" onClick={downloadCard}>
             <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-            Download PNG
+            Download JPG
           </button>
           <button className="btn btn-secondary" onClick={shareCard} style={{flex:"0 0 auto",padding:"12px 18px"}}>
             <svg width="16" height="16" fill="#1e3a5f" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0018 8c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81A2.99 2.99 0 006 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>

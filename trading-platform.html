@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeOps Command Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg-primary:#0a0e17;--bg-secondary:#111827;--bg-card:#1a2332;--bg-card-hover:#1f2b3d;
+--border:#2a3548;--border-bright:#3b4a61;
+--text-primary:#e5e7eb;--text-secondary:#9ca3af;--text-muted:#6b7280;
+--accent-green:#10b981;--accent-red:#ef4444;--accent-blue:#3b82f6;
+--accent-yellow:#f59e0b;--accent-purple:#8b5cf6;--accent-cyan:#06b6d4;
+--accent-green-bg:rgba(16,185,129,.1);--accent-red-bg:rgba(239,68,68,.1);
+--accent-blue-bg:rgba(59,130,246,.1);--accent-yellow-bg:rgba(245,158,11,.1);
+--accent-purple-bg:rgba(139,92,246,.1);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent-blue);text-decoration:none}
+
+/* Header */
+.header{background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:16px}
+.logo{font-size:20px;font-weight:700;color:var(--accent-cyan);letter-spacing:-0.5px}
+.logo span{color:var(--text-muted);font-weight:400}
+.market-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);background:var(--bg-card);padding:4px 12px;border-radius:20px;border:1px solid var(--border)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-red)}
+.status-dot.open{background:var(--accent-green);box-shadow:0 0 8px rgba(16,185,129,.5)}
+.header-right{display:flex;align-items:center;gap:12px}
+.last-scan{font-size:11px;color:var(--text-muted)}
+.btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.btn:hover{border-color:var(--accent-blue);background:var(--accent-blue-bg)}
+.btn-primary{background:var(--accent-blue);border-color:var(--accent-blue);color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{border-color:var(--accent-red);color:var(--accent-red)}
+.btn-danger:hover{background:var(--accent-red-bg)}
+.btn-success{border-color:var(--accent-green);color:var(--accent-green)}
+.btn-success:hover{background:var(--accent-green-bg)}
+
+/* Layout */
+.main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px;max-width:1800px;margin:0 auto}
+.full-width{grid-column:1/-1}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+.card-title .icon{font-size:16px}
+.card-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600}
+.card-body{padding:18px}
+
+/* Portfolio Overview */
+.portfolio-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.stat-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:700}
+.stat-change{font-size:12px;margin-top:4px;display:flex;align-items:center;gap:4px}
+.green{color:var(--accent-green)}.red{color:var(--accent-red)}.blue{color:var(--accent-blue)}.yellow{color:var(--accent-yellow)}.purple{color:var(--accent-purple)}.cyan{color:var(--accent-cyan)}
+
+/* Positions Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-weight:600}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid rgba(42,53,72,.5)}
+tr:hover{background:var(--bg-card-hover)}
+.ticker{font-weight:700;color:var(--accent-cyan)}
+.tag{font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;text-transform:uppercase}
+.tag-buy{background:var(--accent-green-bg);color:var(--accent-green)}
+.tag-sell{background:var(--accent-red-bg);color:var(--accent-red)}
+.tag-hold{background:var(--accent-yellow-bg);color:var(--accent-yellow)}
+.tag-swing{background:var(--accent-purple-bg);color:var(--accent-purple)}
+.tag-long{background:var(--accent-blue-bg);color:var(--accent-blue)}
+
+/* Agent Panels */
+.agent-tabs{display:flex;gap:0;border-bottom:1px solid var(--border)}
+.agent-tab{padding:10px 18px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.agent-tab:hover{color:var(--text-primary)}
+.agent-tab.active{color:var(--accent-cyan);border-bottom-color:var(--accent-cyan)}
+.agent-tab .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.agent-content{display:none;padding:18px}
+.agent-content.active{display:block}
+.agent-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.agent-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.agent-name{font-weight:600;font-size:15px}
+.agent-role{font-size:12px;color:var(--text-muted)}
+.agent-output{background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:var(--text-secondary);white-space:pre-wrap;max-height:400px;overflow-y:auto}
+.agent-output h4{color:var(--text-primary);margin:12px 0 6px;font-size:14px}
+.agent-output h4:first-child{margin-top:0}
+.agent-output .highlight{color:var(--accent-cyan);font-weight:600}
+.agent-output .bullish{color:var(--accent-green);font-weight:600}
+.agent-output .bearish{color:var(--accent-red);font-weight:600}
+
+/* Decision Panel */
+.decision-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.decision-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px}
+.decision-card .ticker-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.decision-card .ticker-name{font-weight:700;font-size:16px;color:var(--accent-cyan)}
+.decision-card .verdict{font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px}
+.verdict-buy{background:var(--accent-green-bg);color:var(--accent-green)}
+.verdict-sell{background:var(--accent-red-bg);color:var(--accent-red)}
+.verdict-hold{background:var(--accent-yellow-bg);color:var(--accent-yellow)}
+.decision-card .targets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.target-item{text-align:center}
+.target-label{font-size:10px;color:var(--text-muted);text-transform:uppercase}
+.target-value{font-size:14px;font-weight:600}
+.confidence-bar{height:4px;background:var(--border);border-radius:2px;margin-top:10px;overflow:hidden}
+.confidence-fill{height:100%;border-radius:2px;transition:width .5s}
+
+/* Trade Entry Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:480px;max-width:90vw;max-height:90vh;overflow-y:auto}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer}
+.modal-body{padding:20px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block}
+.form-input{width:100%;padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:14px;outline:none}
+.form-input:focus{border-color:var(--accent-blue)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+select.form-input{cursor:pointer}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* Trade History */
+.history-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(42,53,72,.3)}
+.history-item:last-child{border-bottom:none}
+.history-left{display:flex;align-items:center;gap:10px}
+.history-action{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.history-action.buy{background:var(--accent-green-bg);color:var(--accent-green)}
+.history-action.sell{background:var(--accent-red-bg);color:var(--accent-red)}
+.history-details .ticker{font-size:14px}.history-details .meta{font-size:11px;color:var(--text-muted)}
+.history-right{text-align:right}
+.history-right .amount{font-size:14px;font-weight:600}
+.history-right .date{font-size:11px;color:var(--text-muted)}
+
+/* Chart container */
+.chart-container{position:relative;height:200px;margin-top:10px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg-secondary)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Responsive */
+@media(max-width:1200px){.main{grid-template-columns:1fr}.portfolio-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:768px){.main{padding:12px}.portfolio-grid{grid-template-columns:repeat(2,1fr)}.header{padding:10px 16px;flex-wrap:wrap;gap:8px}.decision-grid{grid-template-columns:1fr}}
+
+/* Notifications */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg-card);border:1px solid var(--accent-green);border-radius:10px;padding:12px 20px;z-index:300;animation:slideIn .3s;font-size:13px;max-width:350px}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.empty-state .icon{font-size:32px;margin-bottom:10px}
+.empty-state p{font-size:13px;margin-bottom:16px}
+
+/* Pulse animation for live */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 2s infinite}
+
+/* Analysis timestamp */
+.analysis-time{font-size:11px;color:var(--text-muted);padding:8px 18px;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+
+/* Sync UI */
+.sync-status{display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 10px;border-radius:16px;border:1px solid var(--border);background:var(--bg-card);cursor:pointer;transition:all .2s}
+.sync-status:hover{border-color:var(--accent-cyan)}
+.sync-status .sync-icon{font-size:13px;transition:transform .5s}
+.sync-status.syncing .sync-icon{animation:spin 1s linear infinite}
+.sync-status.synced{border-color:var(--accent-green)}
+.sync-status.error{border-color:var(--accent-red)}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.sync-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center}
+.sync-modal.active{display:flex}
+.sync-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:420px;width:90%}
+.sync-panel h3{font-size:16px;margin-bottom:16px;color:var(--accent-cyan)}
+.sync-panel p{font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5}
+.sync-id-display{background:var(--bg-primary);border:1px solid var(--border-bright);border-radius:8px;padding:12px;font-family:monospace;font-size:15px;text-align:center;color:var(--accent-cyan);letter-spacing:1px;margin:12px 0;user-select:all;cursor:pointer}
+.sync-input{width:100%;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text-primary);font-size:14px;font-family:monospace}
+.sync-input:focus{outline:none;border-color:var(--accent-cyan)}
+.sync-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.sync-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">TradeOps <span>Command Center</span></div>
+    <div class="market-status">
+      <div class="status-dot" id="marketDot"></div>
+      <span id="marketStatusText">Market Closed</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="last-scan" id="lastScan">Last analysis: --</div>
+    <div class="sync-status" id="syncBtn" onclick="openSyncModal()" title="Cloud Sync">
+      <span class="sync-icon">☁️</span>
+      <span id="syncLabel">Not synced</span>
+    </div>
+    <button class="btn" onclick="openModal('cash')">+ Update Cash</button>
+    <button class="btn btn-primary" onclick="openModal('trade')">+ New Trade</button>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main">
+
+  <!-- Portfolio Overview -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">📊</span> Portfolio Overview</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="exportData()">Export</button>
+        <button class="btn btn-sm btn-danger" onclick="resetPortfolio()">Reset</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="portfolio-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Value</div>
+          <div class="stat-value" id="totalValue">$0.00</div>
+          <div class="stat-change" id="totalChange"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cash Available</div>
+          <div class="stat-value blue" id="cashAvail">$0.00</div>
+          <div class="stat-change"><span class="blue">Ready to deploy</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Invested</div>
+          <div class="stat-value cyan" id="investedVal">$0.00</div>
+          <div class="stat-change" id="posCount"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total P&L</div>
+          <div class="stat-value" id="totalPL">$0.00</div>
+          <div class="stat-change" id="totalPLPct"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" id="winRate">--%</div>
+          <div class="stat-change" id="winLoss"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Positions -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">📈</span> Active Positions</div>
+      <span class="card-badge" style="background:var(--accent-blue-bg);color:var(--accent-blue)" id="positionCount">0 positions</span>
+    </div>
+    <div class="card-body" id="positionsBody">
+      <div class="empty-state" id="emptyPositions">
+        <div class="icon">📭</div>
+        <p>No active positions. Add your first trade to get started.</p>
+        <button class="btn btn-primary" onclick="openModal('trade')">+ New Trade</button>
+      </div>
+      <div class="table-wrap" id="positionsTable" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Type</th>
+              <th>Shares</th>
+              <th>Avg Cost</th>
+              <th>Current</th>
+              <th>Mkt Value</th>
+              <th>P&L</th>
+              <th>P&L %</th>
+              <th>Weight</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="positionsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent Analysis Panel -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">🤖</span> Multi-Agent Analysis War Room</div>
+      <button class="btn btn-sm" onclick="runManualAnalysis()">Request Fresh Analysis</button>
+    </div>
+    <div class="analysis-time" id="analysisTime">
+      <span class="pulse" style="color:var(--accent-cyan)">●</span>
+      Analysis will appear here when the scheduled scan runs. Click "Request Fresh Analysis" to trigger one now.
+    </div>
+    <div class="agent-tabs" id="agentTabs">
+      <div class="agent-tab active" onclick="switchAgent('research')">
+        <span class="dot" style="background:var(--accent-blue)"></span>Research Agent
+      </div>
+      <div class="agent-tab" onclick="switchAgent('data')">
+        <span class="dot" style="background:var(--accent-cyan)"></span>Data Agent
+      </div>
+      <div class="agent-tab" onclick="switchAgent('bull')">
+        <span class="dot" style="background:var(--accent-green)"></span>Bull Case
+      </div>
+      <div class="agent-tab" onclick="switchAgent('bear')">
+        <span class="dot" style="background:var(--accent-red)"></span>Bear Case
+      </div>
+      <div class="agent-tab" onclick="switchAgent('decision')">
+        <span class="dot" style="background:var(--accent-yellow)"></span>Decision Agent
+      </div>
+    </div>
+
+    <!-- Research Agent -->
+    <div class="agent-content active" id="agent-research">
+      <div class="agent-header">
+        <div class="agent-icon" style="background:var(--accent-blue-bg)">🔍</div>
+        <div>
+          <div class="agent-name">Research Agent</div>
+          <div class="agent-role">Market news, sector analysis, catalyst identification</div>
+        </div>
+      </div>
+      <div class="agent-output" id="research-output">Waiting for analysis data...
+
+The Research Agent scans news sources, earnings calendars, sector rotations, and macro events to identify opportunities. It runs at each scheduled scan (pre-market, mid-day, close).</div>
+    </div>
+
+    <!-- Data Agent -->
+    <div class="agent-content" id="agent-data">
+      <div class="agent-header">
+        <div class="agent-icon" style="background:rgba(6,182,212,.1)">📊</div>
+        <div>
+          <div class="agent-name">Data Agent</div>
+          <div class="agent-role">Technical indicators, price action, volume analysis, fundamentals</div>
+        </div>
+      </div>
+      <div class="agent-output" id="data-output">Waiting for analysis data...
+
+The Data Agent pulls technical indicators (RSI, MACD, moving averages), volume patterns, support/resistance levels, P/E ratios, and earnings data.</div>
+    </div>
+
+    <!-- Bull Agent -->
+    <div class="agent-content" id="agent-bull">
+      <div class="agent-header">
+        <div class="agent-icon" style="background:var(--accent-green-bg)">🐂</div>
+        <div>
+          <div class="agent-name">Bull Case Agent</div>
+          <div class="agent-role">Makes the strongest case FOR each trade opportunity</div>
+        </div>
+      </div>
+      <div class="agent-output" id="bull-output">Waiting for analysis data...
+
+The Bull Agent takes each opportunity identified and builds the strongest possible case for why you should take the trade. It's intentionally optimistic — that's its job.</div>
+    </div>
+
+    <!-- Bear Agent -->
+    <div class="agent-content" id="agent-bear">
+      <div class="agent-header">
+        <div class="agent-icon" style="background:var(--accent-red-bg)">🐻</div>
+        <div>
+          <div class="agent-name">Bear Case Agent</div>
+          <div class="agent-role">Makes the strongest case AGAINST each trade — finds every risk</div>
+        </div>
+      </div>
+      <div class="agent-output" id="bear-output">Waiting for analysis data...
+
+The Bear Agent stress-tests every opportunity. It finds the risks, the downside scenarios, the things the Bull Agent doesn't want you to see. If an idea survives the Bear, it's battle-tested.</div>
+    </div>
+
+    <!-- Decision Agent -->
+    <div class="agent-content" id="agent-decision">
+      <div class="agent-header">
+        <div class="agent-icon" style="background:var(--accent-yellow-bg)">⚖️</div>
+        <div>
+          <div class="agent-name">Decision Agent</div>
+          <div class="agent-role">Final verdict — synthesizes all agents, sets price targets and position sizes</div>
+        </div>
+      </div>
+      <div class="agent-output" id="decision-text-output">Waiting for analysis data...
+
+The Decision Agent weighs the Research, Data, Bull, and Bear inputs. It issues the final BUY / SELL / HOLD verdict with specific entry prices, stop losses, price targets, and recommended position sizes based on your available capital.</div>
+      <div id="decisionCards" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- Allocation Chart -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">🎯</span> Allocation</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container">
+        <canvas id="allocChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- P&L Chart -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">💰</span> P&L History</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container">
+        <canvas id="plChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade History -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">📋</span> Trade History</div>
+      <span class="card-badge" style="background:var(--accent-purple-bg);color:var(--accent-purple)" id="tradeCount">0 trades</span>
+    </div>
+    <div class="card-body" id="historyBody">
+      <div class="empty-state" id="emptyHistory">
+        <div class="icon">📝</div>
+        <p>No trades recorded yet.</p>
+      </div>
+      <div id="historyList" style="display:none"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SYNC MODAL -->
+<div class="sync-modal" id="syncModal">
+  <div class="sync-panel">
+    <h3>☁️ Cloud Sync</h3>
+    <div id="syncSetup">
+      <p>Sync your portfolio across all devices. Your data is stored in the cloud and updates automatically.</p>
+      <div id="syncConnected" style="display:none">
+        <p style="color:var(--accent-green);font-weight:600">✓ Connected</p>
+        <p>Your Sync ID (save this — use it on other devices):</p>
+        <div class="sync-id-display" id="syncIdDisplay" onclick="copySyncId()">--</div>
+        <p style="font-size:11px;color:var(--text-muted)">Click to copy. Last synced: <span id="lastSyncTime">never</span></p>
+        <hr class="sync-divider">
+        <div class="sync-actions">
+          <button class="btn btn-sm" onclick="forceSync()">Force Sync Now</button>
+          <button class="btn btn-sm btn-danger" onclick="disconnectSync()">Disconnect</button>
+          <button class="btn btn-sm" onclick="closeSyncModal()">Close</button>
+        </div>
+      </div>
+      <div id="syncNew">
+        <button class="btn btn-primary" onclick="createSyncBin()" id="createSyncBtn" style="width:100%;margin-bottom:12px">Create New Sync (new portfolio)</button>
+        <hr class="sync-divider">
+        <p>Or connect to an existing portfolio from another device:</p>
+        <input type="text" class="sync-input" id="syncIdInput" placeholder="Paste your Sync ID here...">
+        <div class="sync-actions">
+          <button class="btn btn-sm" onclick="closeSyncModal()">Cancel</button>
+          <button class="btn btn-sm btn-primary" onclick="connectSyncBin()">Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADE MODAL -->
+<div class="modal-overlay" id="tradeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">New Trade</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+// ========== STATE ==========
+const STATE_KEY = 'tradeops_state';
+const SYNC_KEY = 'tradeops_sync_id';
+let state = loadState();
+let syncId = localStorage.getItem(SYNC_KEY) || null;
+let syncInFlight = false;
+let syncDebounceTimer = null;
+
+function defaultState() {
+  return {
+    cash: 0,
+    positions: [],
+    trades: [],
+    analysis: null,
+    plHistory: [],
+    version: 2,
+    lastModified: Date.now()
+  };
+}
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(STATE_KEY);
+    if (s) {
+      const parsed = JSON.parse(s);
+      if (!parsed.version || parsed.version < 2) {
+        parsed.plHistory = parsed.plHistory || [];
+        parsed.version = 2;
+      }
+      parsed.lastModified = parsed.lastModified || Date.now();
+      return parsed;
+    }
+  } catch(e) {}
+  return defaultState();
+}
+
+function saveState() {
+  state.lastModified = Date.now();
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  debouncedCloudSync();
+}
+
+// ========== CLOUD SYNC (jsonblob.com) ==========
+const BLOB_API = 'https://jsonblob.com/api/jsonBlob';
+
+function updateSyncUI(status, label) {
+  const btn = document.getElementById('syncBtn');
+  const lbl = document.getElementById('syncLabel');
+  btn.className = 'sync-status ' + (status || '');
+  lbl.textContent = label || 'Not synced';
+}
+
+function initSync() {
+  if (syncId) {
+    updateSyncUI('synced', 'Synced');
+    pullFromCloud();
+  } else {
+    updateSyncUI('', 'Not synced');
+  }
+}
+
+function debouncedCloudSync() {
+  if (!syncId) return;
+  clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(() => pushToCloud(), 1500);
+}
+
+async function pushToCloud() {
+  if (!syncId || syncInFlight) return;
+  syncInFlight = true;
+  updateSyncUI('syncing', 'Syncing...');
+  try {
+    const payload = { ...state };
+    delete payload.analysis; // analysis comes from analysis.json, don't sync it
+    const res = await fetch(BLOB_API + '/' + syncId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Sync failed: ' + res.status);
+    updateSyncUI('synced', 'Synced');
+    document.getElementById('lastSyncTime').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error('Cloud sync push error:', e);
+    updateSyncUI('error', 'Sync error');
+  } finally {
+    syncInFlight = false;
+  }
+}
+
+async function pullFromCloud() {
+  if (!syncId) return;
+  updateSyncUI('syncing', 'Loading...');
+  try {
+    const res = await fetch(BLOB_API + '/' + syncId, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Pull failed: ' + res.status);
+    const cloud = await res.json();
+    if (cloud && cloud.version) {
+      const cloudTime = cloud.lastModified || 0;
+      const localTime = state.lastModified || 0;
+      if (cloudTime > localTime) {
+        const localAnalysis = state.analysis;
+        Object.assign(state, cloud);
+        state.analysis = localAnalysis;
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        render();
+        showToast('Updated from cloud');
+      }
+    }
+    updateSyncUI('synced', 'Synced');
+    document.getElementById('lastSyncTime').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error('Cloud sync pull error:', e);
+    updateSyncUI('error', 'Sync error');
+  }
+}
+
+async function forceSync() {
+  await pushToCloud();
+  showToast('Force synced to cloud');
+}
+
+function openSyncModal() {
+  const modal = document.getElementById('syncModal');
+  modal.classList.add('active');
+  if (syncId) {
+    document.getElementById('syncConnected').style.display = 'block';
+    document.getElementById('syncNew').style.display = 'none';
+    document.getElementById('syncIdDisplay').textContent = syncId;
+  } else {
+    document.getElementById('syncConnected').style.display = 'none';
+    document.getElementById('syncNew').style.display = 'block';
+  }
+}
+
+function closeSyncModal() {
+  document.getElementById('syncModal').classList.remove('active');
+}
+
+function copySyncId() {
+  if (syncId) {
+    navigator.clipboard.writeText(syncId).then(() => showToast('Sync ID copied!')).catch(() => {});
+  }
+}
+
+async function createSyncBin() {
+  const btn = document.getElementById('createSyncBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+  try {
+    const payload = { ...state };
+    delete payload.analysis;
+    const res = await fetch(BLOB_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to create sync: ' + res.status);
+    // jsonblob returns the blob URL in the Location header
+    const location = res.headers.get('Location') || '';
+    let id = location.split('/').pop();
+    if (!id) {
+      // Fallback: try to get from response URL
+      const url = res.url || '';
+      id = url.split('/').pop();
+    }
+    if (!id) throw new Error('Could not get sync ID from response');
+    syncId = id;
+    localStorage.setItem(SYNC_KEY, syncId);
+    updateSyncUI('synced', 'Synced');
+    document.getElementById('syncConnected').style.display = 'block';
+    document.getElementById('syncNew').style.display = 'none';
+    document.getElementById('syncIdDisplay').textContent = syncId;
+    showToast('Cloud sync created!');
+  } catch(e) {
+    console.error('Create sync error:', e);
+    showToast('Failed to create sync. Try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create New Sync (new portfolio)';
+  }
+}
+
+async function connectSyncBin() {
+  const input = document.getElementById('syncIdInput').value.trim();
+  if (!input) return showToast('Enter a Sync ID');
+  // Handle full URLs or just the ID
+  let id = input;
+  if (id.includes('jsonblob.com')) id = id.split('/').pop();
+  id = id.replace(/[^a-zA-Z0-9-]/g, '');
+  if (!id) return showToast('Invalid Sync ID');
+
+  try {
+    updateSyncUI('syncing', 'Connecting...');
+    const res = await fetch(BLOB_API + '/' + id, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Invalid ID');
+    const data = await res.json();
+    if (!data || !data.version) throw new Error('Not a TradeOps sync');
+
+    syncId = id;
+    localStorage.setItem(SYNC_KEY, syncId);
+
+    const localAnalysis = state.analysis;
+    Object.assign(state, data);
+    state.analysis = localAnalysis;
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    render();
+
+    updateSyncUI('synced', 'Synced');
+    document.getElementById('syncConnected').style.display = 'block';
+    document.getElementById('syncNew').style.display = 'none';
+    document.getElementById('syncIdDisplay').textContent = syncId;
+    showToast('Connected! Portfolio loaded from cloud.');
+  } catch(e) {
+    console.error('Connect error:', e);
+    updateSyncUI('error', 'Failed');
+    showToast('Could not connect — check the Sync ID');
+  }
+}
+
+function disconnectSync() {
+  if (confirm('Disconnect cloud sync? Your local data stays, but changes won\'t sync anymore.')) {
+    syncId = null;
+    localStorage.removeItem(SYNC_KEY);
+    updateSyncUI('', 'Not synced');
+    document.getElementById('syncConnected').style.display = 'none';
+    document.getElementById('syncNew').style.display = 'block';
+    showToast('Sync disconnected');
+  }
+}
+
+// ========== MARKET STATUS ==========
+function updateMarketStatus() {
+  const now = new Date();
+  const et = new Date(now.toLocaleString('en-US', {timeZone:'America/New_York'}));
+  const day = et.getDay();
+  const h = et.getHours(), m = et.getMinutes();
+  const mins = h*60+m;
+  const isWeekday = day > 0 && day < 6;
+  const isOpen = isWeekday && mins >= 570 && mins < 960; // 9:30am-4pm ET
+  const dot = document.getElementById('marketDot');
+  const text = document.getElementById('marketStatusText');
+  if (isOpen) {
+    dot.className = 'status-dot open';
+    text.textContent = 'Market Open';
+  } else if (isWeekday && mins >= 540 && mins < 570) {
+    dot.className = 'status-dot';
+    dot.style.background = 'var(--accent-yellow)';
+    text.textContent = 'Pre-Market';
+  } else {
+    dot.className = 'status-dot';
+    text.textContent = 'Market Closed';
+  }
+}
+updateMarketStatus();
+setInterval(updateMarketStatus, 60000);
+
+// ========== MODALS ==========
+function openModal(type) {
+  const modal = document.getElementById('tradeModal');
+  const body = document.getElementById('modalBody');
+  const footer = document.getElementById('modalFooter');
+  const title = document.getElementById('modalTitle');
+
+  if (type === 'cash') {
+    title.textContent = 'Update Cash Balance';
+    body.innerHTML = `
+      <div class="form-group">
+        <label class="form-label">Available Cash ($)</label>
+        <input type="number" class="form-input" id="cashInput" value="${state.cash}" step="0.01" placeholder="Enter your available trading cash">
+      </div>
+      <p style="font-size:12px;color:var(--text-muted)">This is the cash you have available to trade with today. Your positions are tracked separately.</p>
+    `;
+    footer.innerHTML = `
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="updateCash()">Update Cash</button>
+    `;
+  } else if (type === 'trade') {
+    title.textContent = 'Log New Trade';
+    body.innerHTML = `
+      <div class="form-group">
+        <label class="form-label">Action</label>
+        <select class="form-input" id="tradeAction">
+          <option value="BUY">BUY</option>
+          <option value="SELL">SELL</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ticker Symbol</label>
+        <input type="text" class="form-input" id="tradeTicker" placeholder="e.g. AAPL" style="text-transform:uppercase">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Shares</label>
+          <input type="number" class="form-input" id="tradeShares" placeholder="100" step="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price per Share ($)</label>
+          <input type="number" class="form-input" id="tradePrice" placeholder="150.00" step="0.01">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Trade Type</label>
+        <select class="form-input" id="tradeType">
+          <option value="swing">Swing Trade</option>
+          <option value="long">Long Hold</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <input type="text" class="form-input" id="tradeNotes" placeholder="Reason for trade...">
+      </div>
+    `;
+    footer.innerHTML = `
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitTrade()">Log Trade</button>
+    `;
+  } else if (type === 'sell') {
+    // handled inline
+  }
+  modal.classList.add('active');
+}
+
+function openSellModal(ticker) {
+  const pos = state.positions.find(p => p.ticker === ticker);
+  if (!pos) return;
+  const modal = document.getElementById('tradeModal');
+  const body = document.getElementById('modalBody');
+  const footer = document.getElementById('modalFooter');
+  const title = document.getElementById('modalTitle');
+  title.textContent = `Sell ${ticker}`;
+  body.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Current Position: ${pos.shares} shares @ $${pos.avgCost.toFixed(2)}</label>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Shares to Sell</label>
+        <input type="number" class="form-input" id="sellShares" value="${pos.shares}" max="${pos.shares}" step="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sell Price ($)</label>
+        <input type="number" class="form-input" id="sellPrice" placeholder="Current price" step="0.01">
+      </div>
+    </div>
+  `;
+  footer.innerHTML = `
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-danger" onclick="executeSell('${ticker}')">Sell</button>
+  `;
+  modal.classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('tradeModal').classList.remove('active');
+}
+
+// ========== ACTIONS ==========
+function updateCash() {
+  const val = parseFloat(document.getElementById('cashInput').value) || 0;
+  state.cash = val;
+  saveState();
+  render();
+  closeModal();
+  showToast('Cash balance updated to $' + val.toLocaleString('en-US', {minimumFractionDigits:2}));
+}
+
+function submitTrade() {
+  const action = document.getElementById('tradeAction').value;
+  const ticker = document.getElementById('tradeTicker').value.toUpperCase().trim();
+  const shares = parseInt(document.getElementById('tradeShares').value);
+  const price = parseFloat(document.getElementById('tradePrice').value);
+  const type = document.getElementById('tradeType').value;
+  const notes = document.getElementById('tradeNotes').value;
+
+  if (!ticker || !shares || !price) {
+    alert('Please fill in ticker, shares, and price.');
+    return;
+  }
+
+  const trade = {
+    id: Date.now(),
+    action, ticker, shares, price, type, notes,
+    date: new Date().toISOString(),
+    total: shares * price
+  };
+
+  if (action === 'BUY') {
+    const cost = shares * price;
+    if (cost > state.cash) {
+      if (!confirm(`This trade costs $${cost.toFixed(2)} but you only have $${state.cash.toFixed(2)} cash. Log it anyway?`)) return;
+    }
+    state.cash = Math.max(0, state.cash - cost);
+
+    const existing = state.positions.find(p => p.ticker === ticker);
+    if (existing) {
+      const totalCost = (existing.shares * existing.avgCost) + (shares * price);
+      existing.shares += shares;
+      existing.avgCost = totalCost / existing.shares;
+      if (!existing.type) existing.type = type;
+    } else {
+      state.positions.push({
+        ticker, shares, avgCost: price, type,
+        currentPrice: price, dateAdded: new Date().toISOString()
+      });
+    }
+  } else {
+    // SELL
+    const existing = state.positions.find(p => p.ticker === ticker);
+    if (existing) {
+      existing.shares -= shares;
+      state.cash += shares * price;
+      trade.pnl = (price - existing.avgCost) * shares;
+      if (existing.shares <= 0) {
+        state.positions = state.positions.filter(p => p.ticker !== ticker);
+      }
+    } else {
+      state.cash += shares * price;
+      trade.pnl = 0;
+    }
+  }
+
+  state.trades.unshift(trade);
+  recordPL();
+  saveState();
+  render();
+  closeModal();
+  showToast(`${action} ${shares} ${ticker} @ $${price.toFixed(2)} logged`);
+}
+
+function executeSell(ticker) {
+  const shares = parseInt(document.getElementById('sellShares').value);
+  const price = parseFloat(document.getElementById('sellPrice').value);
+  if (!shares || !price) { alert('Fill in shares and price'); return; }
+
+  const pos = state.positions.find(p => p.ticker === ticker);
+  if (!pos) return;
+
+  const pnl = (price - pos.avgCost) * shares;
+  const trade = {
+    id: Date.now(), action: 'SELL', ticker, shares, price,
+    type: pos.type, notes: `Closed position`,
+    date: new Date().toISOString(), total: shares * price, pnl
+  };
+
+  state.cash += shares * price;
+  pos.shares -= shares;
+  if (pos.shares <= 0) {
+    state.positions = state.positions.filter(p => p.ticker !== ticker);
+  }
+
+  state.trades.unshift(trade);
+  recordPL();
+  saveState();
+  render();
+  closeModal();
+  const pnlStr = pnl >= 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
+  showToast(`Sold ${shares} ${ticker} @ $${price.toFixed(2)} (${pnlStr})`);
+}
+
+function updateCurrentPrice(ticker) {
+  const input = document.getElementById(`price-${ticker}`);
+  const val = parseFloat(input.value);
+  if (!val) return;
+  const pos = state.positions.find(p => p.ticker === ticker);
+  if (pos) {
+    pos.currentPrice = val;
+    saveState();
+    render();
+  }
+}
+
+function recordPL() {
+  const today = new Date().toISOString().split('T')[0];
+  const invested = state.positions.reduce((s, p) => s + p.shares * (p.currentPrice || p.avgCost), 0);
+  const total = state.cash + invested;
+  const existing = state.plHistory.find(h => h.date === today);
+  if (existing) {
+    existing.value = total;
+  } else {
+    state.plHistory.push({ date: today, value: total });
+  }
+  if (state.plHistory.length > 90) state.plHistory = state.plHistory.slice(-90);
+}
+
+// ========== ANALYSIS ==========
+function loadAnalysis() {
+  // Try loading analysis from analysis.json in same directory
+  fetch('analysis.json?' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('No analysis'); return r.json(); })
+    .then(data => {
+      state.analysis = data;
+      renderAnalysis(data);
+      document.getElementById('lastScan').textContent = 'Last analysis: ' + (data.timestamp || 'Unknown');
+      document.getElementById('analysisTime').innerHTML = `<span style="color:var(--accent-green)">●</span> Analysis from: ${data.timestamp || 'Unknown'} — ${data.scanType || 'Scheduled scan'}`;
+    })
+    .catch(() => {
+      // No analysis file yet - that's OK
+    });
+}
+
+function renderAnalysis(data) {
+  if (data.research) {
+    document.getElementById('research-output').innerHTML = data.research;
+  }
+  if (data.dataAgent) {
+    document.getElementById('data-output').innerHTML = data.dataAgent;
+  }
+  if (data.bull) {
+    document.getElementById('bull-output').innerHTML = data.bull;
+  }
+  if (data.bear) {
+    document.getElementById('bear-output').innerHTML = data.bear;
+  }
+  if (data.decision) {
+    document.getElementById('decision-text-output').innerHTML = data.decision;
+  }
+  if (data.recommendations) {
+    renderDecisionCards(data.recommendations);
+  }
+}
+
+function renderDecisionCards(recs) {
+  const container = document.getElementById('decisionCards');
+  container.innerHTML = '<div class="decision-grid">' + recs.map(r => {
+    const verdictClass = r.action === 'BUY' ? 'verdict-buy' : r.action === 'SELL' ? 'verdict-sell' : 'verdict-hold';
+    const conf = r.confidence || 70;
+    const confColor = conf > 75 ? 'var(--accent-green)' : conf > 50 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    return `
+      <div class="decision-card">
+        <div class="ticker-row">
+          <span class="ticker-name">${r.ticker}</span>
+          <span class="verdict ${verdictClass}">${r.action}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">${r.thesis || ''}</div>
+        <div class="targets">
+          <div class="target-item">
+            <div class="target-label">Entry</div>
+            <div class="target-value green">$${r.entry || '--'}</div>
+          </div>
+          <div class="target-item">
+            <div class="target-label">Target</div>
+            <div class="target-value blue">$${r.target || '--'}</div>
+          </div>
+          <div class="target-item">
+            <div class="target-label">Stop Loss</div>
+            <div class="target-value red">$${r.stop || '--'}</div>
+          </div>
+        </div>
+        ${r.positionSize ? `<div style="font-size:11px;color:var(--text-muted);margin-top:8px">Suggested: ${r.positionSize} shares ($${r.dollarAmount || '--'})</div>` : ''}
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${conf}%;background:${confColor}"></div></div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right">Confidence: ${conf}%</div>
+      </div>`;
+  }).join('') + '</div>';
+}
+
+function runManualAnalysis() {
+  showToast('Analysis request noted. The next scheduled scan will run the full 5-agent analysis pipeline and update this dashboard.');
+}
+
+// ========== AGENT TABS ==========
+function switchAgent(id) {
+  document.querySelectorAll('.agent-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.agent-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('agent-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ========== RENDER ==========
+let allocChart = null, plChartInstance = null;
+
+function render() {
+  // Portfolio stats
+  const invested = state.positions.reduce((s, p) => s + p.shares * (p.currentPrice || p.avgCost), 0);
+  const costBasis = state.positions.reduce((s, p) => s + p.shares * p.avgCost, 0);
+  const totalVal = state.cash + invested;
+  const totalPL = invested - costBasis;
+  const totalPLPct = costBasis > 0 ? (totalPL / costBasis * 100) : 0;
+
+  document.getElementById('totalValue').textContent = fmt(totalVal);
+  document.getElementById('cashAvail').textContent = fmt(state.cash);
+  document.getElementById('investedVal').textContent = fmt(invested);
+
+  const plEl = document.getElementById('totalPL');
+  plEl.textContent = (totalPL >= 0 ? '+' : '') + fmt(totalPL);
+  plEl.className = 'stat-value ' + (totalPL >= 0 ? 'green' : 'red');
+
+  const plPctEl = document.getElementById('totalPLPct');
+  plPctEl.innerHTML = `<span class="${totalPL >= 0 ? 'green' : 'red'}">${totalPL >= 0 ? '▲' : '▼'} ${Math.abs(totalPLPct).toFixed(2)}%</span>`;
+
+  document.getElementById('posCount').innerHTML = `<span class="cyan">${state.positions.length} active position${state.positions.length !== 1 ? 's' : ''}</span>`;
+
+  // Win rate
+  const closedTrades = state.trades.filter(t => t.action === 'SELL' && t.pnl !== undefined);
+  const wins = closedTrades.filter(t => t.pnl > 0).length;
+  const losses = closedTrades.filter(t => t.pnl <= 0).length;
+  document.getElementById('winRate').textContent = closedTrades.length > 0 ? Math.round(wins/closedTrades.length*100) + '%' : '--%';
+  document.getElementById('winLoss').innerHTML = `<span class="green">${wins}W</span> / <span class="red">${losses}L</span>`;
+
+  // Positions table
+  const posBody = document.getElementById('positionsTbody');
+  const posTable = document.getElementById('positionsTable');
+  const emptyPos = document.getElementById('emptyPositions');
+  document.getElementById('positionCount').textContent = state.positions.length + ' position' + (state.positions.length !== 1 ? 's' : '');
+
+  if (state.positions.length === 0) {
+    posTable.style.display = 'none';
+    emptyPos.style.display = 'block';
+  } else {
+    posTable.style.display = 'block';
+    emptyPos.style.display = 'none';
+    posBody.innerHTML = state.positions.map(p => {
+      const mktVal = p.shares * (p.currentPrice || p.avgCost);
+      const pl = (p.currentPrice - p.avgCost) * p.shares;
+      const plPct = ((p.currentPrice - p.avgCost) / p.avgCost * 100);
+      const weight = invested > 0 ? (mktVal / invested * 100) : 0;
+      return `<tr>
+        <td><span class="ticker">${p.ticker}</span></td>
+        <td><span class="tag tag-${p.type}">${p.type}</span></td>
+        <td>${p.shares}</td>
+        <td>${fmt(p.avgCost)}</td>
+        <td>
+          <input type="number" value="${p.currentPrice || p.avgCost}" step="0.01"
+            id="price-${p.ticker}"
+            style="width:85px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);padding:3px 6px;font-size:12px"
+            onchange="updateCurrentPrice('${p.ticker}')">
+        </td>
+        <td>${fmt(mktVal)}</td>
+        <td class="${pl >= 0 ? 'green' : 'red'}">${pl >= 0 ? '+' : ''}${fmt(pl)}</td>
+        <td class="${plPct >= 0 ? 'green' : 'red'}">${plPct >= 0 ? '+' : ''}${plPct.toFixed(2)}%</td>
+        <td>${weight.toFixed(1)}%</td>
+        <td><button class="btn btn-sm btn-danger" onclick="openSellModal('${p.ticker}')">Sell</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Trade history
+  const histList = document.getElementById('historyList');
+  const emptyHist = document.getElementById('emptyHistory');
+  document.getElementById('tradeCount').textContent = state.trades.length + ' trade' + (state.trades.length !== 1 ? 's' : '');
+
+  if (state.trades.length === 0) {
+    histList.style.display = 'none';
+    emptyHist.style.display = 'block';
+  } else {
+    histList.style.display = 'block';
+    emptyHist.style.display = 'none';
+    histList.innerHTML = state.trades.slice(0, 50).map(t => {
+      const d = new Date(t.date);
+      const dateStr = d.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
+      const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'});
+      const pnlStr = t.pnl !== undefined ? `<div class="${t.pnl >= 0 ? 'green' : 'red'}" style="font-size:12px">${t.pnl >= 0 ? '+' : ''}${fmt(t.pnl)}</div>` : '';
+      return `<div class="history-item">
+        <div class="history-left">
+          <div class="history-action ${t.action.toLowerCase()}">${t.action === 'BUY' ? 'B' : 'S'}</div>
+          <div class="history-details">
+            <div><span class="ticker">${t.ticker}</span> <span class="tag tag-${t.type}">${t.type}</span></div>
+            <div class="meta">${t.shares} shares @ $${t.price.toFixed(2)}${t.notes ? ' — ' + t.notes : ''}</div>
+          </div>
+        </div>
+        <div class="history-right">
+          <div class="amount">${fmt(t.total)}</div>
+          ${pnlStr}
+          <div class="date">${dateStr} ${timeStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  renderCharts();
+}
+
+function renderCharts() {
+  // Allocation chart
+  const allocCtx = document.getElementById('allocChart').getContext('2d');
+  if (allocChart) allocChart.destroy();
+
+  const labels = state.positions.map(p => p.ticker);
+  labels.push('Cash');
+  const values = state.positions.map(p => p.shares * (p.currentPrice || p.avgCost));
+  values.push(state.cash);
+  const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#a855f7'];
+
+  if (values.some(v => v > 0)) {
+    allocChart = new Chart(allocCtx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: [...colors.slice(0, state.positions.length), '#374151'], borderWidth: 0 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { color: '#9ca3af', font: { size: 11 }, padding: 8 } } },
+        cutout: '65%'
+      }
+    });
+  }
+
+  // P&L chart
+  const plCtx = document.getElementById('plChart').getContext('2d');
+  if (plChartInstance) plChartInstance.destroy();
+
+  if (state.plHistory.length > 1) {
+    plChartInstance = new Chart(plCtx, {
+      type: 'line',
+      data: {
+        labels: state.plHistory.map(h => h.date),
+        datasets: [{
+          label: 'Portfolio Value',
+          data: state.plHistory.map(h => h.value),
+          borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,.1)',
+          fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#6b7280', font: { size: 10 } }, grid: { color: 'rgba(42,53,72,.5)' } },
+          y: { ticks: { color: '#6b7280', font: { size: 10 }, callback: v => '$' + v.toLocaleString() }, grid: { color: 'rgba(42,53,72,.5)' } }
+        }
+      }
+    });
+  }
+}
+
+// ========== UTILS ==========
+function fmt(n) { return '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tradeops-export-' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+}
+
+function resetPortfolio() {
+  if (confirm('Are you sure? This will clear ALL positions, trades, and cash balance. This cannot be undone.')) {
+    if (confirm('Really? Last chance — everything gets wiped.')) {
+      state = defaultState();
+      saveState(); // This triggers cloud sync automatically
+      render();
+      showToast('Portfolio reset');
+    }
+  }
+}
+
+// ========== INIT ==========
+render();
+loadAnalysis();
+initSync();
+
+// Auto-refresh analysis every 5 minutes
+setInterval(loadAnalysis, 300000);
+// Pull from cloud every 2 minutes to catch changes from other devices
+setInterval(() => { if (syncId) pullFromCloud(); }, 120000);
+// Click outside sync modal to close
+document.getElementById('syncModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSyncModal();
+});
+</script>
+</body>
+</html>

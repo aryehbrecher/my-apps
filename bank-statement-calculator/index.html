@@ -8,7 +8,7 @@
 <meta name="description" content="FMHL Nov 2025 compliant bank statement income calculator for self-employed borrowers. All processing client-side.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
         integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
@@ -16,6 +16,7 @@
   :root {
     --bg:        #FAFAF9;
     --surface:   #FFFFFF;
+    --surface-sunk: #F5F5F1;
     --fg:        #0A0A0A;
     --fg-2:      #2A2A28;
     --muted:     #7A7A74;
@@ -28,14 +29,18 @@
     --positive:  #2F7A56;
     --warning:   #B8721A;
     --warning-soft:#FBF2E2;
-    --negative:  #E5544A;
+    --negative:  #C53D32;
     --negative-soft:#FBEBE9;
-    --info:      #2C5F8D;
-    --info-soft: #E6EEF6;
     --ease:      cubic-bezier(0.4, 0, 0.2, 1);
     --t-fast:    160ms;
     --t-base:    240ms;
     --t-slow:    400ms;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --r-sm:      4px;
+    --r-md:      8px;
+    --r-lg:      16px;
+    --r-pill:    999px;
   }
 
   * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
@@ -43,19 +48,25 @@
   body {
     background: var(--bg);
     color: var(--fg);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.5;
     font-weight: 400;
     letter-spacing: -0.005em;
+    font-feature-settings: 'cv11' 1, 'ss01' 1;
     background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.018) 1px, transparent 0);
     background-size: 22px 22px;
   }
 
-  .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
-  .tnum { font-variant-numeric: tabular-nums; }
-  .label-xs { font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
-  .label-sm { font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  h1 { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: 'tnum' 1, 'zero' 1; }
+  .tnum { font-family: var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: 'tnum' 1, 'zero' 1; }
+  .label-xs { font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-variation-settings: 'wght' 510; }
+  .label-sm { font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-variation-settings: 'wght' 510; }
+  .field-error { font-size: 11.5px; color: var(--negative); margin-top: 4px; display: none; }
+  .field-error.visible { display: block; }
+  .skip-link { position: absolute; left: -9999px; top: 0; padding: 8px 16px; background: var(--accent); color: var(--bg); font-size: 14px; border-radius: 0 0 var(--r-md) 0; z-index: 100; text-decoration: none; }
+  .skip-link:focus { left: 0; }
   ::selection { background: var(--accent-soft); color: var(--accent); }
 
   /* Focus visible for keyboard nav */
@@ -65,15 +76,14 @@
   /* ============ TOP BAR ============ */
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 40px;
+    padding: 16px 40px;
     border-bottom: 1px solid var(--hair);
-    background: rgba(250,250,249,0.85);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    background: var(--bg);
     position: sticky; top: 0; z-index: 60;
   }
   .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
   .brand .mark {
-    width: 24px; height: 24px; border-radius: 6px; background: var(--accent);
+    width: 24px; height: 24px; border-radius: var(--r-md); background: var(--accent);
     position: relative; display: flex; align-items: center; justify-content: center;
     box-shadow: 0 2px 4px rgba(31,77,58,0.15);
   }
@@ -89,8 +99,7 @@
     transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
   }
   .saved-dot.visible { opacity: 1; transform: translateY(0); }
-  .saved-dot .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); animation: dotPulse 1.2s var(--ease); }
-  @keyframes dotPulse { 0% { transform: scale(0.4); opacity: 0.4; } 50% { transform: scale(1.4); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  .saved-dot .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--positive); }
 
   /* ============ PRIVACY ============ */
   .privacy {
@@ -122,15 +131,17 @@
   .hero .eyebrow { display: block; margin-bottom: 22px; }
   .hero-number-wrap { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
   .hero-number {
-    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-family: var(--font-mono); font-weight: 400;
     font-size: clamp(56px, 11vw, 128px);
     line-height: 1; letter-spacing: -0.04em;
     color: var(--fg);
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: 'tnum' 1, 'zero' 1;
     transition: color var(--t-base) var(--ease);
   }
-  .hero-number.ineligible { color: var(--negative); font-weight: 400; font-size: clamp(36px, 6vw, 64px); }
+  .hero-number.ineligible { color: var(--negative); font-weight: 500; font-size: clamp(36px, 6vw, 64px); }
   .hero-number.preliminary { color: var(--warning); }
+  .hero-number.zero-state { color: var(--muted-2) !important; }
   .hero-suffix { font-size: 18px; font-weight: 400; color: var(--muted); letter-spacing: -0.01em; }
   .hero-flags { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; }
   .flag {
@@ -151,16 +162,15 @@
   /* ============ STICKY COMPACT BAR ============ */
   .compact-bar {
     position: fixed; left: 0; right: 0; top: 0; z-index: 70;
-    background: rgba(250,250,249,0.92);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    background: var(--bg);
     border-bottom: 1px solid var(--hair);
-    padding: 14px 40px;
+    padding: 12px 40px;
     display: flex; align-items: center; justify-content: space-between;
     transform: translateY(-100%);
     transition: transform var(--t-base) var(--ease);
   }
   .compact-bar.visible { transform: translateY(0); }
-  .compact-bar .num { font-weight: 500; font-size: 18px; letter-spacing: -0.02em; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .compact-bar .num { font-family: var(--font-mono); font-weight: 500; font-size: 18px; letter-spacing: -0.02em; color: var(--fg); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: 'tnum' 1, 'zero' 1; }
   .compact-bar .num.ineligible { color: var(--negative); font-size: 14px; }
   .compact-bar .num.preliminary { color: var(--warning); }
   .compact-bar .meta { color: var(--muted); font-size: 12px; }
@@ -182,7 +192,7 @@
     padding: 7px 14px;
     font-family: inherit; font-size: 12.5px; font-weight: 500;
     color: var(--muted); cursor: pointer;
-    border-radius: 6px; letter-spacing: -0.005em;
+    border-radius: var(--r-sm); letter-spacing: -0.005em;
     transition: all var(--t-fast) var(--ease);
   }
   .seg button:hover { color: var(--fg-2); }
@@ -212,7 +222,7 @@
     display: inline-flex; min-width: 18px; height: 18px; align-items: center; justify-content: center;
     padding: 0 5px;
     background: var(--warning); color: white;
-    border-radius: 9px; font-size: 11px; font-weight: 600;
+    border-radius: var(--r-md); font-size: 11px; font-weight: 600;
   }
   .btn.primary .badge { background: var(--bg); color: var(--accent); }
 
@@ -234,7 +244,7 @@
   section:nth-of-type(7) { animation-delay: 420ms; }
 
   .sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-  .sec-head h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg); margin: 0; }
+  .sec-head h2 { font-size: 20px; font-weight: 500; text-transform: none; letter-spacing: -0.01em; color: var(--fg); margin: 0; line-height: 1.2; }
   .sec-head .meta { color: var(--muted); font-size: 12.5px; }
 
   /* ============ FIELDS ============ */
@@ -319,7 +329,7 @@
   .eligibility-banner {
     margin-top: 18px;
     padding: 14px 18px;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     font-size: 13px;
     display: flex; align-items: center; gap: 10px;
   }
@@ -331,7 +341,7 @@
 
   /* ============ STATEMENT CARDS ============ */
   .stmt {
-    border: 1px solid var(--hair); border-radius: 12px;
+    border: 1px solid var(--hair); border-radius: var(--r-lg);
     background: var(--surface);
     margin-bottom: 10px; overflow: hidden;
     transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
@@ -366,7 +376,7 @@
   .li-head .hint { color: var(--muted); font-size: 11.5px; }
   .li-head .actions { display: flex; gap: 6px; }
 
-  .li-table { display: flex; flex-direction: column; gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; }
+  .li-table { display: flex; flex-direction: column; gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--r-md); overflow: hidden; }
   .li-row {
     display: grid;
     grid-template-columns: 120px 130px 1fr 140px 28px;
@@ -432,7 +442,7 @@
     margin-top: 28px;
     padding: 26px 30px;
     background: var(--surface);
-    border: 1px solid var(--hair); border-radius: 12px;
+    border: 1px solid var(--hair); border-radius: var(--r-lg);
   }
   .ms-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; font-size: 13.5px; gap: 12px; }
   .ms-row + .ms-row { border-top: 1px solid var(--hair-2); }
@@ -456,23 +466,25 @@
     padding: 24px 22px;
     background: var(--surface);
     border: 1.5px solid var(--hair);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     transition: all var(--t-base) var(--ease);
     cursor: pointer;
   }
   .compare-card:hover { border-color: var(--muted-2); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
   .compare-card.active { border-color: var(--accent); background: var(--accent-soft); }
   .compare-card .mode-label {
+    font-family: inherit;
     font-size: 11px; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.14em;
     color: var(--muted); margin-bottom: 6px;
   }
   .compare-card.active .mode-label { color: var(--accent); font-weight: 600; }
   .compare-card .mode-num {
-    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-family: var(--font-mono); font-weight: 400;
     font-size: 30px; letter-spacing: -0.025em;
     line-height: 1.1;
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: 'tnum' 1, 'zero' 1;
     color: var(--fg);
     margin-bottom: 4px;
   }
@@ -486,14 +498,14 @@
   .bulk-paste-zone {
     border: 1px dashed var(--hair);
     padding: 18px 20px;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     background: var(--surface);
   }
   .bulk-paste-zone textarea {
     width: 100%;
     min-height: 100px;
     border: 1px solid var(--hair);
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     padding: 10px 12px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
@@ -537,10 +549,10 @@
   .modal-counter .close { background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: color var(--t-fast) var(--ease); font-size: 13px; }
   .modal-counter .close:hover { color: var(--fg); }
 
-  .modal-amount { font-size: 52px; font-weight: 300; letter-spacing: -0.035em; line-height: 1; color: var(--fg); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+  .modal-amount { font-family: var(--font-mono); font-size: 52px; font-weight: 400; letter-spacing: -0.035em; line-height: 1; color: var(--fg); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: 'tnum' 1, 'zero' 1; margin-bottom: 12px; }
   .modal-date { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; }
   .modal-desc { font-size: 15px; color: var(--fg-2); margin-bottom: 28px; word-break: break-word; }
-  .modal-reason { padding: 16px 20px; background: var(--warning-soft); border-radius: 10px; border: 1px solid rgba(184,114,26,0.2); margin-bottom: 28px; }
+  .modal-reason { padding: 16px 20px; background: var(--warning-soft); border-radius: var(--r-md); border: 1px solid rgba(184,114,26,0.2); margin-bottom: 28px; }
   .modal-reason .label-xs { color: var(--warning); margin-bottom: 6px; display: block; }
   .modal-reason .body { font-size: 13px; color: var(--fg-2); line-height: 1.55; }
 
@@ -548,7 +560,7 @@
   .modal-btn {
     padding: 16px;
     background: var(--surface); border: 1.5px solid var(--hair);
-    border-radius: 10px; cursor: pointer;
+    border-radius: var(--r-md); cursor: pointer;
     font-family: inherit; font-size: 14px; font-weight: 500;
     color: var(--fg);
     transition: all var(--t-fast) var(--ease);
@@ -600,7 +612,7 @@
     position: fixed; bottom: 32px; left: 50%;
     transform: translateX(-50%) translateY(20px);
     background: var(--fg); color: var(--bg);
-    padding: 12px 20px; border-radius: 10px;
+    padding: 12px 20px; border-radius: var(--r-md);
     font-size: 13px; font-weight: 500;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     opacity: 0;
@@ -628,8 +640,80 @@
   }
   footer.appfoot .compliance .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); }
 
+  /* ============ LIVE RAIL ============ */
+  .live-rail {
+    position: fixed; right: 16px; top: 50%;
+    transform: translateY(-50%) translateX(calc(100% + 24px));
+    width: 148px; background: var(--bg);
+    border: 1px solid var(--hair); border-radius: var(--r-md);
+    padding: 14px 16px;
+    transition: transform var(--t-base) var(--ease);
+    z-index: 50; display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  @media (min-width: 1440px) {
+    .live-rail { display: block; }
+    .live-rail.visible { transform: translateY(-50%) translateX(0); }
+  }
+  .live-rail .rl-label { font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 5px; }
+  .live-rail .rl-num { font-family: var(--font-mono); font-size: 20px; font-weight: 500; color: var(--fg); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .live-rail .rl-sub { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .live-rail .rl-prog { font-size: 10px; color: var(--muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--hair); }
+  .live-rail .rl-flags { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .live-rail .rl-flags.warn { color: var(--warning); }
+  .live-rail .rl-flags.bad  { color: var(--negative); }
+
+  /* ============ FILTER CHIPS ============ */
+  .filter-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; background: var(--surface);
+    border: 1px solid var(--hair); border-radius: var(--r-sm);
+    font-size: 11px; font-weight: 500; color: var(--muted);
+    cursor: pointer; transition: all var(--t-fast) var(--ease);
+    user-select: none;
+  }
+  .filter-chip:hover { border-color: var(--muted-2); color: var(--fg); }
+  .filter-chip.active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .filter-chip .fc-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .li-row.fc-hidden { display: none !important; }
+
+  /* ============ MISSING STMT CHIP ============ */
+  .missing-stmt-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; background: var(--negative-soft);
+    border: 1px solid rgba(197,61,50,0.3); border-radius: var(--r-sm);
+    font-size: 11.5px; color: var(--negative); font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  /* ============ PROGRESS / INCOMPLETE ============ */
+  .stmt-progress {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; color: var(--muted); padding: 6px 0 0;
+  }
+  .stmt-progress .pb { flex: none; width: 80px; height: 3px; background: var(--hair); border-radius: var(--r-pill); }
+  .stmt-progress .pf { height: 100%; background: var(--accent); border-radius: var(--r-pill); transition: width var(--t-base) var(--ease); }
+  .incomplete-banner {
+    padding: 10px 14px; background: var(--warning-soft);
+    border: 1px solid rgba(184,114,26,0.25); border-radius: var(--r-md);
+    font-size: 12.5px; color: var(--warning); margin-bottom: 16px; display: none;
+  }
+  .incomplete-banner.visible { display: block; }
+
+  /* ============ DEPOSITOR TABLE ============ */
+  .depositor-section { margin-top: 32px; }
+  .depositor-section .ds-head { font-size: 13px; font-weight: 600; color: var(--fg); margin-bottom: 10px; letter-spacing: -0.005em; }
+  .dep-table { border: 1px solid var(--hair); border-radius: var(--r-md); overflow: hidden; }
+  .dep-row { display: grid; grid-template-columns: 1fr 100px 52px; gap: 8px; align-items: center; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--hair-2); font-size: 12.5px; }
+  .dep-row:last-child { border-bottom: none; }
+  .dep-row.dep-head { background: var(--bg); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 6px 12px; }
+  .dep-row .dr-desc { color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dep-row .dr-amt { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; color: var(--fg); }
+  .dep-row .dr-cnt { color: var(--muted); text-align: right; font-size: 11px; }
+
   /* PDF placeholder */
-  .pdf-zone { border: 1px dashed var(--hair); padding: 32px; border-radius: 12px; text-align: center; color: var(--muted); font-size: 13px; background: var(--surface); }
+  .pdf-zone { border: 1px dashed var(--hair); padding: 32px; border-radius: var(--r-lg); text-align: center; color: var(--muted); font-size: 13px; background: var(--surface); }
   .pdf-zone strong { color: var(--fg); font-weight: 600; display: block; margin-bottom: 6px; font-size: 14px; }
 
   /* ============ PRINT STYLESHEET ============ */
@@ -675,8 +759,7 @@
     .stmt-head { grid-template-columns: 28px 1fr 1fr 28px; }
     .stmt-head .col:nth-child(4),
     .stmt-head .col:nth-child(5) { display: none; }
-    .li-row { grid-template-columns: 100px 1fr 120px 28px; }
-    .li-row > div:nth-child(2) { display: none; }
+    .li-row { grid-template-columns: 90px 80px 1fr 110px 28px; }
     .compare-grid { grid-template-columns: 1fr; }
     .checklist { grid-template-columns: 1fr; }
   }
@@ -703,13 +786,14 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#sec-stmts">Skip to statements</a>
 
 <header class="topbar">
   <div class="brand">
     <span class="mark" aria-hidden="true"></span>
     Bank Statement Income
     <span class="sep"></span>
-    <span class="sub">FMHL Non-QM · v2</span>
+    <span class="sub">FMHL Non-QM · v3</span>
   </div>
   <div class="right">
     <span class="saved-dot" id="savedDot" role="status" aria-live="polite"><span class="dot"></span>Saved</span>
@@ -729,9 +813,17 @@
 <div class="compact-bar" id="compactBar" aria-hidden="true">
   <div>
     <span class="meta">Qualifying Monthly Income · </span>
-    <span class="num tnum" id="compactNum">$0.00</span>
+    <span class="num" id="compactNum">$0.00</span>
   </div>
   <div class="meta" id="compactMeta">Method #1 · 50% Expense Ratio · Medium Mode</div>
+</div>
+
+<div class="live-rail" id="liveRail" aria-hidden="true">
+  <div class="rl-label">Monthly income</div>
+  <div class="rl-num" id="railNum">$0.00</div>
+  <div class="rl-sub" id="railSub">per month</div>
+  <div class="rl-prog" id="railProg">0 of 12 months</div>
+  <div class="rl-flags" id="railFlags"></div>
 </div>
 
 <main>
@@ -748,6 +840,11 @@
     <span class="hero-suffix" id="heroSuffix">per month</span>
   </div>
   <div class="hero-flags" id="heroFlags"></div>
+  <div class="stmt-progress" id="stmtProgress" style="margin-top:12px;">
+    <div class="pb"><div class="pf" id="progressFill" style="width:0%"></div></div>
+    <span id="progressText">0 of 12 months entered</span>
+  </div>
+  <div class="incomplete-banner" id="incompleteBanner">Statements incomplete — fill all months before submitting. Showing income based on entered months only.</div>
 </div>
 
 <!-- ============ ELIGIBILITY ============ -->
@@ -769,27 +866,27 @@
   <div class="controls" style="border-bottom: 0; padding: 0;">
     <div class="group">
       <span class="label-xs">Review Type · FMHL §7</span>
-      <div class="seg accent" id="reviewSeg">
-        <button data-rt="personal">Personal</button>
-        <button data-rt="business" class="active">Business</button>
-        <button data-rt="comingled">Co-mingled</button>
-        <button data-rt="investment">Investment-Passive</button>
+      <div class="seg accent" id="reviewSeg" role="group" aria-label="Review type">
+        <button data-rt="personal" aria-pressed="false">Personal</button>
+        <button data-rt="business" class="active" aria-pressed="true">Business</button>
+        <button data-rt="comingled" aria-pressed="false">Co-mingled</button>
+        <button data-rt="investment" aria-pressed="false">Investment-Passive</button>
       </div>
     </div>
     <div class="group">
       <span class="label-xs">Analysis Mode</span>
-      <div class="seg" id="modeSeg">
-        <button data-mode="cautious">Cautious</button>
-        <button data-mode="medium" class="active">Medium</button>
-        <button data-mode="aggressive">Aggressive</button>
+      <div class="seg" id="modeSeg" role="group" aria-label="Analysis mode">
+        <button data-mode="cautious" aria-pressed="false">Cautious</button>
+        <button data-mode="medium" class="active" aria-pressed="true">Medium</button>
+        <button data-mode="aggressive" aria-pressed="false">Aggressive</button>
       </div>
     </div>
     <div class="group">
       <span class="label-xs">Calculation Method</span>
-      <div class="seg" id="methodSeg">
-        <button data-method="m1" class="active">#1 · 50% Uniform</button>
-        <button data-method="m2">#2 · CPA P&amp;L</button>
-        <button data-method="m3">#3 · CPA Ratio</button>
+      <div class="seg" id="methodSeg" role="group" aria-label="Calculation method">
+        <button data-method="m1" class="active" aria-pressed="true">#1 · 50% Uniform</button>
+        <button data-method="m2" aria-pressed="false">#2 · CPA P&amp;L</button>
+        <button data-method="m3" aria-pressed="false">#3 · CPA Ratio</button>
       </div>
     </div>
     <div class="group" style="align-items: flex-end">
@@ -849,12 +946,16 @@
 </section>
 
 <!-- ============ STATEMENTS ============ -->
-<section>
+<section id="sec-stmts">
   <div class="sec-head">
     <h2>Monthly Statements</h2>
     <span class="meta" id="stmtMeta">12 statements · beginning balances cascade automatically</span>
   </div>
   <div id="stmtList"></div>
+  <div class="depositor-section" id="depositorSection" style="display:none">
+    <div class="ds-head">Top income sources</div>
+    <div class="dep-table" id="depositorTable"></div>
+  </div>
 </section>
 
 <!-- ============ METHOD DETAIL ============ -->
@@ -865,7 +966,7 @@
   </div>
   <div class="method-panel active" data-panel="m1">
     <div class="form-grid" style="max-width: 480px">
-      <div class="field mono"><label class="label-xs" for="m1_ratio">Expense Ratio %</label><input id="m1_ratio" type="number" min="0" max="100" step="0.01" value="50"></div>
+      <div class="field mono"><label class="label-xs" for="m1_ratio">Expense Ratio %</label><input id="m1_ratio" type="number" min="0" max="100" step="0.01" value="50"><div class="field-error" id="m1_ratio_err"></div></div>
       <div class="field"><label class="label-xs" for="m1_bizType">Suggested by business type</label>
         <select id="m1_bizType">
           <option value="">— select to apply preset —</option>
@@ -893,7 +994,7 @@
   </div>
   <div class="method-panel" data-panel="m3">
     <div class="form-grid" style="max-width: 480px">
-      <div class="field mono"><label class="label-xs" for="m3_ratio">CPA Stated Expense Ratio %</label><input id="m3_ratio" type="number" min="0" max="100" step="0.01" placeholder="e.g. 12"></div>
+      <div class="field mono"><label class="label-xs" for="m3_ratio">CPA Stated Expense Ratio %</label><input id="m3_ratio" type="number" min="0" max="100" step="0.01" placeholder="e.g. 12"><div class="field-error" id="m3_ratio_err"></div></div>
     </div>
     <div class="method-summary" id="m3_summary"></div>
   </div>
@@ -923,7 +1024,7 @@
   <div class="row brand-line">Aryeh Brecher · Mortgage Loan Originator</div>
   <div class="row nmls">NMLS #1401181 · FM Home Loans LLC NMLS #2212</div>
   <div class="row"><span class="compliance"><span class="dot"></span>Compliant with FMHL Nov 2025 Rev 1.6 guidelines</span></div>
-  <div class="row" style="margin-top:14px;">Bank Statement Income · v2.1 · Runs entirely in your browser</div>
+  <div class="row" style="margin-top:14px;">Bank Statement Income · v3.0 · Runs entirely in your browser</div>
 </footer>
 
 <!-- ============ REVIEW MODAL ============ -->
@@ -1124,7 +1225,13 @@ const fmtPct = (n, dec=1) => (Number(n)||0).toFixed(dec) + '%';
 function parseISO(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); if(!y||!m||!d) return null; return new Date(y,m-1,d); }
 function fmtISO(d){ if(!d) return ''; return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtUSDate(s){ const d=parseISO(s); if(!d) return '—'; return d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); }
-function subMonths(d, n){ return new Date(d.getFullYear(), d.getMonth()-n, d.getDate()); }
+function subMonths(d, n){
+  const y = d.getFullYear();
+  const m = d.getMonth() - n;
+  // Clamp to last day of target month to prevent Feb-30 → Mar-2 overflow
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  return new Date(y, m, Math.min(d.getDate(), lastDay));
+}
 function daysBetween(a, b) {
   if (!a || !b) return null;
   return Math.round((parseISO(b) - parseISO(a)) / (1000 * 60 * 60 * 24));
@@ -1353,28 +1460,40 @@ function computeFor(modeKey) {
     stmtAgeDays = daysBetween(state.borrower.endDate, state.borrower.noteDate);
   }
 
+  // Count months with non-zero deposits (for corrected divisor)
+  const filledIn12 = state.statements.slice(0, Math.min(months, 12)).filter(s => num(s.deposits) > 0).length;
+  const filledPrev = months === 24 ? state.statements.slice(12, 24).filter(s => num(s.deposits) > 0).length : 0;
+  const filledTotal = filledIn12 + filledPrev;
+
   // ============ METHOD 1 (Uniform Expense Ratio) ============
   const applyRatio = rt.applyExpenseRatio;
-  const m1Ratio = applyRatio ? num(state.m1.ratio) / 100 : 0;
+  // Clamp ratio to valid range [0,100] even if state has a bad value
+  const m1RatioPct = Math.max(0, Math.min(100, num(state.m1.ratio)));
+  const m1Ratio = applyRatio ? m1RatioPct / 100 : 0;
   const m1Most = mostRecent * ownership * (1 - m1Ratio);
   const m1Prev = previous * ownership * (1 - m1Ratio);
-  let m1Annual, m1MethodLabel;
+  let m1Monthly, m1Annual, m1MethodLabel;
+  const d12 = Math.max(filledIn12, 1);
+  const dPrev = Math.max(filledPrev, 1);
   if (months === 24 && previous > 0) {
     const declineRatio = mostRecent / previous;
     if (declineRatio < 0.80) {
-      m1Annual = m1Most;
+      m1Monthly = m1Most / d12;
+      m1Annual = m1Monthly * 12;
       m1MethodLabel = 'Most recent 12mo only (≥20% YoY decline — requires LOE confirming stabilization)';
     } else {
-      m1Annual = (m1Most + m1Prev) / 2;
+      // Average monthly of each period
+      m1Monthly = (m1Most / d12 + m1Prev / dPrev) / 2;
+      m1Annual = m1Monthly * 12;
       m1MethodLabel = (declineRatio < 1)
         ? 'Average of both years (decline under 20% YoY)'
         : 'Average of both years (income stable/increasing)';
     }
   } else {
-    m1Annual = m1Most;
+    m1Monthly = m1Most / d12;
+    m1Annual = m1Monthly * 12;
     m1MethodLabel = applyRatio ? '12 months only' : '12 months only — no expense ratio (review type override)';
   }
-  const m1Monthly = m1Annual / 12;
 
   // ============ METHOD 2 (CPA P&L) ============
   const m2Gross = num(state.m2.gross);
@@ -1388,26 +1507,29 @@ function computeFor(modeKey) {
   const m2Monthly = m2Annual / months;
 
   // ============ METHOD 3 (CPA Stated Ratio) ============
-  const m3Pct = num(state.m3.ratio);
+  const m3Pct = Math.max(0, Math.min(100, num(state.m3.ratio)));
   const m3RatioFrac = m3Pct / 100;
   // P0-1: floor 10% (was 20%)
   const m3TooLow = m3Pct > 0 && m3Pct < 10;
   const m3Most = mostRecent * ownership * (1 - m3RatioFrac);
   const m3Prev = previous * ownership * (1 - m3RatioFrac);
-  let m3Annual = 0, m3MethodLabel = '—';
+  let m3Monthly = 0, m3Annual = 0, m3MethodLabel = '—';
   if (m3Pct > 0 && !m3TooLow) {
     if (months === 24 && previous > 0) {
       const declineRatio = mostRecent / previous;
       if (declineRatio < 0.80) {
-        m3Annual = m3Most;
+        m3Monthly = m3Most / d12;
         m3MethodLabel = 'Most recent 12mo only (≥20% YoY decline)';
       } else {
-        m3Annual = (m3Most + m3Prev) / 2;
+        m3Monthly = (m3Most / d12 + m3Prev / dPrev) / 2;
         m3MethodLabel = (declineRatio < 1) ? 'Average of both years (decline under 20% YoY)' : 'Average of both years';
       }
-    } else { m3Annual = m3Most; m3MethodLabel = '12 months only'; }
+    } else {
+      m3Monthly = m3Most / d12;
+      m3MethodLabel = '12 months only';
+    }
+    m3Annual = m3Monthly * 12;
   }
-  const m3Monthly = m3Annual / 12;
 
   let eligCount = 0, ineligCount = 0, questCount = 0, manualCount = 0;
   const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems(), reviewType: state.reviewType };
@@ -1424,7 +1546,8 @@ function computeFor(modeKey) {
     eligibles, totalEligible, mostRecent, previous,
     totalNSF, excessiveNSF, depositsTrend, periodPctChange, declineSevere,
     mrConsistency, stmtAgeDays,
-    m1: { ratio: num(state.m1.ratio), most:m1Most, prev:m1Prev, annual:m1Annual, monthly:m1Monthly, label:m1MethodLabel, applyRatio },
+    filledIn12, filledPrev, filledTotal,
+    m1: { ratio: m1RatioPct, most:m1Most, prev:m1Prev, annual:m1Annual, monthly:m1Monthly, label:m1MethodLabel, applyRatio },
     m2: { gross:m2Gross, net:m2Net, dep:m2Dep, amort:m2Amort, netWithAddBacks:m2NetWithAddBacks, coverageOK:m2CoverageOK, monthly:m2Monthly, annual:m2Annual },
     m3: { ratio:m3Pct, most:m3Most, prev:m3Prev, annual:m3Annual, monthly:m3Monthly, label:m3MethodLabel, tooLow:m3TooLow },
     lineItemCounts: { eligible: eligCount, ineligible: ineligCount, questionable: questCount, manual: manualCount }
@@ -1533,7 +1656,7 @@ function renderHero(c) {
   heroEyebrow.textContent = `QUALIFYING MONTHLY INCOME · ${rt.label.toUpperCase()} · ${methodLabel} · ${ratioText.toUpperCase()}`;
   compactMeta.textContent = `${rt.label} · ${methodLabel.replace('METHOD ','Method ')} · ${ratioText} · ${MODES[state.mode].label} Mode`;
 
-  heroNum.classList.remove('ineligible', 'preliminary');
+  heroNum.classList.remove('ineligible', 'preliminary', 'zero-state');
   compactNum.classList.remove('ineligible', 'preliminary');
 
   if (c.ineligibleByOwnership) {
@@ -1547,16 +1670,26 @@ function renderHero(c) {
     heroSuffix.textContent = 'CPA expense ratio < 10% — below FMHL minimum';
     compactNum.classList.add('ineligible'); compactNum.textContent = 'INELIGIBLE';
   } else {
-    if (!allEligibilityConfirmed()) {
+    if (head === 0) {
+      // No data yet — neutral gray, no warning color
+      heroNum.classList.add('zero-state');
+    } else if (!allEligibilityConfirmed()) {
       heroNum.classList.add('preliminary');
       compactNum.classList.add('preliminary');
-      heroSuffix.textContent = 'preliminary — eligibility flags';
-    } else {
-      heroSuffix.textContent = 'per month';
     }
+    heroSuffix.textContent = head === 0 ? 'add a statement to begin' : (!allEligibilityConfirmed() ? 'preliminary — eligibility flags' : 'per month');
     animateNumber(heroNum, head);
     animateNumber(compactNum, head, { duration: 280 });
   }
+
+  // Progress indicator
+  const total = parseInt(state.borrower.months, 10);
+  const filled = c.filledIn12 + c.filledPrev;
+  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${filled} of ${total} month${total===1?'':'s'} entered`;
+  const incompBanner = document.getElementById('incompleteBanner');
+  incompBanner.classList.toggle('visible', filled > 0 && filled < total);
 
   // Flags
   const flagsEl = document.getElementById('heroFlags');
@@ -1577,7 +1710,8 @@ function renderHero(c) {
     flags.push({ cls: 'info', label: 'Trend: N/A (12-mo)' });
   }
 
-  if (c.mrConsistency && Math.abs(c.mrConsistency.dev) > 0.30) {
+  // Only show MR-vs-trail chip when all months are filled (otherwise deviation is caused by empty months)
+  if (c.mrConsistency && Math.abs(c.mrConsistency.dev) > 0.30 && c.filledIn12 >= Math.min(c.months, 12)) {
     flags.push({ cls: 'warn', label: `MR deposits ${c.mrConsistency.dev > 0 ? '+' : ''}${(c.mrConsistency.dev*100).toFixed(0)}% vs trail · investigate` });
   }
   if (c.stmtAgeDays !== null && c.stmtAgeDays > 90) {
@@ -1629,7 +1763,7 @@ function renderCompare() {
     `;
     card.addEventListener('click', () => {
       state.mode = modeKey;
-      document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
+      setSegActive('modeSeg', state.mode, 'mode');
       recalcAndPersist();
       renderCompare();
       renderStatements();
@@ -1678,6 +1812,10 @@ function renderBorrower() {
 /* ===========================================================
    STATEMENTS
    =========================================================== */
+function stmtHasData(s) {
+  return num(s.deposits) > 0 || num(s.ending) > 0 || num(s.nsf) > 0 || s.lineItems.length > 0;
+}
+
 function renderStatements() {
   const root = document.getElementById('stmtList');
   root.innerHTML = '';
@@ -1690,8 +1828,22 @@ function renderStatements() {
       sep.innerHTML = `<div class="label-sm" style="padding: 20px 0 10px;">Previous Year · months 13–24</div>`;
       root.appendChild(sep);
     }
+    // Missing-statement gap detector: flag empty statements between filled ones
+    if (!stmtHasData(state.statements[i])) {
+      const prevFilled = state.statements.slice(0, i).some(stmtHasData);
+      const nextFilled = state.statements.slice(i+1, months).some(stmtHasData);
+      if (prevFilled && nextFilled) {
+        const chip = document.createElement('div');
+        const label = state.statements[i].endDate ? fmtUSDate(state.statements[i].endDate) : `Statement ${i+1}`;
+        chip.innerHTML = `<span class="missing-stmt-chip">⚠ Possible missing statement: ${label}</span>`;
+        root.appendChild(chip);
+      }
+    }
     root.appendChild(renderStmtCard(i));
   }
+
+  // Render top-5 depositors
+  renderDepositorTable();
 }
 
 function renderStmtCard(i) {
@@ -1798,6 +1950,22 @@ function renderStmtCard(i) {
     });
   });
 
+  // Filter chips
+  card.querySelectorAll(`.filter-chips[data-stmt-filter="${i}"] .filter-chip`).forEach(chip => {
+    chip.addEventListener('click', () => {
+      card.querySelectorAll(`.filter-chips[data-stmt-filter="${i}"] .filter-chip`).forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const f = chip.dataset.filter;
+      card.querySelectorAll('.li-table .li-row:not(.head)').forEach(row => {
+        if (f === 'all') { row.classList.remove('fc-hidden'); return; }
+        const cat = row.querySelector('.li-cat');
+        if (!cat) return;
+        const hasClass = cat.classList.contains(f) || (f === 'questionable' && cat.classList.contains('questionable'));
+        row.classList.toggle('fc-hidden', !hasClass);
+      });
+    });
+  });
+
   return card;
 }
 
@@ -1825,8 +1993,14 @@ function renderLineItems(stmtIdx, s) {
     <div class="line-items" data-stmt="${stmtIdx}">
       <div class="li-head">
         <h4>Deposit Line Items</h4>
-        <span class="hint">${s.lineItems.length || 'No'} item${s.lineItems.length===1?'':'s'} · ${MODES[state.mode].label} mode · ${REVIEW_TYPES[state.reviewType].label}</span>
+        <span class="hint">${s.lineItems.length || 'No'} item${s.lineItems.length===1?'':'s'} · ${MODES[state.mode].label} mode</span>
       </div>
+      ${s.lineItems.length > 0 ? `<div class="filter-chips" data-stmt-filter="${stmtIdx}">
+        <button class="filter-chip active" data-filter="all">All</button>
+        <button class="filter-chip" data-filter="eligible"><span class="fc-dot"></span>Eligible</button>
+        <button class="filter-chip" data-filter="questionable"><span class="fc-dot"></span>Flagged</button>
+        <button class="filter-chip" data-filter="ineligible"><span class="fc-dot"></span>Excluded</button>
+      </div>` : ''}
       <div class="li-table" role="table">
         <div class="li-row head" role="row">
           <div>Amount</div><div>Date</div><div>Description / Source</div><div>Category</div><div></div>
@@ -1940,6 +2114,54 @@ function msRow(k, v, extra='') {
 }
 
 /* ===========================================================
+   DEPOSITOR TABLE
+   =========================================================== */
+function renderDepositorTable() {
+  const sec = document.getElementById('depositorSection');
+  const tbl = document.getElementById('depositorTable');
+  const months = parseInt(state.borrower.months, 10);
+  const items = state.statements.slice(0, months).flatMap(s => s.lineItems);
+  if (items.length === 0) { sec.style.display = 'none'; return; }
+
+  // Group by normalized description
+  const map = {};
+  items.forEach(li => {
+    const key = (li.description || '(no description)').trim().replace(/\s+/g,' ').toLowerCase().slice(0, 40);
+    if (!map[key]) map[key] = { desc: (li.description||'(no description)').trim(), total: 0, count: 0 };
+    map[key].total += num(li.amount);
+    map[key].count++;
+  });
+  const sorted = Object.values(map).filter(r => r.total > 0).sort((a,b) => b.total - a.total).slice(0, 5);
+  if (sorted.length === 0) { sec.style.display = 'none'; return; }
+
+  sec.style.display = '';
+  tbl.innerHTML = `<div class="dep-row dep-head"><div>Source</div><div class="dr-amt">Total</div><div class="dr-cnt">Count</div></div>` +
+    sorted.map(r => `<div class="dep-row"><div class="dr-desc" title="${r.desc.replace(/"/g,'&quot;')}">${r.desc}</div><div class="dr-amt">${fmt(r.total)}</div><div class="dr-cnt">${r.count}×</div></div>`).join('');
+}
+
+/* ===========================================================
+   LIVE RAIL
+   =========================================================== */
+function renderRail(c) {
+  const rail = document.getElementById('liveRail');
+  if (!rail) return;
+  const head = headlineMonthly(c);
+  document.getElementById('railNum').textContent = c.ineligibleByOwnership ? 'INELIGIBLE' : fmt(head);
+  document.getElementById('railSub').textContent = c.ineligibleByOwnership ? '' : (head === 0 ? 'no data yet' : 'per month');
+  const total = parseInt(state.borrower.months, 10);
+  const filled = c.filledIn12 + c.filledPrev;
+  document.getElementById('railProg').textContent = `${filled} of ${total} months`;
+  const flagsEl = document.getElementById('railFlags');
+  if (c.excessiveNSF) {
+    flagsEl.textContent = `${c.totalNSF} NSF — excessive`; flagsEl.className = 'rl-flags bad';
+  } else if (c.totalNSF > 0) {
+    flagsEl.textContent = `${c.totalNSF} NSF`; flagsEl.className = 'rl-flags warn';
+  } else {
+    flagsEl.textContent = ''; flagsEl.className = 'rl-flags';
+  }
+}
+
+/* ===========================================================
    MAIN RECALC
    =========================================================== */
 function recalcOnly() { _calcCache = computeAll(); return _calcCache; }
@@ -1948,6 +2170,7 @@ function recalcAndPersist() {
   renderHero(_calcCache);
   renderMethodSummaries(_calcCache);
   renderCompare();
+  renderRail(_calcCache);
   debouncedSave();
 }
 
@@ -1989,16 +2212,39 @@ document.getElementById('f_months').addEventListener('change', e => {
   else if (state.statements.length > m) state.statements = state.statements.slice(0, m);
   autoPopulateDates(); renderStatements(); recalcAndPersist();
 });
-['m1_ratio','m2_gross','m2_net','m2_dep','m2_amort','m3_ratio'].forEach(id => {
+['m2_gross','m2_net','m2_dep','m2_amort'].forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
-    if (id === 'm1_ratio') state.m1.ratio = e.target.value;
-    else if (id === 'm2_gross') state.m2.gross = e.target.value;
+    if (id === 'm2_gross') state.m2.gross = e.target.value;
     else if (id === 'm2_net') state.m2.net = e.target.value;
     else if (id === 'm2_dep') state.m2.dep = e.target.value;
     else if (id === 'm2_amort') state.m2.amort = e.target.value;
-    else if (id === 'm3_ratio') state.m3.ratio = e.target.value;
     recalcAndPersist();
   });
+});
+// Expense ratio inputs with bounds validation
+document.getElementById('m1_ratio').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  const errEl = document.getElementById('m1_ratio_err');
+  if (e.target.value !== '' && (isNaN(v) || v < 0 || v > 100)) {
+    errEl.textContent = v > 100 ? 'Must be 0–100%' : 'Must be 0–100%';
+    errEl.classList.add('visible');
+    return;
+  }
+  errEl.classList.remove('visible');
+  state.m1.ratio = e.target.value;
+  recalcAndPersist();
+});
+document.getElementById('m3_ratio').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  const errEl = document.getElementById('m3_ratio_err');
+  if (e.target.value !== '' && (isNaN(v) || v < 0 || v > 100)) {
+    errEl.textContent = 'Must be 0–100%';
+    errEl.classList.add('visible');
+    return;
+  }
+  errEl.classList.remove('visible');
+  state.m3.ratio = e.target.value;
+  recalcAndPersist();
 });
 document.getElementById('m1_bizType').addEventListener('change', e => {
   state.m1.bizType = e.target.value;
@@ -2012,10 +2258,17 @@ document.getElementById('m1_bizType').addEventListener('change', e => {
 /* ===========================================================
    SEGMENTED CONTROLS
    =========================================================== */
+function setSegActive(segId, val, attr) {
+  document.querySelectorAll(`#${segId} button`).forEach(x => {
+    const match = x.dataset[attr] === val;
+    x.classList.toggle('active', match);
+    x.setAttribute('aria-pressed', match ? 'true' : 'false');
+  });
+}
 document.getElementById('reviewSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   state.reviewType = b.dataset.rt;
-  document.querySelectorAll('#reviewSeg button').forEach(x => x.classList.toggle('active', x === b));
+  setSegActive('reviewSeg', state.reviewType, 'rt');
   renderBorrower();
   renderStatements();
   recalcAndPersist();
@@ -2023,13 +2276,13 @@ document.getElementById('reviewSeg').addEventListener('click', e => {
 document.getElementById('modeSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   state.mode = b.dataset.mode;
-  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x === b));
+  setSegActive('modeSeg', state.mode, 'mode');
   renderStatements(); recalcAndPersist();
 });
 document.getElementById('methodSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   state.method = b.dataset.method;
-  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x === b));
+  setSegActive('methodSeg', state.method, 'method');
   document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
   recalcAndPersist();
 });
@@ -2138,7 +2391,7 @@ window.addEventListener('keydown', e => {
     const order = ['personal','business','comingled','investment'];
     const next = order[(order.indexOf(state.reviewType)+1) % order.length];
     state.reviewType = next;
-    document.querySelectorAll('#reviewSeg button').forEach(x => x.classList.toggle('active', x.dataset.rt === next));
+    setSegActive('reviewSeg', next, 'rt');
     renderBorrower(); renderStatements(); recalcAndPersist();
     showToast(`Review Type: ${REVIEW_TYPES[next].label}`);
   } else if (e.key === 'm' || e.key === 'M') {
@@ -2146,7 +2399,7 @@ window.addEventListener('keydown', e => {
     const order = ['cautious','medium','aggressive'];
     const next = order[(order.indexOf(state.mode)+1) % order.length];
     state.mode = next;
-    document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === next));
+    setSegActive('modeSeg', next, 'mode');
     renderStatements(); recalcAndPersist();
     showToast(`Mode: ${MODES[next].label}`);
   }
@@ -2159,9 +2412,12 @@ const compactBar = document.getElementById('compactBar');
 let _heroBottom = 0;
 function measureHero() { _heroBottom = document.querySelector('.hero').getBoundingClientRect().bottom + window.scrollY; }
 window.addEventListener('resize', measureHero);
+const liveRail = document.getElementById('liveRail');
 window.addEventListener('scroll', () => {
-  if (window.scrollY > _heroBottom - 80) compactBar.classList.add('visible');
-  else compactBar.classList.remove('visible');
+  const past = window.scrollY > _heroBottom - 80;
+  compactBar.classList.toggle('visible', past);
+  if (liveRail) liveRail.classList.toggle('visible', past);
+  if (liveRail) liveRail.setAttribute('aria-hidden', past ? 'false' : 'true');
 });
 
 /* ===========================================================
@@ -2446,9 +2702,9 @@ document.getElementById('btnNew').addEventListener('click', () => {
 });
 
 function syncControlsToState() {
-  document.querySelectorAll('#reviewSeg button').forEach(x => x.classList.toggle('active', x.dataset.rt === state.reviewType));
-  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
-  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === state.method));
+  setSegActive('reviewSeg', state.reviewType, 'rt');
+  setSegActive('modeSeg', state.mode, 'mode');
+  setSegActive('methodSeg', state.method, 'method');
   document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
 }
 
@@ -2562,7 +2818,74 @@ function selfTest() {
   c = computeAll();
   // MR=240k, Prev=360k → MR/Prev = 0.667 (33% decline) → severe, use MR-only
   results.push({ test: '24mo: 33% decline → MR-only', expected: true, got: c.declineSevere, pass: c.declineSevere === true });
-  results.push({ test: '24mo: 33% decline → m1 uses MR-only', expected: '120000', got: c.m1.annual.toFixed(0), pass: Math.abs(c.m1.annual - 120000) < 1 });
+  results.push({ test: '24mo: 33% decline → m1 monthly = $10,000', expected: 10000, got: c.m1.monthly, pass: Math.abs(c.m1.monthly - 10000) < 0.01 });
+
+  // ============ MONTH SEQUENCER TESTS ============
+  // Apr 30 base: 24 months should produce 24 unique month labels, no skips
+  const testBase = new Date(2026, 3, 30);
+  const seqApr = Array.from({length:24}, (_, i) => subMonths(testBase, i));
+  const labelsApr = seqApr.map(d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  results.push({ test: 'Month seq: Apr 30 base, 24 months, no duplicates', expected: 24, got: new Set(labelsApr).size, pass: new Set(labelsApr).size === 24 });
+  let seqOk = true;
+  for (let i = 0; i < 23; i++) {
+    const diff = (seqApr[i].getFullYear()*12 + seqApr[i].getMonth()) - (seqApr[i+1].getFullYear()*12 + seqApr[i+1].getMonth());
+    if (diff !== 1) { seqOk = false; break; }
+  }
+  results.push({ test: 'Month seq: Apr 30 base, 24 months, no skips', expected: true, got: seqOk, pass: seqOk });
+  // May 31 base: 12 months
+  const testBase2 = new Date(2026, 4, 31);
+  const seqMay = Array.from({length:12}, (_, i) => subMonths(testBase2, i));
+  const labelsMay = seqMay.map(d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  results.push({ test: 'Month seq: May 31 base, 12 months, no duplicates', expected: 12, got: new Set(labelsMay).size, pass: new Set(labelsMay).size === 12 });
+  // Jan 31 base: 12 months
+  const testBase3 = new Date(2026, 0, 31);
+  const seqJan = Array.from({length:12}, (_, i) => subMonths(testBase3, i));
+  const labelsJan = seqJan.map(d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  results.push({ test: 'Month seq: Jan 31 base, 12 months, no duplicates', expected: 12, got: new Set(labelsJan).size, pass: new Set(labelsJan).size === 12 });
+  // Check Feb is present in May-31 sequence (was the bug)
+  const hasFeb = labelsMay.some(l => l.endsWith('-02'));
+  results.push({ test: 'Month seq: May 31 base includes February', expected: true, got: hasFeb, pass: hasFeb });
+
+  // ============ EXPENSE RATIO CLAMP TESTS ============
+  state.borrower.months = 12; state.borrower.ownership = 100; state.reviewType = 'business';
+  state.statements = Array.from({length:12}, () => ({ endDate:'', beginning:'', deposits:'30000', ending:'', nsf:0, lineItems:[] }));
+  state.m1.ratio = 150; // out of range → clamped to 100 → $0 income
+  c = computeAll();
+  results.push({ test: 'Expense ratio clamped: 150% → income ≥ 0', expected: 0, got: c.m1.monthly, pass: c.m1.monthly >= 0 && c.m1.monthly < 0.01 });
+  state.m1.ratio = -5; // negative → clamped to 0 → full income
+  c = computeAll();
+  results.push({ test: 'Expense ratio clamped: -5% → income > 0', expected: true, got: c.m1.monthly > 0, pass: c.m1.monthly > 0 });
+  state.m1.ratio = 50; // restore
+
+  // ============ MONTHS-WITH-DATA DIVISOR TEST ============
+  // 3 of 12 months filled at $50k each → monthly = $50k * 0.5 = $25k/mo
+  state.statements = Array.from({length:12}, (_, i) => ({
+    endDate:'', beginning:'', deposits: i < 3 ? '50000' : '', ending:'', nsf:0, lineItems:[]
+  }));
+  c = computeAll();
+  results.push({ test: 'Divisor fix: 3 of 12 months @ $50k → $25,000/mo (not $6,250)', expected: 25000, got: c.m1.monthly, pass: Math.abs(c.m1.monthly - 25000) < 0.01 });
+
+  // Nathan Antebi regression: all 12 months filled → $7,804.20/mo
+  state.m1.ratio = 50; state.borrower.ownership = 100; state.reviewType = 'business';
+  const monthly211 = 211000.85 / 12;
+  state.statements = Array.from({length:12}, (_, i) => ({
+    endDate:'', beginning:'', deposits: monthly211.toFixed(2), ending:'', nsf:0,
+    lineItems: i === 0 ? [
+      { id:'t1', amount:'5000', description:'CASH DEPOSIT TELLER', date:'', manualDecision:null, note:'' },
+      { id:'t2', amount:'2500', description:'ZELLE FROM J ANTEBI', date:'', manualDecision:null, note:'' }
+    ] : i === 3 ? [
+      { id:'t3', amount:'15000', description:'WIRE TRANSFER LOAN PROCEEDS', date:'', manualDecision:null, note:'' }
+    ] : i === 7 ? [
+      { id:'t4', amount:'1200', description:'REFUND - CLIENT INVOICE 4421', date:'', manualDecision:null, note:'' }
+    ] : []
+  }));
+  // Fix total to match exactly 211000.85
+  const totalDep = state.statements.reduce((a,s) => a + num(s.deposits), 0);
+  const drift = 211000.85 - totalDep;
+  state.statements[0].deposits = (num(state.statements[0].deposits) + drift).toFixed(2);
+  state.borrower.name = 'Nathan Antebi';
+  c = computeAll();
+  results.push({ test: 'Nathan Antebi regression: $7,804.20/mo', expected: 7804.20, got: +c.m1.monthly.toFixed(2), pass: Math.abs(c.m1.monthly - 7804.20) < 0.01 });
 
   return results;
 }

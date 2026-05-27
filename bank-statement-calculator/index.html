@@ -1,0 +1,2110 @@
+<!-- All processing client-side. No data uploaded. Source: github.com/aryehbrecher/my-apps -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bank Statement Income</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+        integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  :root {
+    --bg:        #FAFAF9;
+    --surface:   #FFFFFF;
+    --fg:        #0A0A0A;
+    --fg-2:      #2A2A28;
+    --muted:     #7A7A74;
+    --muted-2:   #A8A8A2;
+    --hair:      #E5E5E2;
+    --hair-2:    #EFEFEC;
+    --accent:    #1F4D3A;
+    --accent-2:  #2A6249;
+    --accent-soft:#E8EFEB;
+    --positive:  #2F7A56;
+    --warning:   #B8721A;
+    --warning-soft:#FBF2E2;
+    --negative:  #E5544A;
+    --negative-soft:#FBEBE9;
+    --ease:      cubic-bezier(0.4, 0, 0.2, 1);
+    --t-fast:    160ms;
+    --t-base:    240ms;
+    --t-slow:    400ms;
+  }
+
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    /* Very faint paper texture */
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(0,0,0,0.018) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+
+  .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .label-xs {
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+  .label-sm {
+    font-size: 11.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  ::selection { background: var(--accent-soft); color: var(--accent); }
+
+  /* ============ TOP BAR ============ */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 40px;
+    border-bottom: 1px solid var(--hair);
+    background: rgba(250,250,249,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 60;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+  }
+  .brand .mark {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: var(--accent);
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand .mark::after {
+    content: ''; width: 8px; height: 8px;
+    border: 1.5px solid var(--bg);
+    border-radius: 2px;
+  }
+  .brand .sep {
+    width: 1px; height: 14px; background: var(--hair); margin: 0 4px;
+  }
+  .brand .sub { color: var(--muted); font-weight: 400; }
+
+  .topbar .right { display: flex; align-items: center; gap: 18px; }
+  .saved-dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted);
+    opacity: 0; transform: translateY(-2px);
+    transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
+  }
+  .saved-dot.visible { opacity: 1; transform: translateY(0); }
+  .saved-dot .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--positive);
+  }
+
+  /* ============ PRIVACY ============ */
+  .privacy {
+    padding: 12px 40px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 12.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--hair);
+  }
+  .privacy strong { font-weight: 600; }
+  .privacy .x {
+    background: transparent; border: 0;
+    color: var(--accent); cursor: pointer;
+    font-size: 18px; line-height: 1; padding: 4px 8px;
+    border-radius: 4px;
+    transition: background var(--t-fast) var(--ease);
+  }
+  .privacy .x:hover { background: rgba(31,77,58,0.08); }
+  .privacy.hidden { display: none; }
+
+  /* ============ MAIN ============ */
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 40px 120px;
+  }
+
+  /* ============ HERO ============ */
+  .hero {
+    padding: 88px 0 64px;
+    text-align: left;
+    border-bottom: 1px solid var(--hair);
+    animation: heroIn 600ms var(--ease) both;
+  }
+  @keyframes heroIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .hero .eyebrow {
+    display: block;
+    margin-bottom: 24px;
+  }
+  .hero-number-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .hero-number {
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: clamp(64px, 11vw, 128px);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-number.ineligible { color: var(--negative); font-weight: 400; font-size: clamp(38px, 6vw, 64px); }
+  .hero-suffix {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: -0.01em;
+  }
+  .hero-flags {
+    margin-top: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .flag {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-2);
+    letter-spacing: -0.005em;
+  }
+  .flag .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--muted-2);
+  }
+  .flag.good .dot { background: var(--positive); }
+  .flag.warn .dot { background: var(--warning); }
+  .flag.bad  .dot { background: var(--negative); }
+
+  /* ============ STICKY COMPACT BAR (appears when hero scrolls out) ============ */
+  .compact-bar {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 70;
+    background: rgba(250,250,249,0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--hair);
+    padding: 14px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    transform: translateY(-100%);
+    transition: transform var(--t-base) var(--ease);
+  }
+  .compact-bar.visible { transform: translateY(0); }
+  .compact-bar .num {
+    font-weight: 500;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .compact-bar .num.ineligible { color: var(--negative); font-size: 14px; }
+  .compact-bar .meta { color: var(--muted); font-size: 12px; }
+
+  /* ============ CONTROLS ROW ============ */
+  .controls {
+    padding: 36px 0 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--hair);
+  }
+  .controls .group { display: flex; flex-direction: column; gap: 8px; }
+  .controls .group .label-xs { margin-bottom: 0; }
+
+  /* Segmented control */
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    padding: 3px;
+    background: var(--surface);
+  }
+  .seg button {
+    background: transparent;
+    border: 0;
+    padding: 7px 14px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px;
+    letter-spacing: -0.005em;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .seg button:hover { color: var(--fg-2); }
+  .seg button.active {
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .seg.accent button.active { background: var(--accent); }
+  .seg .desc { display: none; }
+
+  /* Button styles */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    color: var(--fg-2);
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+    letter-spacing: -0.005em;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .btn:hover { background: var(--hair-2); border-color: var(--muted-2); color: var(--fg); }
+  .btn.primary {
+    background: var(--accent); border-color: var(--accent); color: var(--bg);
+  }
+  .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  .btn.subtle { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.subtle:hover { color: var(--fg); background: var(--hair-2); }
+  .btn.danger { color: var(--negative); }
+  .btn.danger:hover { background: var(--negative-soft); border-color: var(--negative); }
+  .btn .badge {
+    display: inline-flex; min-width: 18px; height: 18px; align-items: center; justify-content: center;
+    padding: 0 5px;
+    background: var(--warning); color: white;
+    border-radius: 9px; font-size: 11px; font-weight: 600;
+  }
+  .btn.primary .badge { background: var(--bg); color: var(--accent); }
+
+  /* ============ SECTIONS ============ */
+  section {
+    padding: 56px 0;
+    border-bottom: 1px solid var(--hair);
+    opacity: 0;
+    transform: translateY(8px);
+    animation: secIn 500ms var(--ease) forwards;
+  }
+  section:last-of-type { border-bottom: 0; }
+  @keyframes secIn { to { opacity: 1; transform: none; } }
+  section:nth-of-type(1) { animation-delay: 60ms; }
+  section:nth-of-type(2) { animation-delay: 120ms; }
+  section:nth-of-type(3) { animation-delay: 180ms; }
+  section:nth-of-type(4) { animation-delay: 240ms; }
+  section:nth-of-type(5) { animation-delay: 300ms; }
+
+  .sec-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 28px;
+  }
+  .sec-head h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--fg);
+    margin: 0;
+  }
+  .sec-head .meta { color: var(--muted); font-size: 12.5px; }
+
+  /* ============ BORDERLESS INPUTS ============ */
+  .field {
+    display: flex; flex-direction: column;
+    position: relative;
+    padding-top: 4px;
+    padding-bottom: 8px;
+  }
+  .field label { margin-bottom: 6px; }
+  .field input, .field select, .field textarea {
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    background: transparent;
+    padding: 8px 0;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--fg);
+    width: 100%;
+    border-radius: 0;
+    outline: none;
+    transition: border-color var(--t-fast) var(--ease);
+    letter-spacing: -0.005em;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-bottom-color: transparent; }
+  .field::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 8px;
+    height: 1.5px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--t-base) var(--ease);
+    pointer-events: none;
+  }
+  .field.focused::after { transform: scaleX(1); }
+  .field.mono input { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; font-size: 15px; }
+  .field .prefix {
+    position: absolute; left: 0; bottom: 18px; font-family: 'JetBrains Mono', monospace; color: var(--muted-2);
+    font-size: 14px;
+    pointer-events: none;
+    transition: color var(--t-fast) var(--ease);
+  }
+  .field.has-prefix input { padding-left: 14px; }
+  .field.focused .prefix { color: var(--accent); }
+  .field input::-webkit-outer-spin-button,
+  .field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .field input[type="number"] { -moz-appearance: textfield; }
+  .field input[type="date"] { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: var(--fg-2); }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 28px 36px;
+  }
+
+  /* ============ STATEMENT CARDS ============ */
+  .stmt {
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    background: var(--surface);
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color var(--t-fast) var(--ease);
+  }
+  .stmt:hover { border-color: var(--muted-2); }
+  .stmt-head {
+    display: grid;
+    grid-template-columns: 28px 1fr 1.4fr 1fr 1fr 1fr 28px;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease);
+  }
+  .stmt-head:hover { background: var(--hair-2); }
+  .stmt-head .idx {
+    font-size: 11px;
+    color: var(--muted-2);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .stmt-head .date-display { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--fg-2); }
+  .stmt-head .col {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .stmt-head .col .v {
+    font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+    font-size: 13px; color: var(--fg); font-weight: 500;
+  }
+  .stmt-head .col .v.elig { color: var(--accent); font-weight: 600; }
+  .stmt-head .col .v.warn { color: var(--negative); }
+  .stmt-head .col .k { font-size: 9.5px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .stmt-head .caret {
+    width: 16px; height: 16px;
+    transition: transform var(--t-base) var(--ease);
+    color: var(--muted-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stmt.open .stmt-head .caret { transform: rotate(90deg); }
+
+  .stmt-body {
+    display: none;
+    padding: 8px 18px 24px;
+    border-top: 1px solid var(--hair);
+    background: var(--bg);
+  }
+  .stmt.open .stmt-body { display: block; }
+
+  .stmt-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 20px 28px;
+    padding: 16px 0 24px;
+  }
+
+  /* Line items table */
+  .line-items {
+    margin-top: 18px;
+  }
+  .li-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .li-head h4 {
+    margin: 0; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--fg);
+  }
+  .li-head .hint { color: var(--muted); font-size: 11.5px; }
+
+  .li-table {
+    display: flex; flex-direction: column;
+    gap: 1px;
+    background: var(--hair);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .li-row {
+    display: grid;
+    grid-template-columns: 120px 130px 1fr 130px 28px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--surface);
+    transition: background var(--t-fast) var(--ease);
+  }
+  .li-row.head {
+    background: var(--bg);
+    padding-top: 8px; padding-bottom: 8px;
+  }
+  .li-row.head > div {
+    font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted);
+  }
+  .li-row input {
+    border: 0; background: transparent; padding: 4px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px; color: var(--fg);
+    width: 100%; outline: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--t-fast) var(--ease);
+  }
+  .li-row input[type="text"] { font-family: 'Inter', sans-serif; }
+  .li-row input:focus { border-bottom-color: var(--accent); }
+  .li-row input::placeholder { color: var(--muted-2); }
+
+  .li-cat {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--hair);
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--fg-2);
+    transition: all var(--t-fast) var(--ease);
+    letter-spacing: -0.005em;
+  }
+  .li-cat:hover { border-color: var(--muted-2); }
+  .li-cat .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-2); }
+  .li-cat.eligible    { color: var(--positive); border-color: rgba(47,122,86,0.3); background: rgba(47,122,86,0.06); }
+  .li-cat.eligible .dot { background: var(--positive); }
+  .li-cat.questionable { color: var(--warning); border-color: rgba(184,114,26,0.3); background: var(--warning-soft); }
+  .li-cat.questionable .dot { background: var(--warning); }
+  .li-cat.ineligible  { color: var(--negative); border-color: rgba(229,84,74,0.3); background: var(--negative-soft); }
+  .li-cat.ineligible .dot { background: var(--negative); }
+
+  .li-del {
+    background: transparent; border: 0;
+    color: var(--muted-2); cursor: pointer;
+    padding: 4px 6px; border-radius: 4px;
+    transition: all var(--t-fast) var(--ease);
+    font-size: 14px;
+  }
+  .li-del:hover { color: var(--negative); background: var(--negative-soft); }
+
+  .li-add {
+    margin-top: 10px;
+    background: transparent; border: 1px dashed var(--hair);
+    color: var(--muted); padding: 9px 14px;
+    border-radius: 8px; cursor: pointer;
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    width: 100%; text-align: center;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .li-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  /* ============ METHOD PANELS ============ */
+  .method-panel { display: none; }
+  .method-panel.active { display: block; }
+  .method-summary {
+    margin-top: 32px;
+    padding: 28px 32px;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+  }
+  .ms-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 0;
+    font-size: 13.5px;
+  }
+  .ms-row + .ms-row { border-top: 1px solid var(--hair-2); }
+  .ms-row .k { color: var(--muted); }
+  .ms-row .v {
+    font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+    color: var(--fg); font-weight: 500;
+  }
+  .ms-row.total { padding-top: 18px; margin-top: 6px; border-top: 1px solid var(--fg); }
+  .ms-row.total .k { color: var(--fg); font-weight: 600; }
+  .ms-row.total .v { font-size: 18px; font-weight: 500; }
+  .ms-row.total.headline .v { color: var(--accent); }
+  .ms-row.note { color: var(--muted); font-style: italic; font-size: 12px; }
+  .ms-row.bad .v, .ms-row.bad .k { color: var(--negative); }
+  .ms-row.warn .v, .ms-row.warn .k { color: var(--warning); }
+
+  /* ============ EXPORTS ROW ============ */
+  .exports {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    padding: 0;
+  }
+
+  /* ============ REVIEW MODAL ============ */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(10, 10, 10, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity var(--t-base) var(--ease);
+  }
+  .modal-bg.open { display: flex; opacity: 1; }
+  .modal {
+    background: var(--bg);
+    border: 1px solid var(--hair);
+    border-radius: 16px;
+    width: 92%;
+    max-width: 560px;
+    padding: 48px 56px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.1);
+    transform: scale(0.98) translateY(4px);
+    opacity: 0;
+    transition: transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease);
+  }
+  .modal-bg.open .modal { transform: none; opacity: 1; }
+
+  .modal-counter {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px;
+  }
+  .modal-counter .count {
+    font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .modal-counter .close {
+    background: transparent; border: 0; color: var(--muted);
+    cursor: pointer; padding: 4px 8px; border-radius: 4px;
+    transition: color var(--t-fast) var(--ease);
+    font-size: 13px;
+  }
+  .modal-counter .close:hover { color: var(--fg); }
+
+  .modal-amount {
+    font-size: 56px; font-weight: 300; letter-spacing: -0.035em; line-height: 1;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 12px;
+  }
+  .modal-date {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .modal-desc {
+    font-size: 15px;
+    color: var(--fg-2);
+    margin-bottom: 32px;
+    word-break: break-word;
+  }
+  .modal-reason {
+    padding: 16px 20px;
+    background: var(--warning-soft);
+    border-radius: 10px;
+    border: 1px solid rgba(184,114,26,0.2);
+    margin-bottom: 32px;
+  }
+  .modal-reason .label-xs { color: var(--warning); margin-bottom: 6px; display: block; }
+  .modal-reason .body { font-size: 13px; color: var(--fg-2); line-height: 1.55; }
+
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .modal-btn {
+    padding: 16px;
+    background: var(--surface);
+    border: 1.5px solid var(--hair);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fg);
+    transition: all var(--t-fast) var(--ease);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .modal-btn .kbd {
+    font-size: 10px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg); padding: 2px 6px; border-radius: 3px;
+    border: 1px solid var(--hair);
+    margin-top: 4px;
+  }
+  .modal-btn.eligible { border-color: rgba(47,122,86,0.3); color: var(--positive); }
+  .modal-btn.eligible:hover { background: rgba(47,122,86,0.06); border-color: var(--positive); }
+  .modal-btn.ineligible { border-color: rgba(229,84,74,0.3); color: var(--negative); }
+  .modal-btn.ineligible:hover { background: var(--negative-soft); border-color: var(--negative); }
+
+  .modal-note { margin-bottom: 24px; }
+  .modal-note input {
+    width: 100%; padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    font-family: inherit; font-size: 13px; color: var(--fg);
+    outline: none;
+    transition: border-color var(--t-fast) var(--ease);
+  }
+  .modal-note input:focus { border-color: var(--accent); }
+
+  .modal-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 20px;
+    border-top: 1px solid var(--hair);
+  }
+  .modal-nav button {
+    background: transparent; border: 0;
+    color: var(--muted); cursor: pointer;
+    padding: 8px 12px; border-radius: 6px;
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .modal-nav button:hover { color: var(--fg); background: var(--hair-2); }
+  .modal-nav button:disabled { color: var(--muted-2); cursor: not-allowed; }
+  .modal-nav button:disabled:hover { background: transparent; }
+  .modal-live {
+    font-size: 11.5px; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .modal-live .v { color: var(--fg); font-weight: 500; font-family: 'JetBrains Mono', monospace; margin-left: 8px; }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--fg); color: var(--bg);
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    opacity: 0;
+    transition: all var(--t-base) var(--ease);
+    z-index: 300; pointer-events: none;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ============ FOOTER ============ */
+  footer.appfoot {
+    text-align: center; padding: 48px 0;
+    color: var(--muted); font-size: 11.5px;
+    letter-spacing: 0.02em;
+  }
+
+  /* PDF placeholder */
+  .pdf-zone {
+    border: 1px dashed var(--hair);
+    padding: 32px;
+    border-radius: 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--surface);
+  }
+  .pdf-zone strong { color: var(--fg); font-weight: 600; display: block; margin-bottom: 6px; font-size: 14px; }
+
+  /* Print */
+  @media print {
+    .topbar, .privacy, .controls, .compact-bar, .modal-bg, .pdf-zone, .exports, .li-del, .li-add, .saved-dot, footer.appfoot { display: none !important; }
+    body { background: white; background-image: none; }
+    main { max-width: none; padding: 0 24px; }
+    .hero { padding: 24px 0; border: 0; }
+    section { padding: 24px 0; border-color: #ddd; opacity: 1; transform: none; animation: none; }
+    .stmt { break-inside: avoid; border: 1px solid #ddd; }
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .topbar, .privacy { padding-left: 24px; padding-right: 24px; }
+    main { padding: 0 24px 80px; }
+    .hero { padding: 56px 0 40px; }
+    .stmt-head { grid-template-columns: 28px 1fr 1fr 28px; }
+    .stmt-head .col:nth-child(4),
+    .stmt-head .col:nth-child(5) { display: none; }
+    .li-row { grid-template-columns: 100px 1fr 110px 28px; }
+    .li-row > div:nth-child(2) { display: none; } /* hide date column */
+  }
+  @media (max-width: 640px) {
+    .hero-number { font-size: 56px; }
+    .compact-bar { padding: 12px 20px; }
+    .compact-bar .meta { display: none; }
+    .modal { padding: 32px 28px; }
+    .modal-amount { font-size: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOPBAR ============ -->
+<header class="topbar">
+  <div class="brand">
+    <span class="mark"></span>
+    Bank Statement Income
+    <span class="sep"></span>
+    <span class="sub">Non-QM Underwriting</span>
+  </div>
+  <div class="right">
+    <span class="saved-dot" id="savedDot"><span class="dot"></span>Saved</span>
+    <button class="btn subtle" id="btnNew">New</button>
+    <button class="btn subtle" id="btnSaveJson">Save</button>
+    <button class="btn subtle" id="btnLoadJson">Load</button>
+    <input type="file" id="jsonFileInput" accept=".json" style="display:none">
+  </div>
+</header>
+
+<div class="privacy" id="privacyBanner">
+  <span><strong>Private &amp; local.</strong> &nbsp; Statements never leave your browser. No upload, no server, no cloud.</span>
+  <button class="x" id="dismissPrivacy" aria-label="Dismiss">×</button>
+</div>
+
+<!-- Compact sticky bar -->
+<div class="compact-bar" id="compactBar">
+  <div>
+    <span class="meta">Qualifying Monthly Income · </span>
+    <span class="num tnum" id="compactNum">$0.00</span>
+  </div>
+  <div class="meta" id="compactMeta">Method #1 · 50% Expense Ratio · Medium Mode</div>
+</div>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <span class="label-sm eyebrow" id="heroEyebrow">QUALIFYING MONTHLY INCOME · METHOD #1 · 50% EXPENSE RATIO</span>
+  <div class="hero-number-wrap">
+    <span class="hero-number tnum" id="heroNumber">$0.00</span>
+    <span class="hero-suffix" id="heroSuffix">per month</span>
+  </div>
+  <div class="hero-flags" id="heroFlags"></div>
+</div>
+
+<!-- ============ CONTROLS ============ -->
+<div class="controls">
+  <div class="group">
+    <span class="label-xs">Analysis Mode</span>
+    <div class="seg accent" id="modeSeg">
+      <button data-mode="cautious">Cautious</button>
+      <button data-mode="medium" class="active">Medium</button>
+      <button data-mode="aggressive">Aggressive</button>
+    </div>
+  </div>
+  <div class="group">
+    <span class="label-xs">Calculation Method</span>
+    <div class="seg" id="methodSeg">
+      <button data-method="m1" class="active">Method #1 · Uniform</button>
+      <button data-method="m2">#2 · CPA P&amp;L</button>
+      <button data-method="m3">#3 · CPA Ratio</button>
+    </div>
+  </div>
+  <div class="group" style="align-items: flex-end">
+    <span class="label-xs">Review</span>
+    <button class="btn primary" id="btnReview">
+      Review Flagged Deposits <span class="badge" id="flaggedBadge">0</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ BORROWER ============ -->
+<section>
+  <div class="sec-head">
+    <h2>Borrower</h2>
+    <span class="meta">Self-employed, business bank statements</span>
+  </div>
+  <div class="form-grid">
+    <div class="field"><label class="label-xs">Borrower Name</label><input id="f_borrower" type="text" autocomplete="off"></div>
+    <div class="field"><label class="label-xs">Business Name</label><input id="f_business" type="text" autocomplete="off"></div>
+    <div class="field"><label class="label-xs">Bank</label><input id="f_bank" type="text" autocomplete="off"></div>
+    <div class="field"><label class="label-xs">Last 4 of Account</label><input id="f_last4" type="text" maxlength="4" inputmode="numeric"></div>
+    <div class="field"><label class="label-xs">Months of Statements</label>
+      <select id="f_months"><option value="12">12 months</option><option value="24">24 months</option></select>
+    </div>
+    <div class="field mono"><label class="label-xs">Ownership %</label><input id="f_ownership" type="number" min="0" max="100" step="0.01" value="100"></div>
+    <div class="field"><label class="label-xs">Most Recent Statement End Date</label><input id="f_endDate" type="date"></div>
+  </div>
+</section>
+
+<!-- ============ PDF PLACEHOLDER ============ -->
+<section>
+  <div class="sec-head">
+    <h2>Source Documents</h2>
+    <span class="meta">Phase 2 — automatic extraction</span>
+  </div>
+  <div class="pdf-zone">
+    <strong>PDF auto-parsing coming next</strong>
+    For now, type the deposit totals and individual line items below. Phase 2 will extract Chase, BofA, Wells Fargo, Capital One, TD, and Citi business statements automatically.
+  </div>
+</section>
+
+<!-- ============ STATEMENTS ============ -->
+<section>
+  <div class="sec-head">
+    <h2>Monthly Statements</h2>
+    <span class="meta" id="stmtMeta">12 statements · beginning balances cascade automatically</span>
+  </div>
+  <div id="stmtList"></div>
+</section>
+
+<!-- ============ METHOD ============ -->
+<section>
+  <div class="sec-head">
+    <h2>Calculation Detail</h2>
+    <span class="meta" id="methodMeta">Method #1 · Uniform Expense Ratio</span>
+  </div>
+  <div class="method-panel active" data-panel="m1">
+    <div class="form-grid" style="max-width: 360px">
+      <div class="field mono"><label class="label-xs">Expense Ratio %</label><input id="m1_ratio" type="number" min="0" max="100" step="0.01" value="50"></div>
+    </div>
+    <div class="method-summary" id="m1_summary"></div>
+  </div>
+  <div class="method-panel" data-panel="m2">
+    <div class="form-grid">
+      <div class="field mono has-prefix"><label class="label-xs">P&amp;L Gross Receipts</label><span class="prefix">$</span><input id="m2_gross" type="number" min="0" step="0.01"></div>
+      <div class="field mono has-prefix"><label class="label-xs">P&amp;L Net Income</label><span class="prefix">$</span><input id="m2_net" type="number" min="0" step="0.01"></div>
+    </div>
+    <div class="method-summary" id="m2_summary"></div>
+  </div>
+  <div class="method-panel" data-panel="m3">
+    <div class="form-grid" style="max-width: 360px">
+      <div class="field mono"><label class="label-xs">CPA Stated Expense Ratio %</label><input id="m3_ratio" type="number" min="0" max="100" step="0.01" placeholder="e.g. 40"></div>
+    </div>
+    <div class="method-summary" id="m3_summary"></div>
+  </div>
+</section>
+
+<!-- ============ EXPORT ============ -->
+<section>
+  <div class="sec-head">
+    <h2>Export</h2>
+    <span class="meta">Local download — nothing sent over the network</span>
+  </div>
+  <div class="exports">
+    <button class="btn primary" id="btnCopy">Copy Summary</button>
+    <button class="btn" id="btnXlsx">Download Excel</button>
+    <button class="btn" id="btnPrint">Print</button>
+  </div>
+</section>
+
+</main>
+
+<footer class="appfoot">Bank Statement Income · v2.0 · Runs entirely in your browser</footer>
+
+<!-- ============ REVIEW MODAL ============ -->
+<div class="modal-bg" id="reviewModal" role="dialog" aria-modal="true">
+  <div class="modal" id="modalInner">
+    <div class="modal-counter">
+      <span class="count" id="modalCount">0 of 0 flagged</span>
+      <button class="close" id="modalClose">Close (Esc)</button>
+    </div>
+    <div class="modal-date" id="modalDate"></div>
+    <div class="modal-amount tnum" id="modalAmount">$0.00</div>
+    <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-reason">
+      <span class="label-xs">Why this was flagged</span>
+      <div class="body" id="modalReason"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn eligible" id="modalEligible">Eligible · Count it<span class="kbd">Press 1</span></button>
+      <button class="modal-btn ineligible" id="modalIneligible">Ineligible · Exclude<span class="kbd">Press 2</span></button>
+    </div>
+    <div class="modal-note">
+      <input id="modalNote" placeholder="Note for audit trail (optional)">
+    </div>
+    <div class="modal-nav">
+      <div>
+        <button id="modalPrev">← Previous</button>
+        <button id="modalSkip">Skip</button>
+        <button id="modalNext">Next →</button>
+      </div>
+      <div class="modal-live">Qualifying monthly income <span class="v tnum" id="modalLive">$0.00</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===========================================================
+   STATE
+   =========================================================== */
+const STORAGE_KEY = 'bsic_v2_state';
+
+const DEFAULT_STATE = () => ({
+  borrower: { name:'', business:'', bank:'', last4:'', months:12, ownership:100, endDate:'' },
+  statements: [],
+  m1: { ratio: 50 }, m2: { gross:'', net:'' }, m3: { ratio:'' },
+  mode: 'medium',
+  method: 'm1',
+  openStmts: new Set([0])
+});
+
+let state = loadState();
+ensureOpenSet();
+if (state.statements.length === 0) seedStatements(state);
+
+let reviewIdx = 0;       // index into current flagged list
+let lastHeroValue = 0;
+let _calcCache = null;
+
+function ensureOpenSet() {
+  if (!(state.openStmts instanceof Set)) state.openStmts = new Set(state.openStmts || [0]);
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT_STATE();
+    const s = JSON.parse(raw);
+    s.openStmts = new Set(s.openStmts || [0]);
+    return s;
+  } catch(e) { return DEFAULT_STATE(); }
+}
+function saveState() {
+  try {
+    const persistable = { ...state, openStmts: Array.from(state.openStmts) };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
+    flashSaved();
+  } catch(e) {}
+}
+let _saveTimer = null;
+function debouncedSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveState, 250);
+}
+function seedStatements(s) {
+  s.statements = Array.from({length: s.borrower.months}, () => emptyStmt());
+  return s;
+}
+function emptyStmt() {
+  return { endDate:'', beginning:'', deposits:'', ending:'', nsf:0, lineItems:[] };
+}
+function newLineItem(amount='', desc='', date='') {
+  return { id: 'li_' + Math.random().toString(36).slice(2,9),
+           amount, description: desc, date, manualDecision: null, note: '' };
+}
+
+/* ===========================================================
+   UTILITIES
+   =========================================================== */
+const num = v => { if(v==='' || v==null) return 0; const n=Number(v); return isNaN(n)?0:n; };
+const fmt = (n, dec=2) => {
+  if (n === null || n === undefined || isNaN(n)) return '$0.00';
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+};
+const fmtPct = (n, dec=1) => (Number(n)||0).toFixed(dec) + '%';
+function parseISO(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); if(!y||!m||!d) return null; return new Date(y,m-1,d); }
+function fmtISO(d){ if(!d) return ''; return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function fmtUSDate(s){ const d=parseISO(s); if(!d) return '—'; return d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); }
+function subMonths(d, n){ return new Date(d.getFullYear(), d.getMonth()-n, d.getDate()); }
+
+/* ===========================================================
+   AUTO-FLAG RULES — three modes
+   =========================================================== */
+const MODES = {
+  cautious: {
+    label: 'Cautious',
+    flagNamedPerson: true,
+    roundFlagMin: 1000,
+    cashFlagMin: 0,
+    avgPctTrigger: 0.50,
+    flagBorrowerName: true,
+    loanWireRoundMin: 0,
+    defaultForFlagged: 'ineligible'
+  },
+  medium: {
+    label: 'Medium',
+    flagNamedPerson: true,
+    roundFlagMin: 2000,
+    cashFlagMin: 1000,
+    avgPctTrigger: 0.75,
+    flagBorrowerName: true,
+    loanWireRoundMin: 5000,
+    defaultForFlagged: 'ineligible'  // calc-conservative until user reviews
+  },
+  aggressive: {
+    label: 'Aggressive',
+    flagNamedPerson: false,
+    roundFlagMin: 10000,
+    cashFlagMin: 5000,
+    avgPctTrigger: 1.00,
+    flagBorrowerName: false,
+    loanWireRoundMin: 20000,
+    defaultForFlagged: 'eligible'
+  }
+};
+
+const NAMED_TRANSFER_KEYWORDS = /\b(ZELLE|VENMO|CASH ?APP|PAYPAL|P2P|FROM\s+\w+)/i;
+const CASH_KEYWORDS = /\b(CASH(\s+DEPOSIT)?|ATM\s+DEPOSIT|TELLER\s+DEPOSIT|MOBILE\s+CHECK)/i;
+const REFUND_KEYWORDS = /\b(REFUND|REVERSAL|CHARGEBACK|RETURN|VOID|CREDIT\s+ADJ)/i;
+const LOAN_KEYWORDS = /\b(LOAN|WIRE|EFT|TRANSFER|ACH|FUND|ADVANCE)/i;
+const TRANSFER_KEYWORDS = /\b(TRANSFER|TRF|XFER|ZELLE|VENMO|TO\s+SAV|FROM\s+SAV)/i;
+
+function isRoundNumber(n, min) {
+  if (n < min) return false;
+  return n >= min && (n % 1000 === 0 || n % 500 === 0 && n >= 5000);
+}
+
+function classify(li, modeKey, ctx) {
+  const m = MODES[modeKey];
+  const amt = num(li.amount);
+  const desc = (li.description || '').toUpperCase();
+  const borrowerLast = (ctx.borrowerName || '').trim().split(/\s+/).pop().toUpperCase();
+  const reasons = [];
+
+  if (amt <= 0) return { auto: 'eligible', reasons: [] };
+
+  // Hard ineligible cases (always flagged regardless of mode)
+  if (REFUND_KEYWORDS.test(desc)) {
+    reasons.push('Description matches refund / reversal / chargeback keywords — not income.');
+    return { auto: 'ineligible', reasons };
+  }
+
+  // Same-day duplicate amounts (likely transfers)
+  const sameDay = (ctx.allItems || []).filter(o =>
+    o.id !== li.id && o.date && o.date === li.date && Math.abs(num(o.amount) - amt) < 0.01
+  );
+  if (sameDay.length && TRANSFER_KEYWORDS.test(desc)) {
+    reasons.push('Same-day matching transfer pattern across owner accounts.');
+    return { auto: 'questionable', reasons };
+  }
+
+  // Named-person transfer (Zelle/Venmo/etc)
+  if (m.flagNamedPerson && NAMED_TRANSFER_KEYWORDS.test(desc)) {
+    reasons.push('Looks like a peer-to-peer transfer from a named person — not clearly business revenue.');
+  }
+
+  // Borrower name in description
+  if (m.flagBorrowerName && borrowerLast && borrowerLast.length > 2 && desc.includes(borrowerLast)) {
+    reasons.push(`Borrower's last name "${borrowerLast}" appears in description — likely personal infusion.`);
+  }
+
+  // Cash deposits
+  if (CASH_KEYWORDS.test(desc) && amt >= m.cashFlagMin) {
+    reasons.push(`${fmt(amt)} cash deposit without a clearly identified business source.`);
+  }
+
+  // Loan / wire / EFT round amounts
+  if (LOAN_KEYWORDS.test(desc) && isRoundNumber(amt, m.loanWireRoundMin)) {
+    reasons.push(`Round-number ${fmt(amt)} wire / EFT / loan-style deposit.`);
+  }
+
+  // Generic round number (no specific keyword) — only if mode lets us
+  if (!LOAN_KEYWORDS.test(desc) && !CASH_KEYWORDS.test(desc) && isRoundNumber(amt, m.roundFlagMin)) {
+    reasons.push(`Round-number deposit of ${fmt(amt)} — common pattern for personal injections.`);
+  }
+
+  // Deposit > X% of average monthly
+  if (ctx.avgMonthly > 0 && amt > ctx.avgMonthly * m.avgPctTrigger) {
+    const pct = ((amt / ctx.avgMonthly) * 100).toFixed(0);
+    reasons.push(`${fmt(amt)} is ${pct}% of the average monthly deposit total — unusually large.`);
+  }
+
+  if (reasons.length === 0) return { auto: 'eligible', reasons: [] };
+  return { auto: 'questionable', reasons };
+}
+
+function effectiveCategory(li, modeKey, ctx) {
+  if (li.manualDecision === 'eligible' || li.manualDecision === 'ineligible') {
+    return { effective: li.manualDecision, auto: 'manual', reasons: ['Manually overridden.'] };
+  }
+  const c = classify(li, modeKey, ctx);
+  if (c.auto === 'questionable') {
+    return { effective: MODES[modeKey].defaultForFlagged, auto: c.auto, reasons: c.reasons };
+  }
+  return { effective: c.auto, auto: c.auto, reasons: c.reasons };
+}
+
+/* Calculate average monthly deposits for the avgPct rule */
+function calcAvgMonthly() {
+  const months = parseInt(state.borrower.months, 10);
+  const totalDep = state.statements.slice(0, months).reduce((a,s) => a + num(s.deposits), 0);
+  return months > 0 ? totalDep / months : 0;
+}
+
+function allLineItems() {
+  return state.statements.flatMap((s, idx) => s.lineItems.map(li => ({...li, _stmtIdx: idx})));
+}
+
+function flaggedLineItems() {
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  return allLineItems()
+    .map(li => ({ ...li, _eff: effectiveCategory(li, state.mode, ctx) }))
+    .filter(li => li._eff.auto === 'questionable' && !li.manualDecision);
+}
+
+/* ===========================================================
+   ELIGIBLE DEPOSIT CALC PER STATEMENT
+   =========================================================== */
+function eligibleOf(stmtIdx) {
+  const s = state.statements[stmtIdx];
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const ineligSum = s.lineItems.reduce((a, li) => {
+    const eff = effectiveCategory(li, state.mode, ctx).effective;
+    return a + (eff === 'ineligible' ? num(li.amount) : 0);
+  }, 0);
+  return num(s.deposits) - ineligSum;
+}
+
+function sumLineItemsByCategory(stmtIdx) {
+  const s = state.statements[stmtIdx];
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const out = { eligible: 0, ineligible: 0, questionable: 0 };
+  s.lineItems.forEach(li => {
+    const r = effectiveCategory(li, state.mode, ctx);
+    out[r.effective === 'ineligible' && r.auto === 'questionable' ? 'questionable' : r.effective] += num(li.amount);
+  });
+  return out;
+}
+
+/* ===========================================================
+   DATES AUTO-POPULATE
+   =========================================================== */
+function autoPopulateDates() {
+  const base = parseISO(state.borrower.endDate);
+  if (!base) return;
+  state.statements.forEach((s, i) => { s.endDate = fmtISO(subMonths(base, i)); });
+}
+
+/* ===========================================================
+   COMPUTE — methods 1/2/3
+   =========================================================== */
+function computeAll() {
+  const months = parseInt(state.borrower.months, 10);
+  const ownershipPct = num(state.borrower.ownership);
+  const ownership = ownershipPct / 100;
+  const ineligibleByOwnership = ownershipPct < 25;
+
+  const eligibles = state.statements.slice(0, months).map((_, i) => eligibleOf(i));
+  const totalEligible = eligibles.reduce((a,b)=>a+b,0);
+  const mostRecent = eligibles.slice(0, 12).reduce((a,b)=>a+b,0);
+  const previous = months === 24 ? eligibles.slice(12,24).reduce((a,b)=>a+b,0) : 0;
+
+  const totalNSF = state.statements.slice(0, months).reduce((a,s) => a + num(s.nsf), 0);
+  const excessiveNSF = totalNSF > 3;
+  const depositsIncreasing = months === 24 ? mostRecent >= previous : null;
+  const periodPctChange = (months === 24 && previous > 0) ? (mostRecent - previous) / previous : null;
+
+  // Method 1
+  const m1Ratio = num(state.m1.ratio) / 100;
+  const m1Most = mostRecent * ownership * (1 - m1Ratio);
+  const m1Prev = previous * ownership * (1 - m1Ratio);
+  let m1Annual, m1MethodLabel;
+  if (months === 24) {
+    if (m1Most / 0.95 > m1Prev) { m1Annual = m1Most; m1MethodLabel = 'Most recent year only (income meaningfully higher)'; }
+    else { m1Annual = (m1Most + m1Prev) / 2; m1MethodLabel = 'Average of both years (declining-income protection)'; }
+  } else { m1Annual = m1Most; m1MethodLabel = '12 months only'; }
+  const m1Monthly = m1Annual / 12;
+
+  // Method 2
+  const m2Gross = num(state.m2.gross);
+  const m2Net = num(state.m2.net);
+  const m2CoverageOK = m2Gross > 0 ? totalEligible >= 0.75 * m2Gross : null;
+  const m2Monthly = (m2Net * ownership) / months;
+
+  // Method 3
+  const m3Pct = num(state.m3.ratio);
+  const m3RatioFrac = m3Pct / 100;
+  const m3TooLow = m3Pct > 0 && m3Pct < 20;
+  const m3Most = mostRecent * ownership * (1 - m3RatioFrac);
+  const m3Prev = previous * ownership * (1 - m3RatioFrac);
+  let m3Annual = 0, m3MethodLabel = '—';
+  if (m3Pct > 0) {
+    if (months === 24) {
+      if (m3Most / 0.95 > m3Prev) { m3Annual = m3Most; m3MethodLabel = 'Most recent year only'; }
+      else { m3Annual = (m3Most + m3Prev) / 2; m3MethodLabel = 'Average of both years'; }
+    } else { m3Annual = m3Most; m3MethodLabel = '12 months only'; }
+  }
+  const m3Monthly = m3Annual / 12;
+
+  // Line item counts across whole period
+  let eligCount = 0, ineligCount = 0, questCount = 0, manualCount = 0;
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  allLineItems().forEach(li => {
+    const r = effectiveCategory(li, state.mode, ctx);
+    if (li.manualDecision) { manualCount++; }
+    if (r.effective === 'eligible') eligCount++;
+    else if (r.auto === 'questionable' && !li.manualDecision) questCount++;
+    else if (r.effective === 'ineligible') ineligCount++;
+  });
+
+  return {
+    months, ownershipPct, ownership, ineligibleByOwnership,
+    eligibles, totalEligible, mostRecent, previous,
+    totalNSF, excessiveNSF, depositsIncreasing, periodPctChange,
+    m1: { ratio: num(state.m1.ratio), most:m1Most, prev:m1Prev, annual:m1Annual, monthly:m1Monthly, label:m1MethodLabel },
+    m2: { gross:m2Gross, net:m2Net, coverageOK:m2CoverageOK, monthly:m2Monthly, annual: m2Net * ownership },
+    m3: { ratio:m3Pct, most:m3Most, prev:m3Prev, annual:m3Annual, monthly:m3Monthly, label:m3MethodLabel, tooLow:m3TooLow },
+    lineItemCounts: { eligible: eligCount, ineligible: ineligCount, questionable: questCount, manual: manualCount }
+  };
+}
+
+/* ===========================================================
+   COUNT-UP ANIMATION
+   =========================================================== */
+function animateNumber(el, target, opts={}) {
+  const duration = opts.duration || 400;
+  const start = el._currentVal || 0;
+  const delta = target - start;
+  if (Math.abs(delta) < 0.01) {
+    el.textContent = fmt(target);
+    el._currentVal = target;
+    return;
+  }
+  const t0 = performance.now();
+  cancelAnimationFrame(el._raf);
+  function tick(now) {
+    const t = Math.min(1, (now - t0) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const v = start + delta * eased;
+    el.textContent = fmt(v);
+    if (t < 1) { el._raf = requestAnimationFrame(tick); }
+    else { el._currentVal = target; }
+  }
+  el._raf = requestAnimationFrame(tick);
+}
+
+/* ===========================================================
+   RENDER — HERO + COMPACT + FLAGS
+   =========================================================== */
+function renderHero(c) {
+  const heroNum = document.getElementById('heroNumber');
+  const heroSuffix = document.getElementById('heroSuffix');
+  const heroEyebrow = document.getElementById('heroEyebrow');
+  const compactNum = document.getElementById('compactNum');
+  const compactMeta = document.getElementById('compactMeta');
+
+  const headlineMonthly = (state.method === 'm1') ? c.m1.monthly
+                        : (state.method === 'm2') ? c.m2.monthly
+                        : c.m3.monthly;
+  const ratioText = (state.method === 'm1') ? `${num(state.m1.ratio).toFixed(1)}% expense ratio`
+                  : (state.method === 'm2') ? 'CPA P&L'
+                  : `CPA ${num(state.m3.ratio).toFixed(1)}% expense ratio`;
+  const methodLabel = state.method === 'm1' ? 'METHOD #1' : state.method === 'm2' ? 'METHOD #2' : 'METHOD #3';
+
+  heroEyebrow.textContent = `QUALIFYING MONTHLY INCOME · ${methodLabel} · ${ratioText.toUpperCase()}`;
+  compactMeta.textContent = `${methodLabel.replace('METHOD ','Method ')} · ${ratioText} · ${MODES[state.mode].label} Mode`;
+
+  // Ineligibility states
+  if (c.ineligibleByOwnership) {
+    heroNum.classList.add('ineligible');
+    heroNum.textContent = 'INELIGIBLE';
+    heroSuffix.textContent = 'Ownership < 25%';
+    compactNum.classList.add('ineligible'); compactNum.textContent = 'INELIGIBLE';
+  } else if (state.method === 'm3' && c.m3.tooLow) {
+    heroNum.classList.add('ineligible');
+    heroNum.textContent = 'INELIGIBLE';
+    heroSuffix.textContent = 'CPA ratio < 20%';
+    compactNum.classList.add('ineligible'); compactNum.textContent = 'INELIGIBLE';
+  } else {
+    heroNum.classList.remove('ineligible');
+    heroSuffix.textContent = 'per month';
+    compactNum.classList.remove('ineligible');
+    animateNumber(heroNum, headlineMonthly);
+    animateNumber(compactNum, headlineMonthly, { duration: 250 });
+  }
+
+  // Flags
+  const flagsEl = document.getElementById('heroFlags');
+  flagsEl.innerHTML = '';
+  const flags = [];
+  flags.push({ cls: c.ineligibleByOwnership ? 'bad' : 'good', label: `Ownership ${c.ownershipPct.toFixed(1)}%` });
+  flags.push({ cls: c.excessiveNSF ? 'bad' : c.totalNSF>0 ? 'warn' : 'good', label: `${c.totalNSF} NSF${c.excessiveNSF?' · excessive':''}` });
+  if (c.depositsIncreasing === null) {
+    flags.push({ cls: '', label: 'Trend: N/A (12-mo)' });
+  } else if (c.depositsIncreasing) {
+    flags.push({ cls: 'good', label: `Increasing ${c.periodPctChange != null ? '+'+(c.periodPctChange*100).toFixed(1)+'%' : ''}` });
+  } else {
+    flags.push({ cls: 'warn', label: `Declining ${c.periodPctChange != null ? (c.periodPctChange*100).toFixed(1)+'%' : ''}` });
+  }
+  const lic = c.lineItemCounts;
+  if (lic.eligible+lic.ineligible+lic.questionable > 0) {
+    flags.push({ cls: lic.questionable>0 ? 'warn' : 'good',
+                 label: `${lic.eligible} ok · ${lic.ineligible} excl · ${lic.questionable} to review` });
+  }
+  flags.push({ cls:'', label: `Annual ${fmt(headlineMonthly*12)}` });
+  flags.forEach(f => {
+    const el = document.createElement('span');
+    el.className = `flag ${f.cls}`;
+    el.innerHTML = `<span class="dot"></span>${f.label}`;
+    flagsEl.appendChild(el);
+  });
+
+  // Review badge
+  const fl = flaggedLineItems();
+  document.getElementById('flaggedBadge').textContent = fl.length;
+  document.getElementById('btnReview').style.display = fl.length > 0 ? '' : 'none';
+}
+
+/* ===========================================================
+   RENDER — BORROWER + METHOD INPUTS
+   =========================================================== */
+function renderBorrower() {
+  const b = state.borrower;
+  document.getElementById('f_borrower').value = b.name;
+  document.getElementById('f_business').value = b.business;
+  document.getElementById('f_bank').value = b.bank;
+  document.getElementById('f_last4').value = b.last4;
+  document.getElementById('f_months').value = b.months;
+  document.getElementById('f_ownership').value = b.ownership;
+  document.getElementById('f_endDate').value = b.endDate;
+  document.getElementById('m1_ratio').value = state.m1.ratio;
+  document.getElementById('m2_gross').value = state.m2.gross;
+  document.getElementById('m2_net').value = state.m2.net;
+  document.getElementById('m3_ratio').value = state.m3.ratio;
+}
+
+/* ===========================================================
+   RENDER — STATEMENTS
+   =========================================================== */
+function renderStatements() {
+  const root = document.getElementById('stmtList');
+  root.innerHTML = '';
+  const months = parseInt(state.borrower.months, 10);
+  document.getElementById('stmtMeta').textContent = `${months} statements · beginning balances cascade automatically`;
+
+  for (let i = 0; i < months; i++) {
+    if (i === 12 && months === 24) {
+      const sep = document.createElement('div');
+      sep.innerHTML = `<div class="label-sm" style="padding: 24px 0 12px;">Previous Year · months 13–24</div>`;
+      root.appendChild(sep);
+    }
+    root.appendChild(renderStmtCard(i));
+  }
+}
+
+function renderStmtCard(i) {
+  const s = state.statements[i];
+  const open = state.openStmts.has(i);
+  const card = document.createElement('div');
+  card.className = 'stmt' + (open ? ' open' : '');
+  const elig = eligibleOf(i);
+  const cats = sumLineItemsByCategory(i);
+  const nsfClass = num(s.nsf) > 0 ? 'warn' : '';
+
+  const dateStr = s.endDate ? fmtUSDate(s.endDate) : `Statement ${i+1}`;
+
+  card.innerHTML = `
+    <div class="stmt-head" data-i="${i}">
+      <span class="idx">${String(i+1).padStart(2,'0')}</span>
+      <div class="col">
+        <span class="k">Statement</span>
+        <span class="date-display">${dateStr}</span>
+      </div>
+      <div class="col">
+        <span class="k">Total deposits</span>
+        <span class="v">${fmt(num(s.deposits))}</span>
+      </div>
+      <div class="col">
+        <span class="k">Excluded</span>
+        <span class="v">${fmt(cats.ineligible + cats.questionable)}</span>
+      </div>
+      <div class="col">
+        <span class="k">Eligible</span>
+        <span class="v elig">${fmt(elig)}</span>
+      </div>
+      <div class="col">
+        <span class="k">NSF</span>
+        <span class="v ${nsfClass}">${num(s.nsf)}</span>
+      </div>
+      <span class="caret">▸</span>
+    </div>
+    <div class="stmt-body">
+      <div class="stmt-fields">
+        <div class="field"><label class="label-xs">Statement End Date</label><input type="date" data-f="endDate" value="${s.endDate||''}"></div>
+        <div class="field mono has-prefix"><label class="label-xs">Beginning Balance</label><span class="prefix">$</span><input type="number" step="0.01" data-f="beginning" value="${s.beginning}" ${i>0?'readonly':''}></div>
+        <div class="field mono has-prefix"><label class="label-xs">Total Deposits</label><span class="prefix">$</span><input type="number" step="0.01" data-f="deposits" value="${s.deposits}"></div>
+        <div class="field mono has-prefix"><label class="label-xs">Ending Balance</label><span class="prefix">$</span><input type="number" step="0.01" data-f="ending" value="${s.ending}"></div>
+        <div class="field mono"><label class="label-xs">NSF Count</label><input type="number" min="0" step="1" data-f="nsf" value="${s.nsf}"></div>
+      </div>
+      ${renderLineItems(i, s)}
+    </div>
+  `;
+
+  // Toggle expand
+  card.querySelector('.stmt-head').addEventListener('click', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (state.openStmts.has(i)) state.openStmts.delete(i);
+    else state.openStmts.add(i);
+    card.classList.toggle('open');
+    debouncedSave();
+  });
+
+  // Stmt field inputs
+  card.querySelectorAll('.stmt-fields input').forEach(inp => {
+    setupFieldFocus(inp);
+    inp.addEventListener('input', e => {
+      const f = e.target.dataset.f;
+      state.statements[i][f] = e.target.value;
+      if (f === 'ending' && i+1 < state.statements.length) {
+        state.statements[i+1].beginning = e.target.value;
+      }
+      recalcAndPersist();
+      // Re-render only the head of this and the next (for cascade)
+      renderStatements();
+    });
+  });
+
+  // Line item handlers
+  card.querySelectorAll('.li-add').forEach(b => {
+    b.addEventListener('click', () => {
+      s.lineItems.push(newLineItem('', '', s.endDate || ''));
+      renderStatements();
+      recalcAndPersist();
+      // Focus the new item's amount field
+      setTimeout(() => {
+        const inputs = document.querySelectorAll(`[data-stmt="${i}"] .li-row input[data-lf="amount"]`);
+        inputs[inputs.length-1]?.focus();
+      }, 20);
+    });
+  });
+  card.querySelectorAll('.li-row input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const j = +e.target.closest('.li-row').dataset.j;
+      const lf = e.target.dataset.lf;
+      s.lineItems[j][lf] = e.target.value;
+      debouncedSave();
+      recalcOnly();
+      // Update just badges/head without full re-render to avoid focus loss
+      updateStmtHead(i);
+    });
+    inp.addEventListener('blur', () => { renderStatements(); recalcAndPersist(); });
+  });
+  card.querySelectorAll('.li-cat').forEach(c => {
+    c.addEventListener('click', () => {
+      const j = +c.dataset.j;
+      const li = s.lineItems[j];
+      // cycle: null (auto) -> eligible -> ineligible -> null
+      if (li.manualDecision === null || li.manualDecision === undefined) li.manualDecision = 'eligible';
+      else if (li.manualDecision === 'eligible') li.manualDecision = 'ineligible';
+      else li.manualDecision = null;
+      renderStatements();
+      recalcAndPersist();
+    });
+  });
+  card.querySelectorAll('.li-del').forEach(b => {
+    b.addEventListener('click', () => {
+      const j = +b.dataset.j;
+      s.lineItems.splice(j, 1);
+      renderStatements();
+      recalcAndPersist();
+    });
+  });
+
+  return card;
+}
+
+function renderLineItems(stmtIdx, s) {
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const rows = s.lineItems.map((li, j) => {
+    const r = effectiveCategory(li, state.mode, ctx);
+    const eff = r.effective;
+    const isQ = r.auto === 'questionable' && !li.manualDecision;
+    const catClass = isQ ? 'questionable' : eff;
+    const catLabel = isQ ? 'Questionable' : (li.manualDecision ? (eff === 'eligible' ? 'Manual: Eligible' : 'Manual: Ineligible') : (eff.charAt(0).toUpperCase() + eff.slice(1)));
+    return `
+      <div class="li-row" data-j="${j}">
+        <input data-lf="amount" type="number" step="0.01" placeholder="0.00" value="${li.amount}">
+        <input data-lf="date" type="date" value="${li.date||''}">
+        <input data-lf="description" type="text" placeholder="Transaction description (e.g. ZELLE FROM JOHN SMITH)" value="${(li.description||'').replace(/"/g,'&quot;')}">
+        <span class="li-cat ${catClass}" data-j="${j}" title="Click to override (eligible → ineligible → auto)">
+          <span class="dot"></span>${catLabel}
+        </span>
+        <button class="li-del" data-j="${j}" title="Remove">×</button>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="line-items" data-stmt="${stmtIdx}">
+      <div class="li-head">
+        <h4>Individual Deposit Line Items</h4>
+        <span class="hint">${s.lineItems.length || 'No'} line item${s.lineItems.length===1?'':'s'} entered · auto-classified by ${MODES[state.mode].label} mode</span>
+      </div>
+      <div class="li-table">
+        <div class="li-row head">
+          <div>Amount</div><div>Date</div><div>Description / Source</div><div>Category</div><div></div>
+        </div>
+        ${rows || ''}
+      </div>
+      <button class="li-add">+ Add deposit line item</button>
+    </div>
+  `;
+}
+
+// Quick head update without re-render (to avoid blurring focused input)
+function updateStmtHead(i) {
+  const card = document.querySelectorAll('.stmt')[i];
+  if (!card) return;
+  const elig = eligibleOf(i);
+  const cats = sumLineItemsByCategory(i);
+  const cols = card.querySelectorAll('.stmt-head .col .v');
+  if (cols[1]) cols[1].textContent = fmt(num(state.statements[i].deposits));
+  if (cols[2]) cols[2].textContent = fmt(cats.ineligible + cats.questionable);
+  if (cols[3]) cols[3].textContent = fmt(elig);
+}
+
+/* ===========================================================
+   RENDER — METHOD SUMMARIES
+   =========================================================== */
+function renderMethodSummaries(c) {
+  // Method 1
+  let m1 = '';
+  if (c.ineligibleByOwnership) {
+    m1 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">Ownership ${c.ownershipPct.toFixed(1)}% &lt; 25%</span></div>`;
+  } else {
+    m1 += msRow('Most recent 12mo eligible deposits', fmt(c.mostRecent));
+    m1 += msRow('× Ownership', fmtPct(c.ownershipPct, 2));
+    m1 += msRow(`× (1 − Expense ratio ${fmtPct(c.m1.ratio,1)})`, (1 - c.m1.ratio/100).toFixed(4));
+    m1 += msRow('Most recent year qualifying', fmt(c.m1.most));
+    if (c.months === 24) {
+      m1 += msRow('Previous 12mo eligible deposits', fmt(c.previous));
+      m1 += msRow('Previous year qualifying', fmt(c.m1.prev));
+      m1 += `<div class="ms-row note"><span class="k">Method chosen</span><span>${c.m1.label}</span></div>`;
+    }
+    m1 += msRow('Annual qualifying income', fmt(c.m1.annual), 'total');
+    m1 += msRow('Monthly qualifying income', fmt(c.m1.monthly), 'total headline');
+  }
+  document.getElementById('m1_summary').innerHTML = m1;
+
+  // Method 2
+  let m2 = '';
+  if (c.ineligibleByOwnership) {
+    m2 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">Ownership ${c.ownershipPct.toFixed(1)}% &lt; 25%</span></div>`;
+  } else if (!c.m2.gross && !c.m2.net) {
+    m2 = `<div class="ms-row note"><span class="k">Enter CPA P&amp;L Gross Receipts and Net Income above to compute.</span></div>`;
+  } else {
+    m2 += msRow('P&L Gross Receipts', fmt(c.m2.gross));
+    m2 += msRow(`Total Eligible Deposits (${c.months}mo)`, fmt(c.totalEligible));
+    m2 += msRow('75% threshold of Gross', fmt(c.m2.gross * 0.75));
+    if (c.m2.coverageOK === false) m2 += `<div class="ms-row bad"><span class="k">⚠ Statements do NOT show 75%+ of revenues</span><span></span></div>`;
+    else if (c.m2.coverageOK === true) m2 += `<div class="ms-row"><span class="k" style="color:var(--positive)">✓ Deposit coverage passed</span><span></span></div>`;
+    m2 += msRow('P&L Net Income × Ownership', fmt(c.m2.annual));
+    m2 += msRow('Annual qualifying income', fmt(c.m2.annual), 'total');
+    m2 += msRow(`Monthly qualifying income (÷${c.months})`, fmt(c.m2.monthly), 'total headline');
+  }
+  document.getElementById('m2_summary').innerHTML = m2;
+
+  // Method 3
+  let m3 = '';
+  if (c.ineligibleByOwnership) {
+    m3 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">Ownership ${c.ownershipPct.toFixed(1)}% &lt; 25%</span></div>`;
+  } else if (!c.m3.ratio) {
+    m3 = `<div class="ms-row note"><span class="k">Enter CPA-stated expense ratio above to compute.</span></div>`;
+  } else if (c.m3.tooLow) {
+    m3 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">CPA ratio ${fmtPct(c.m3.ratio,1)} &lt; 20%</span></div>`;
+  } else {
+    m3 += msRow('Most recent 12mo eligible deposits', fmt(c.mostRecent));
+    m3 += msRow('× Ownership', fmtPct(c.ownershipPct, 2));
+    m3 += msRow(`× (1 − CPA ratio ${fmtPct(c.m3.ratio,1)})`, (1 - c.m3.ratio/100).toFixed(4));
+    m3 += msRow('Most recent year qualifying', fmt(c.m3.most));
+    if (c.months === 24) {
+      m3 += msRow('Previous year qualifying', fmt(c.m3.prev));
+      m3 += `<div class="ms-row note"><span class="k">Method chosen</span><span>${c.m3.label}</span></div>`;
+    }
+    m3 += msRow('Annual qualifying income', fmt(c.m3.annual), 'total');
+    m3 += msRow('Monthly qualifying income', fmt(c.m3.monthly), 'total headline');
+  }
+  document.getElementById('m3_summary').innerHTML = m3;
+
+  document.getElementById('methodMeta').textContent =
+    state.method === 'm1' ? `Method #1 · Uniform Expense Ratio ${fmtPct(c.m1.ratio,1)}` :
+    state.method === 'm2' ? 'Method #2 · CPA Profit & Loss' :
+                            'Method #3 · CPA Expense Ratio';
+}
+
+function msRow(k, v, extra='') {
+  return `<div class="ms-row ${extra}"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+}
+
+/* ===========================================================
+   MAIN RECALC
+   =========================================================== */
+function recalcOnly() {
+  _calcCache = computeAll();
+  return _calcCache;
+}
+function recalcAndPersist() {
+  recalcOnly();
+  renderHero(_calcCache);
+  renderMethodSummaries(_calcCache);
+  debouncedSave();
+}
+function recalcFull() {
+  recalcOnly();
+  renderHero(_calcCache);
+  renderMethodSummaries(_calcCache);
+}
+
+/* ===========================================================
+   SAVED INDICATOR
+   =========================================================== */
+let _savedTimer = null;
+function flashSaved() {
+  const dot = document.getElementById('savedDot');
+  dot.classList.add('visible');
+  clearTimeout(_savedTimer);
+  _savedTimer = setTimeout(() => dot.classList.remove('visible'), 1200);
+}
+
+/* ===========================================================
+   FIELD FOCUS UNDERLINE
+   =========================================================== */
+function setupFieldFocus(inp) {
+  const f = inp.closest('.field');
+  if (!f) return;
+  inp.addEventListener('focus', () => f.classList.add('focused'));
+  inp.addEventListener('blur', () => f.classList.remove('focused'));
+}
+document.querySelectorAll('.field input, .field select').forEach(setupFieldFocus);
+
+/* ===========================================================
+   BORROWER + METHOD INPUT BINDINGS
+   =========================================================== */
+const borrowerMap = { f_borrower:'name', f_business:'business', f_bank:'bank',
+                     f_last4:'last4', f_ownership:'ownership', f_endDate:'endDate' };
+Object.keys(borrowerMap).forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    state.borrower[borrowerMap[id]] = e.target.value;
+    if (id === 'f_endDate') { autoPopulateDates(); renderStatements(); }
+    recalcAndPersist();
+  });
+});
+document.getElementById('f_months').addEventListener('change', e => {
+  const m = parseInt(e.target.value, 10);
+  state.borrower.months = m;
+  if (state.statements.length < m) while (state.statements.length < m) state.statements.push(emptyStmt());
+  else if (state.statements.length > m) state.statements = state.statements.slice(0, m);
+  autoPopulateDates(); renderStatements(); recalcAndPersist();
+});
+['m1_ratio','m2_gross','m2_net','m3_ratio'].forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    if (id === 'm1_ratio') state.m1.ratio = e.target.value;
+    else if (id === 'm2_gross') state.m2.gross = e.target.value;
+    else if (id === 'm2_net') state.m2.net = e.target.value;
+    else if (id === 'm3_ratio') state.m3.ratio = e.target.value;
+    recalcAndPersist();
+  });
+});
+
+/* ===========================================================
+   SEGMENTED CONTROLS — Mode & Method
+   =========================================================== */
+document.getElementById('modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.mode = b.dataset.mode;
+  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x === b));
+  renderStatements(); recalcAndPersist();
+});
+document.getElementById('methodSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.method = b.dataset.method;
+  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
+  recalcAndPersist();
+});
+
+/* ===========================================================
+   REVIEW MODAL
+   =========================================================== */
+const modal = document.getElementById('reviewModal');
+function openReview() {
+  const fl = flaggedLineItems();
+  if (!fl.length) return showToast('No flagged deposits to review.');
+  reviewIdx = 0;
+  modal.classList.add('open');
+  document.addEventListener('keydown', modalKeyHandler);
+  renderReview();
+}
+function closeReview() {
+  modal.classList.remove('open');
+  document.removeEventListener('keydown', modalKeyHandler);
+}
+function renderReview() {
+  const fl = flaggedLineItems();
+  if (!fl.length) {
+    closeReview();
+    showToast('All deposits reviewed.');
+    renderStatements();
+    recalcAndPersist();
+    return;
+  }
+  if (reviewIdx >= fl.length) reviewIdx = fl.length - 1;
+  if (reviewIdx < 0) reviewIdx = 0;
+  const item = fl[reviewIdx];
+  document.getElementById('modalCount').textContent =
+    `${reviewIdx+1} of ${fl.length} flagged · Statement ${item._stmtIdx+1}`;
+  document.getElementById('modalDate').textContent = (item.date ? fmtUSDate(item.date) : '—').toUpperCase();
+  document.getElementById('modalAmount').textContent = fmt(num(item.amount));
+  document.getElementById('modalDesc').textContent = item.description || '(no description)';
+  document.getElementById('modalReason').innerHTML = (item._eff.reasons || []).map(r => `<div>${r}</div>`).join('');
+  document.getElementById('modalNote').value = item.note || '';
+  document.getElementById('modalPrev').disabled = reviewIdx === 0;
+  document.getElementById('modalNext').disabled = reviewIdx >= fl.length - 1;
+  // Live monthly income
+  const live = recalcOnly();
+  const lv = state.method === 'm1' ? live.m1.monthly : state.method === 'm2' ? live.m2.monthly : live.m3.monthly;
+  document.getElementById('modalLive').textContent = fmt(lv);
+}
+
+function decide(decision) {
+  const fl = flaggedLineItems();
+  if (!fl.length) return closeReview();
+  const item = fl[reviewIdx];
+  // Find item in actual state
+  const stmt = state.statements[item._stmtIdx];
+  const li = stmt.lineItems.find(x => x.id === item.id);
+  if (!li) return;
+  li.manualDecision = decision;
+  li.note = document.getElementById('modalNote').value || li.note;
+  // Re-render statements + hero with count-up
+  renderStatements();
+  recalcAndPersist();
+  // Advance (current index now points to next flagged item since this one was resolved)
+  const updated = flaggedLineItems();
+  if (updated.length === 0) {
+    closeReview();
+    showToast('All deposits reviewed.');
+    return;
+  }
+  if (reviewIdx >= updated.length) reviewIdx = updated.length - 1;
+  renderReview();
+}
+
+document.getElementById('btnReview').addEventListener('click', openReview);
+document.getElementById('modalClose').addEventListener('click', closeReview);
+document.getElementById('modalEligible').addEventListener('click', () => decide('eligible'));
+document.getElementById('modalIneligible').addEventListener('click', () => decide('ineligible'));
+document.getElementById('modalSkip').addEventListener('click', () => {
+  reviewIdx++;
+  renderReview();
+});
+document.getElementById('modalPrev').addEventListener('click', () => { reviewIdx--; renderReview(); });
+document.getElementById('modalNext').addEventListener('click', () => { reviewIdx++; renderReview(); });
+modal.addEventListener('click', e => { if (e.target.id === 'reviewModal') closeReview(); });
+document.getElementById('modalNote').addEventListener('input', e => {
+  const fl = flaggedLineItems();
+  if (!fl.length) return;
+  const item = fl[reviewIdx];
+  const li = state.statements[item._stmtIdx].lineItems.find(x => x.id === item.id);
+  if (li) { li.note = e.target.value; debouncedSave(); }
+});
+function modalKeyHandler(e) {
+  if (e.key === 'Escape') { e.preventDefault(); closeReview(); }
+  else if (e.key === '1') { e.preventDefault(); decide('eligible'); }
+  else if (e.key === '2') { e.preventDefault(); decide('ineligible'); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); reviewIdx--; renderReview(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); reviewIdx++; renderReview(); }
+}
+
+/* ===========================================================
+   COMPACT BAR ON SCROLL
+   =========================================================== */
+const compactBar = document.getElementById('compactBar');
+let _heroBottom = 0;
+function measureHero() { _heroBottom = document.querySelector('.hero').getBoundingClientRect().bottom + window.scrollY; }
+window.addEventListener('resize', measureHero);
+window.addEventListener('scroll', () => {
+  if (window.scrollY > _heroBottom - 80) compactBar.classList.add('visible');
+  else compactBar.classList.remove('visible');
+});
+
+/* ===========================================================
+   COPY SUMMARY
+   =========================================================== */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2200);
+}
+
+document.getElementById('btnCopy').addEventListener('click', async () => {
+  const c = _calcCache;
+  const b = state.borrower;
+  const last = state.statements[0]?.endDate;
+  const first = state.statements[c.months-1]?.endDate;
+  const monthly = state.method === 'm1' ? c.m1.monthly : state.method === 'm2' ? c.m2.monthly : c.m3.monthly;
+  const annual = monthly * 12;
+  const lines = [
+    `Borrower: ${b.name || '—'}`,
+    `Business: ${b.business || '—'}`,
+    `Bank: ${b.bank || '—'} ****${b.last4 || '—'}`,
+    `Period: ${fmtUSDate(first)} to ${fmtUSDate(last)} (${c.months} months)`,
+    `Analysis Mode: ${MODES[state.mode].label}`,
+    `Method: ${state.method === 'm1' ? `#1 Uniform Expense Ratio @ ${fmtPct(c.m1.ratio,1)}` :
+              state.method === 'm2' ? '#2 CPA Profit & Loss' :
+              `#3 CPA Expense Ratio @ ${fmtPct(c.m3.ratio,1)}`}`,
+    `Ownership: ${fmtPct(c.ownershipPct,2)}`,
+    `Total Eligible Deposits: ${fmt(c.totalEligible)}`,
+    c.ineligibleByOwnership ? `Qualifying Income: INELIGIBLE — Ownership below 25%` :
+                              `Qualifying Annual Income: ${fmt(annual)}`,
+    c.ineligibleByOwnership ? '' : `Qualifying Monthly Income: ${fmt(monthly)}  <-- USE THIS TO UNDERWRITE`,
+    `NSFs: ${c.totalNSF} (${c.excessiveNSF ? 'EXCESSIVE' : 'within tolerance'})`,
+    `Trend: ${c.depositsIncreasing === null ? 'N/A (12-mo)' : c.depositsIncreasing ? 'increasing' : 'declining'}`,
+    `Line items: ${c.lineItemCounts.eligible} eligible, ${c.lineItemCounts.ineligible} ineligible, ${c.lineItemCounts.questionable} unreviewed`
+  ].filter(Boolean);
+  const txt = lines.join('\n');
+  try { await navigator.clipboard.writeText(txt); showToast('Summary copied to clipboard'); }
+  catch(e) {
+    const ta = document.createElement('textarea'); ta.value = txt;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    showToast('Summary copied to clipboard');
+  }
+});
+
+/* ===========================================================
+   EXCEL EXPORT
+   =========================================================== */
+document.getElementById('btnXlsx').addEventListener('click', () => {
+  const c = _calcCache;
+  const b = state.borrower;
+  const wb = XLSX.utils.book_new();
+
+  const headlineMonthly = state.method === 'm1' ? c.m1.monthly : state.method === 'm2' ? c.m2.monthly : c.m3.monthly;
+  const summary = [
+    ['Bank Statement Income Worksheet'], [],
+    ['Borrower', b.name], ['Business', b.business], ['Bank', `${b.bank} ****${b.last4}`],
+    ['Months Analyzed', c.months], ['Ownership %', c.ownershipPct],
+    ['Period End', fmtUSDate(state.statements[0]?.endDate)],
+    ['Period Start', fmtUSDate(state.statements[c.months-1]?.endDate)],
+    ['Analysis Mode', MODES[state.mode].label],
+    ['Headline Method', state.method.toUpperCase()],
+    [], ['HEADLINE'],
+    ['Qualifying Monthly Income', headlineMonthly],
+    ['Qualifying Annual Income', headlineMonthly * 12],
+    [], ['== Method #1: Uniform Expense Ratio =='],
+    ['Expense Ratio', c.m1.ratio + '%'],
+    ['Most Recent 12mo Eligible Deposits', c.mostRecent],
+    ['Most Recent Year Qualifying', c.m1.most]
+  ];
+  if (c.months === 24) {
+    summary.push(['Previous 12mo Eligible', c.previous]);
+    summary.push(['Previous Year Qualifying', c.m1.prev]);
+    summary.push(['Method Chosen', c.m1.label]);
+  }
+  summary.push(['Annual Qualifying', c.m1.annual], ['Monthly Qualifying', c.m1.monthly], [],
+    ['== Validation =='],
+    ['Total NSFs', c.totalNSF],
+    ['Excessive NSFs (>3)', c.excessiveNSF ? 'YES' : 'NO']);
+  if (c.months === 24) {
+    summary.push(['Deposits Increasing?', c.depositsIncreasing ? 'YES' : 'NO']);
+    summary.push(['% Change', (c.periodPctChange*100).toFixed(2) + '%']);
+  }
+  summary.push([], ['== Line Items Summary =='],
+    ['Eligible', c.lineItemCounts.eligible],
+    ['Ineligible', c.lineItemCounts.ineligible],
+    ['Unreviewed (questionable)', c.lineItemCounts.questionable],
+    [], ['== Method #2: CPA P&L =='],
+    ['Gross Receipts', c.m2.gross], ['Net Income', c.m2.net],
+    ['Deposit Coverage of Gross', c.m2.coverageOK === null ? 'N/A' : c.m2.coverageOK ? '>=75% OK' : '<75% FAIL'],
+    ['Monthly', c.m2.monthly],
+    [], ['== Method #3: CPA Expense Ratio =='],
+    ['CPA Stated Ratio', c.m3.ratio + '%'],
+    ['Annual', c.m3.annual], ['Monthly', c.m3.monthly]);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(summary);
+  ws1['!cols'] = [{wch:40},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
+
+  const detail = [['#','End Date','Beginning','Total Deposits','Excluded','Eligible','Ending','NSF']];
+  state.statements.slice(0, c.months).forEach((s, i) => {
+    const cats = sumLineItemsByCategory(i);
+    detail.push([i+1, s.endDate, num(s.beginning), num(s.deposits),
+      cats.ineligible + cats.questionable, eligibleOf(i), num(s.ending), num(s.nsf)]);
+  });
+  detail.push([], ['TOTAL','','','','', c.totalEligible, '', c.totalNSF]);
+  const ws2 = XLSX.utils.aoa_to_sheet(detail);
+  ws2['!cols'] = [{wch:5},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:6}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Statement Detail');
+
+  const lis = [['Stmt#','Stmt End','Tx Date','Amount','Description','Auto Category','Effective','Manual','Note','Reasons']];
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  state.statements.slice(0, c.months).forEach((s, i) => {
+    s.lineItems.forEach(li => {
+      const r = effectiveCategory(li, state.mode, ctx);
+      lis.push([i+1, s.endDate, li.date, num(li.amount), li.description || '',
+        r.auto, r.effective, li.manualDecision || '', li.note || '', (r.reasons||[]).join(' | ')]);
+    });
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet(lis);
+  ws3['!cols'] = [{wch:6},{wch:12},{wch:12},{wch:12},{wch:36},{wch:14},{wch:12},{wch:10},{wch:24},{wch:60}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Line Items');
+
+  const filename = `BankStmt_${(b.name||'borrower').replace(/[^\w]+/g,'_')}_${b.last4||'xxxx'}.xlsx`;
+  XLSX.writeFile(wb, filename);
+});
+
+/* ===========================================================
+   PRINT / SAVE JSON / LOAD JSON / NEW
+   =========================================================== */
+document.getElementById('btnPrint').addEventListener('click', () => window.print());
+document.getElementById('btnSaveJson').addEventListener('click', () => {
+  const persistable = { ...state, openStmts: Array.from(state.openStmts) };
+  const blob = new Blob([JSON.stringify(persistable, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `BankStmt_${(state.borrower.name||'borrower').replace(/[^\w]+/g,'_')}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Saved to disk');
+});
+document.getElementById('btnLoadJson').addEventListener('click', () => document.getElementById('jsonFileInput').click());
+document.getElementById('jsonFileInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const loaded = JSON.parse(ev.target.result);
+      if (!loaded.borrower || !loaded.statements) throw new Error('bad format');
+      state = loaded;
+      state.openStmts = new Set(loaded.openStmts || [0]);
+      state.m1 = state.m1 || { ratio: 50 }; state.m2 = state.m2 || {gross:'',net:''}; state.m3 = state.m3 || {ratio:''};
+      state.mode = state.mode || 'medium'; state.method = state.method || 'm1';
+      // Back-compat: old format had 'ineligibles' per statement
+      state.statements.forEach(s => {
+        if (!s.lineItems) {
+          s.lineItems = (s.ineligibles || []).map(it => newLineItem(it.amount, it.category || it.note || '', s.endDate));
+          // mark them as manually ineligible since the old data model meant exclusion
+          s.lineItems.forEach(li => li.manualDecision = 'ineligible');
+          delete s.ineligibles;
+        }
+      });
+      document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
+      document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === state.method));
+      document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
+      renderBorrower(); renderStatements(); recalcAndPersist();
+      showToast('File loaded');
+    } catch(err) { showToast('Could not load: ' + err.message); }
+    e.target.value = '';
+  };
+  r.readAsText(f);
+});
+document.getElementById('btnNew').addEventListener('click', () => {
+  if (!confirm('Clear all data and start a new calculation?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = DEFAULT_STATE(); seedStatements(state);
+  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === 'medium'));
+  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === 'm1'));
+  document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === 'm1'));
+  renderBorrower(); renderStatements(); recalcAndPersist();
+});
+
+document.getElementById('dismissPrivacy').addEventListener('click', () => {
+  document.getElementById('privacyBanner').classList.add('hidden');
+  localStorage.setItem('bsic_privacy_ok', '1');
+});
+if (localStorage.getItem('bsic_privacy_ok') === '1') document.getElementById('privacyBanner').classList.add('hidden');
+
+/* ===========================================================
+   SAMPLE DATA — ?sample=nathan
+   =========================================================== */
+function loadNathanSample() {
+  const monthly = 211000.85 / 12;
+  const stmts = [];
+  let bal = 25000;
+  for (let i = 0; i < 12; i++) {
+    const dep = +(monthly).toFixed(2);
+    const ending = +(bal + dep - 8000).toFixed(2);
+    const stmt = {
+      endDate: '', beginning: i === 0 ? bal.toFixed(2) : '',
+      deposits: dep.toFixed(2), ending: ending.toFixed(2), nsf: 0,
+      lineItems: []
+    };
+    // Sprinkle realistic flagged-style transactions for demo:
+    if (i === 0) {
+      stmt.lineItems.push(newLineItem('5000.00', 'CASH DEPOSIT TELLER', ''));
+      stmt.lineItems.push(newLineItem('2500.00', 'ZELLE FROM J ANTEBI', ''));
+    }
+    if (i === 3) {
+      stmt.lineItems.push(newLineItem('15000.00', 'WIRE TRANSFER LOAN PROCEEDS', ''));
+    }
+    if (i === 7) {
+      stmt.lineItems.push(newLineItem('1200.00', 'REFUND - CLIENT INVOICE 4421', ''));
+    }
+    stmts.push(stmt);
+    bal = ending;
+  }
+  const total = stmts.reduce((a,s) => a + num(s.deposits), 0);
+  const drift = +(211000.85 - total).toFixed(2);
+  stmts[0].deposits = (num(stmts[0].deposits) + drift).toFixed(2);
+
+  state = {
+    borrower: { name:'Nathan Antebi', business:'YY Script LLC', bank:'Chase', last4:'7000',
+                months:12, ownership:100, endDate:'2026-04-30' },
+    statements: stmts,
+    m1:{ ratio:50 }, m2:{ gross:'', net:'' }, m3:{ ratio:'' },
+    mode:'medium', method:'m1', openStmts: new Set([0])
+  };
+  autoPopulateDates();
+  for (let i = 1; i < state.statements.length; i++) state.statements[i].beginning = state.statements[i-1].ending;
+  // Assign line item dates relative to statement end
+  state.statements.forEach(s => s.lineItems.forEach(li => { if (!li.date) li.date = s.endDate; }));
+  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === 'medium'));
+  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === 'm1'));
+  renderBorrower(); renderStatements(); recalcAndPersist();
+}
+
+/* ===========================================================
+   INIT
+   =========================================================== */
+function init() {
+  // Method tab + mode persisted state
+  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
+  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === state.method));
+  document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
+  renderBorrower();
+  renderStatements();
+  recalcAndPersist();
+  measureHero();
+  if (new URLSearchParams(location.search).get('sample') === 'nathan') {
+    // Defer slightly so initial render completes
+    setTimeout(loadNathanSample, 50);
+  }
+}
+init();
+</script>
+</body>
+</html>

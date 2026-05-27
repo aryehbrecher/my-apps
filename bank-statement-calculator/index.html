@@ -4,13 +4,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bank Statement Income</title>
+<title>Bank Statement Income Calculator · FMHL Non-QM</title>
+<meta name="description" content="FMHL Nov 2025 compliant bank statement income calculator for self-employed borrowers. All processing client-side.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
         integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <style>
   :root {
     --bg:        #FAFAF9;
@@ -29,6 +30,8 @@
     --warning-soft:#FBF2E2;
     --negative:  #E5544A;
     --negative-soft:#FBEBE9;
+    --info:      #2C5F8D;
+    --info-soft: #E6EEF6;
     --ease:      cubic-bezier(0.4, 0, 0.2, 1);
     --t-fast:    160ms;
     --t-base:    240ms;
@@ -45,68 +48,40 @@
     line-height: 1.5;
     font-weight: 400;
     letter-spacing: -0.005em;
-    /* Very faint paper texture */
-    background-image:
-      radial-gradient(circle at 1px 1px, rgba(0,0,0,0.018) 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.018) 1px, transparent 0);
     background-size: 22px 22px;
   }
 
   .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
   .tnum { font-variant-numeric: tabular-nums; }
-  .label-xs {
-    font-size: 10.5px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--muted);
-  }
-  .label-sm {
-    font-size: 11.5px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-  }
+  .label-xs { font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+  .label-sm { font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
   ::selection { background: var(--accent-soft); color: var(--accent); }
+
+  /* Focus visible for keyboard nav */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  button:focus-visible { outline-offset: 3px; }
 
   /* ============ TOP BAR ============ */
   .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 22px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px;
     border-bottom: 1px solid var(--hair);
     background: rgba(250,250,249,0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     position: sticky; top: 0; z-index: 60;
   }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: -0.01em;
-  }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
   .brand .mark {
-    width: 22px; height: 22px;
-    border-radius: 5px;
-    background: var(--accent);
-    position: relative;
-    display: flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 6px; background: var(--accent);
+    position: relative; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 4px rgba(31,77,58,0.15);
   }
-  .brand .mark::after {
-    content: ''; width: 8px; height: 8px;
-    border: 1.5px solid var(--bg);
-    border-radius: 2px;
-  }
-  .brand .sep {
-    width: 1px; height: 14px; background: var(--hair); margin: 0 4px;
-  }
+  .brand .mark::after { content: ''; width: 9px; height: 9px; border: 1.5px solid var(--bg); border-radius: 2px; }
+  .brand .sep { width: 1px; height: 14px; background: var(--hair); margin: 0 4px; }
   .brand .sub { color: var(--muted); font-weight: 400; }
 
-  .topbar .right { display: flex; align-items: center; gap: 18px; }
+  .topbar .right { display: flex; align-items: center; gap: 10px; }
   .saved-dot {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 11px; color: var(--muted);
@@ -114,106 +89,70 @@
     transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
   }
   .saved-dot.visible { opacity: 1; transform: translateY(0); }
-  .saved-dot .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--positive);
-  }
+  .saved-dot .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); animation: dotPulse 1.2s var(--ease); }
+  @keyframes dotPulse { 0% { transform: scale(0.4); opacity: 0.4; } 50% { transform: scale(1.4); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
   /* ============ PRIVACY ============ */
   .privacy {
-    padding: 12px 40px;
-    background: var(--accent-soft);
-    color: var(--accent);
+    padding: 11px 40px;
+    background: var(--accent-soft); color: var(--accent);
     font-size: 12.5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid var(--hair);
   }
   .privacy strong { font-weight: 600; }
   .privacy .x {
-    background: transparent; border: 0;
-    color: var(--accent); cursor: pointer;
-    font-size: 18px; line-height: 1; padding: 4px 8px;
-    border-radius: 4px;
+    background: transparent; border: 0; color: var(--accent); cursor: pointer;
+    font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 4px;
     transition: background var(--t-fast) var(--ease);
   }
   .privacy .x:hover { background: rgba(31,77,58,0.08); }
   .privacy.hidden { display: none; }
 
   /* ============ MAIN ============ */
-  main {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 0 40px 120px;
-  }
+  main { max-width: 1120px; margin: 0 auto; padding: 0 40px 120px; }
 
   /* ============ HERO ============ */
   .hero {
-    padding: 88px 0 64px;
-    text-align: left;
+    padding: 80px 0 56px; text-align: left;
     border-bottom: 1px solid var(--hair);
-    animation: heroIn 600ms var(--ease) both;
+    animation: heroIn 700ms var(--ease) both;
   }
-  @keyframes heroIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: none; }
-  }
-  .hero .eyebrow {
-    display: block;
-    margin-bottom: 24px;
-  }
-  .hero-number-wrap {
-    display: flex;
-    align-items: baseline;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
+  @keyframes heroIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .hero .eyebrow { display: block; margin-bottom: 22px; }
+  .hero-number-wrap { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
   .hero-number {
-    font-family: 'Inter', sans-serif;
-    font-weight: 300;
-    font-size: clamp(64px, 11vw, 128px);
-    line-height: 1;
-    letter-spacing: -0.04em;
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: clamp(56px, 11vw, 128px);
+    line-height: 1; letter-spacing: -0.04em;
     color: var(--fg);
     font-variant-numeric: tabular-nums;
+    transition: color var(--t-base) var(--ease);
   }
-  .hero-number.ineligible { color: var(--negative); font-weight: 400; font-size: clamp(38px, 6vw, 64px); }
-  .hero-suffix {
-    font-size: 18px;
-    font-weight: 400;
-    color: var(--muted);
-    letter-spacing: -0.01em;
-  }
-  .hero-flags {
-    margin-top: 32px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
+  .hero-number.ineligible { color: var(--negative); font-weight: 400; font-size: clamp(36px, 6vw, 64px); }
+  .hero-number.preliminary { color: var(--warning); }
+  .hero-suffix { font-size: 18px; font-weight: 400; color: var(--muted); letter-spacing: -0.01em; }
+  .hero-flags { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; }
   .flag {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 12px;
-    background: var(--surface);
-    border: 1px solid var(--hair);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--fg-2);
+    padding: 6px 12px; background: var(--surface);
+    border: 1px solid var(--hair); border-radius: 999px;
+    font-size: 12px; font-weight: 500; color: var(--fg-2);
     letter-spacing: -0.005em;
+    transition: border-color var(--t-fast) var(--ease);
   }
-  .flag .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--muted-2);
-  }
+  .flag:hover { border-color: var(--muted-2); }
+  .flag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-2); }
   .flag.good .dot { background: var(--positive); }
   .flag.warn .dot { background: var(--warning); }
   .flag.bad  .dot { background: var(--negative); }
+  .flag.info .dot { background: var(--info); }
 
-  /* ============ STICKY COMPACT BAR (appears when hero scrolls out) ============ */
+  /* ============ STICKY COMPACT BAR ============ */
   .compact-bar {
     position: fixed; left: 0; right: 0; top: 0; z-index: 70;
     background: rgba(250,250,249,0.92);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--hair);
     padding: 14px 40px;
     display: flex; align-items: center; justify-content: space-between;
@@ -221,77 +160,49 @@
     transition: transform var(--t-base) var(--ease);
   }
   .compact-bar.visible { transform: translateY(0); }
-  .compact-bar .num {
-    font-weight: 500;
-    font-size: 18px;
-    letter-spacing: -0.02em;
-    color: var(--fg);
-    font-variant-numeric: tabular-nums;
-  }
+  .compact-bar .num { font-weight: 500; font-size: 18px; letter-spacing: -0.02em; color: var(--fg); font-variant-numeric: tabular-nums; }
   .compact-bar .num.ineligible { color: var(--negative); font-size: 14px; }
+  .compact-bar .num.preliminary { color: var(--warning); }
   .compact-bar .meta { color: var(--muted); font-size: 12px; }
 
   /* ============ CONTROLS ROW ============ */
   .controls {
-    padding: 36px 0 28px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-    flex-wrap: wrap;
+    padding: 32px 0 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 20px; flex-wrap: wrap;
     border-bottom: 1px solid var(--hair);
   }
   .controls .group { display: flex; flex-direction: column; gap: 8px; }
   .controls .group .label-xs { margin-bottom: 0; }
 
   /* Segmented control */
-  .seg {
-    display: inline-flex;
-    border: 1px solid var(--hair);
-    border-radius: 8px;
-    padding: 3px;
-    background: var(--surface);
-  }
+  .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; padding: 3px; background: var(--surface); flex-wrap: wrap; }
   .seg button {
-    background: transparent;
-    border: 0;
+    background: transparent; border: 0;
     padding: 7px 14px;
-    font-family: inherit;
-    font-size: 12.5px;
-    font-weight: 500;
-    color: var(--muted);
-    cursor: pointer;
-    border-radius: 6px;
-    letter-spacing: -0.005em;
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    border-radius: 6px; letter-spacing: -0.005em;
     transition: all var(--t-fast) var(--ease);
   }
   .seg button:hover { color: var(--fg-2); }
-  .seg button.active {
-    background: var(--fg);
-    color: var(--bg);
-  }
+  .seg button.active { background: var(--fg); color: var(--bg); }
   .seg.accent button.active { background: var(--accent); }
   .seg .desc { display: none; }
 
-  /* Button styles */
+  /* Buttons */
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
-    background: var(--surface);
-    border: 1px solid var(--hair);
+    background: var(--surface); border: 1px solid var(--hair);
     color: var(--fg-2);
     padding: 8px 14px;
-    font-family: inherit;
-    font-size: 12.5px;
-    font-weight: 500;
-    cursor: pointer;
-    border-radius: 8px;
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; border-radius: 8px;
     letter-spacing: -0.005em;
     transition: all var(--t-fast) var(--ease);
   }
   .btn:hover { background: var(--hair-2); border-color: var(--muted-2); color: var(--fg); }
-  .btn.primary {
-    background: var(--accent); border-color: var(--accent); color: var(--bg);
-  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
   .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
   .btn.subtle { border-color: transparent; background: transparent; color: var(--muted); }
   .btn.subtle:hover { color: var(--fg); background: var(--hair-2); }
@@ -307,10 +218,9 @@
 
   /* ============ SECTIONS ============ */
   section {
-    padding: 56px 0;
+    padding: 48px 0;
     border-bottom: 1px solid var(--hair);
-    opacity: 0;
-    transform: translateY(8px);
+    opacity: 0; transform: translateY(8px);
     animation: secIn 500ms var(--ease) forwards;
   }
   section:last-of-type { border-bottom: 0; }
@@ -320,179 +230,156 @@
   section:nth-of-type(3) { animation-delay: 180ms; }
   section:nth-of-type(4) { animation-delay: 240ms; }
   section:nth-of-type(5) { animation-delay: 300ms; }
+  section:nth-of-type(6) { animation-delay: 360ms; }
+  section:nth-of-type(7) { animation-delay: 420ms; }
 
-  .sec-head {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 28px;
-  }
-  .sec-head h2 {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--fg);
-    margin: 0;
-  }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .sec-head h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg); margin: 0; }
   .sec-head .meta { color: var(--muted); font-size: 12.5px; }
 
-  /* ============ BORDERLESS INPUTS ============ */
+  /* ============ FIELDS ============ */
   .field {
     display: flex; flex-direction: column;
-    position: relative;
-    padding-top: 4px;
-    padding-bottom: 8px;
+    position: relative; padding-top: 4px; padding-bottom: 8px;
   }
   .field label { margin-bottom: 6px; }
   .field input, .field select, .field textarea {
-    border: 0;
-    border-bottom: 1px solid var(--hair);
+    border: 0; border-bottom: 1px solid var(--hair);
     background: transparent;
     padding: 8px 0;
-    font-family: inherit;
-    font-size: 15px;
-    color: var(--fg);
-    width: 100%;
-    border-radius: 0;
-    outline: none;
+    font-family: inherit; font-size: 15px; color: var(--fg);
+    width: 100%; border-radius: 0; outline: none;
     transition: border-color var(--t-fast) var(--ease);
     letter-spacing: -0.005em;
   }
   .field input:focus, .field select:focus, .field textarea:focus { border-bottom-color: transparent; }
   .field::after {
-    content: '';
-    position: absolute;
-    left: 0; right: 0; bottom: 8px;
-    height: 1.5px;
-    background: var(--accent);
-    transform: scaleX(0);
-    transform-origin: left;
+    content: ''; position: absolute; left: 0; right: 0; bottom: 8px;
+    height: 1.5px; background: var(--accent);
+    transform: scaleX(0); transform-origin: left;
     transition: transform var(--t-base) var(--ease);
     pointer-events: none;
   }
   .field.focused::after { transform: scaleX(1); }
   .field.mono input { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; font-size: 15px; }
   .field .prefix {
-    position: absolute; left: 0; bottom: 18px; font-family: 'JetBrains Mono', monospace; color: var(--muted-2);
-    font-size: 14px;
-    pointer-events: none;
+    position: absolute; left: 0; bottom: 18px;
+    font-family: 'JetBrains Mono', monospace; color: var(--muted-2);
+    font-size: 14px; pointer-events: none;
     transition: color var(--t-fast) var(--ease);
   }
   .field.has-prefix input { padding-left: 14px; }
   .field.focused .prefix { color: var(--accent); }
-  .field input::-webkit-outer-spin-button,
-  .field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .field input::-webkit-outer-spin-button, .field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .field input[type="number"] { -moz-appearance: textfield; }
   .field input[type="date"] { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: var(--fg-2); }
 
   .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 28px 36px;
+    gap: 24px 32px;
   }
+
+  /* ============ ELIGIBILITY CHECKLIST ============ */
+  .checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 8px 24px;
+    margin-top: 8px;
+  }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all var(--t-fast) var(--ease);
+    user-select: none;
+  }
+  .check-item:hover { border-color: var(--muted-2); background: var(--hair-2); }
+  .check-item.checked { border-color: rgba(47,122,86,0.3); background: rgba(47,122,86,0.04); }
+  .check-item .box {
+    flex: 0 0 18px; width: 18px; height: 18px;
+    border: 1.5px solid var(--muted-2); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+    transition: all var(--t-fast) var(--ease);
+    background: var(--bg);
+  }
+  .check-item.checked .box { border-color: var(--positive); background: var(--positive); }
+  .check-item.checked .box::after {
+    content: ''; width: 5px; height: 9px;
+    border: solid var(--bg); border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .check-item .txt { flex: 1; font-size: 13px; color: var(--fg-2); line-height: 1.45; }
+  .check-item .cite { font-size: 10.5px; color: var(--muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+
+  .eligibility-banner {
+    margin-top: 18px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eligibility-banner.ok { background: rgba(47,122,86,0.08); color: var(--positive); border: 1px solid rgba(47,122,86,0.2); }
+  .eligibility-banner.warn { background: var(--warning-soft); color: var(--warning); border: 1px solid rgba(184,114,26,0.25); }
+  .eligibility-banner .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .eligibility-banner.ok .dot { background: var(--positive); }
+  .eligibility-banner.warn .dot { background: var(--warning); }
 
   /* ============ STATEMENT CARDS ============ */
   .stmt {
-    border: 1px solid var(--hair);
-    border-radius: 12px;
+    border: 1px solid var(--hair); border-radius: 12px;
     background: var(--surface);
-    margin-bottom: 12px;
-    overflow: hidden;
-    transition: border-color var(--t-fast) var(--ease);
+    margin-bottom: 10px; overflow: hidden;
+    transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
   }
-  .stmt:hover { border-color: var(--muted-2); }
+  .stmt:hover { border-color: var(--muted-2); box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
   .stmt-head {
     display: grid;
     grid-template-columns: 28px 1fr 1.4fr 1fr 1fr 1fr 28px;
-    gap: 16px;
-    align-items: center;
-    padding: 14px 18px;
-    cursor: pointer;
+    gap: 16px; align-items: center;
+    padding: 14px 18px; cursor: pointer;
     transition: background var(--t-fast) var(--ease);
   }
   .stmt-head:hover { background: var(--hair-2); }
-  .stmt-head .idx {
-    font-size: 11px;
-    color: var(--muted-2);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-  }
+  .stmt-head .idx { font-size: 11px; color: var(--muted-2); font-weight: 500; font-variant-numeric: tabular-nums; }
   .stmt-head .date-display { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--fg-2); }
-  .stmt-head .col {
-    display: flex; flex-direction: column; gap: 2px;
-  }
-  .stmt-head .col .v {
-    font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
-    font-size: 13px; color: var(--fg); font-weight: 500;
-  }
+  .stmt-head .col { display: flex; flex-direction: column; gap: 2px; }
+  .stmt-head .col .v { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--fg); font-weight: 500; }
   .stmt-head .col .v.elig { color: var(--accent); font-weight: 600; }
   .stmt-head .col .v.warn { color: var(--negative); }
   .stmt-head .col .k { font-size: 9.5px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
-  .stmt-head .caret {
-    width: 16px; height: 16px;
-    transition: transform var(--t-base) var(--ease);
-    color: var(--muted-2);
-    display: flex; align-items: center; justify-content: center;
-  }
+  .stmt-head .caret { width: 16px; height: 16px; transition: transform var(--t-base) var(--ease); color: var(--muted-2); display: flex; align-items: center; justify-content: center; }
   .stmt.open .stmt-head .caret { transform: rotate(90deg); }
 
-  .stmt-body {
-    display: none;
-    padding: 8px 18px 24px;
-    border-top: 1px solid var(--hair);
-    background: var(--bg);
-  }
+  .stmt-body { display: none; padding: 8px 18px 24px; border-top: 1px solid var(--hair); background: var(--bg); }
   .stmt.open .stmt-body { display: block; }
+  .stmt-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 18px 24px; padding: 16px 0 20px; }
 
-  .stmt-fields {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 20px 28px;
-    padding: 16px 0 24px;
-  }
-
-  /* Line items table */
-  .line-items {
-    margin-top: 18px;
-  }
-  .li-head {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 14px;
-  }
-  .li-head h4 {
-    margin: 0; font-size: 12px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    color: var(--fg);
-  }
+  /* Line items */
+  .line-items { margin-top: 14px; }
+  .li-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .li-head h4 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fg); }
   .li-head .hint { color: var(--muted); font-size: 11.5px; }
+  .li-head .actions { display: flex; gap: 6px; }
 
-  .li-table {
-    display: flex; flex-direction: column;
-    gap: 1px;
-    background: var(--hair);
-    border: 1px solid var(--hair);
-    border-radius: 8px;
-    overflow: hidden;
-  }
+  .li-table { display: flex; flex-direction: column; gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; }
   .li-row {
     display: grid;
-    grid-template-columns: 120px 130px 1fr 130px 28px;
-    gap: 12px;
-    align-items: center;
+    grid-template-columns: 120px 130px 1fr 140px 28px;
+    gap: 12px; align-items: center;
     padding: 10px 14px;
     background: var(--surface);
     transition: background var(--t-fast) var(--ease);
   }
-  .li-row.head {
-    background: var(--bg);
-    padding-top: 8px; padding-bottom: 8px;
-  }
-  .li-row.head > div {
-    font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted);
-  }
+  .li-row.head { background: var(--bg); padding-top: 8px; padding-bottom: 8px; }
+  .li-row.head > div { font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
   .li-row input {
     border: 0; background: transparent; padding: 4px 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-variant-numeric: tabular-nums;
+    font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
     font-size: 13px; color: var(--fg);
     width: 100%; outline: none;
     border-bottom: 1px solid transparent;
@@ -504,14 +391,10 @@
 
   .li-cat {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 500;
-    border: 1px solid var(--hair);
-    cursor: pointer;
-    background: var(--surface);
-    color: var(--fg-2);
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+    border: 1px solid var(--hair); cursor: pointer;
+    background: var(--surface); color: var(--fg-2);
     transition: all var(--t-fast) var(--ease);
     letter-spacing: -0.005em;
   }
@@ -525,19 +408,16 @@
   .li-cat.ineligible .dot { background: var(--negative); }
 
   .li-del {
-    background: transparent; border: 0;
-    color: var(--muted-2); cursor: pointer;
+    background: transparent; border: 0; color: var(--muted-2); cursor: pointer;
     padding: 4px 6px; border-radius: 4px;
-    transition: all var(--t-fast) var(--ease);
-    font-size: 14px;
+    transition: all var(--t-fast) var(--ease); font-size: 14px;
   }
   .li-del:hover { color: var(--negative); background: var(--negative-soft); }
 
   .li-add {
-    margin-top: 10px;
-    background: transparent; border: 1px dashed var(--hair);
-    color: var(--muted); padding: 9px 14px;
-    border-radius: 8px; cursor: pointer;
+    margin-top: 10px; background: transparent;
+    border: 1px dashed var(--hair); color: var(--muted);
+    padding: 9px 14px; border-radius: 8px; cursor: pointer;
     font-family: inherit; font-size: 12px; font-weight: 500;
     width: 100%; text-align: center;
     transition: all var(--t-fast) var(--ease);
@@ -546,26 +426,19 @@
 
   /* ============ METHOD PANELS ============ */
   .method-panel { display: none; }
-  .method-panel.active { display: block; }
+  .method-panel.active { display: block; animation: fadeIn 300ms var(--ease); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   .method-summary {
-    margin-top: 32px;
-    padding: 28px 32px;
+    margin-top: 28px;
+    padding: 26px 30px;
     background: var(--surface);
-    border: 1px solid var(--hair);
-    border-radius: 12px;
+    border: 1px solid var(--hair); border-radius: 12px;
   }
-  .ms-row {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: 8px 0;
-    font-size: 13.5px;
-  }
+  .ms-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; font-size: 13.5px; gap: 12px; }
   .ms-row + .ms-row { border-top: 1px solid var(--hair-2); }
   .ms-row .k { color: var(--muted); }
-  .ms-row .v {
-    font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
-    color: var(--fg); font-weight: 500;
-  }
-  .ms-row.total { padding-top: 18px; margin-top: 6px; border-top: 1px solid var(--fg); }
+  .ms-row .v { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; color: var(--fg); font-weight: 500; }
+  .ms-row.total { padding-top: 16px; margin-top: 6px; border-top: 1px solid var(--fg); }
   .ms-row.total .k { color: var(--fg); font-weight: 600; }
   .ms-row.total .v { font-size: 18px; font-weight: 500; }
   .ms-row.total.headline .v { color: var(--accent); }
@@ -573,149 +446,154 @@
   .ms-row.bad .v, .ms-row.bad .k { color: var(--negative); }
   .ms-row.warn .v, .ms-row.warn .k { color: var(--warning); }
 
-  /* ============ EXPORTS ROW ============ */
-  .exports {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    padding: 0;
+  /* ============ COMPARISON VIEW ============ */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
   }
+  .compare-card {
+    padding: 24px 22px;
+    background: var(--surface);
+    border: 1.5px solid var(--hair);
+    border-radius: 12px;
+    transition: all var(--t-base) var(--ease);
+    cursor: pointer;
+  }
+  .compare-card:hover { border-color: var(--muted-2); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+  .compare-card.active { border-color: var(--accent); background: var(--accent-soft); }
+  .compare-card .mode-label {
+    font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .compare-card.active .mode-label { color: var(--accent); font-weight: 600; }
+  .compare-card .mode-num {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 30px; letter-spacing: -0.025em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+    margin-bottom: 4px;
+  }
+  .compare-card.active .mode-num { color: var(--accent); font-weight: 400; }
+  .compare-card .mode-sub { font-size: 11.5px; color: var(--muted); }
+  .compare-card .delta { font-size: 11px; color: var(--muted); margin-top: 8px; font-family: 'JetBrains Mono', monospace; }
+  .compare-card .delta.pos { color: var(--positive); }
+  .compare-card .delta.neg { color: var(--negative); }
+
+  /* ============ BULK PASTE ============ */
+  .bulk-paste-zone {
+    border: 1px dashed var(--hair);
+    padding: 18px 20px;
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .bulk-paste-zone textarea {
+    width: 100%;
+    min-height: 100px;
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--fg);
+    outline: none;
+    resize: vertical;
+    background: var(--bg);
+    transition: border-color var(--t-fast) var(--ease);
+  }
+  .bulk-paste-zone textarea:focus { border-color: var(--accent); }
+  .bulk-paste-zone .row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; flex-wrap: wrap; }
+  .bulk-paste-zone .row .hint { color: var(--muted); font-size: 11.5px; }
+
+  /* ============ EXPORTS ============ */
+  .exports { display: flex; flex-wrap: wrap; gap: 10px; }
 
   /* ============ REVIEW MODAL ============ */
   .modal-bg {
     position: fixed; inset: 0;
     background: rgba(10, 10, 10, 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    display: none;
-    align-items: center; justify-content: center;
-    z-index: 200;
-    opacity: 0;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200; opacity: 0;
     transition: opacity var(--t-base) var(--ease);
   }
   .modal-bg.open { display: flex; opacity: 1; }
   .modal {
     background: var(--bg);
-    border: 1px solid var(--hair);
-    border-radius: 16px;
-    width: 92%;
-    max-width: 560px;
-    padding: 48px 56px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.1);
-    transform: scale(0.98) translateY(4px);
-    opacity: 0;
+    border: 1px solid var(--hair); border-radius: 16px;
+    width: 92%; max-width: 560px;
+    padding: 44px 52px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.12);
+    transform: scale(0.97) translateY(6px); opacity: 0;
     transition: transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease);
+    max-height: 92vh; overflow-y: auto;
   }
   .modal-bg.open .modal { transform: none; opacity: 1; }
 
-  .modal-counter {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 32px;
-  }
-  .modal-counter .count {
-    font-size: 11px; font-weight: 500;
-    text-transform: uppercase; letter-spacing: 0.14em;
-    color: var(--muted);
-  }
-  .modal-counter .close {
-    background: transparent; border: 0; color: var(--muted);
-    cursor: pointer; padding: 4px 8px; border-radius: 4px;
-    transition: color var(--t-fast) var(--ease);
-    font-size: 13px;
-  }
+  .modal-counter { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .modal-counter .count { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+  .modal-counter .close { background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: color var(--t-fast) var(--ease); font-size: 13px; }
   .modal-counter .close:hover { color: var(--fg); }
 
-  .modal-amount {
-    font-size: 56px; font-weight: 300; letter-spacing: -0.035em; line-height: 1;
-    color: var(--fg);
-    font-variant-numeric: tabular-nums;
-    margin-bottom: 12px;
-  }
-  .modal-date {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--muted);
-    margin-bottom: 6px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .modal-desc {
-    font-size: 15px;
-    color: var(--fg-2);
-    margin-bottom: 32px;
-    word-break: break-word;
-  }
-  .modal-reason {
-    padding: 16px 20px;
-    background: var(--warning-soft);
-    border-radius: 10px;
-    border: 1px solid rgba(184,114,26,0.2);
-    margin-bottom: 32px;
-  }
+  .modal-amount { font-size: 52px; font-weight: 300; letter-spacing: -0.035em; line-height: 1; color: var(--fg); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+  .modal-date { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; }
+  .modal-desc { font-size: 15px; color: var(--fg-2); margin-bottom: 28px; word-break: break-word; }
+  .modal-reason { padding: 16px 20px; background: var(--warning-soft); border-radius: 10px; border: 1px solid rgba(184,114,26,0.2); margin-bottom: 28px; }
   .modal-reason .label-xs { color: var(--warning); margin-bottom: 6px; display: block; }
   .modal-reason .body { font-size: 13px; color: var(--fg-2); line-height: 1.55; }
 
-  .modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 24px;
-  }
+  .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .modal-btn {
     padding: 16px;
-    background: var(--surface);
-    border: 1.5px solid var(--hair);
-    border-radius: 10px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 500;
+    background: var(--surface); border: 1.5px solid var(--hair);
+    border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 500;
     color: var(--fg);
     transition: all var(--t-fast) var(--ease);
     display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
-  .modal-btn .kbd {
-    font-size: 10px; color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    background: var(--bg); padding: 2px 6px; border-radius: 3px;
-    border: 1px solid var(--hair);
-    margin-top: 4px;
-  }
+  .modal-btn .kbd { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 3px; border: 1px solid var(--hair); margin-top: 4px; }
   .modal-btn.eligible { border-color: rgba(47,122,86,0.3); color: var(--positive); }
-  .modal-btn.eligible:hover { background: rgba(47,122,86,0.06); border-color: var(--positive); }
+  .modal-btn.eligible:hover { background: rgba(47,122,86,0.06); border-color: var(--positive); transform: translateY(-1px); }
   .modal-btn.ineligible { border-color: rgba(229,84,74,0.3); color: var(--negative); }
-  .modal-btn.ineligible:hover { background: var(--negative-soft); border-color: var(--negative); }
+  .modal-btn.ineligible:hover { background: var(--negative-soft); border-color: var(--negative); transform: translateY(-1px); }
 
-  .modal-note { margin-bottom: 24px; }
-  .modal-note input {
-    width: 100%; padding: 10px 14px;
-    background: var(--surface);
-    border: 1px solid var(--hair);
-    border-radius: 8px;
-    font-family: inherit; font-size: 13px; color: var(--fg);
-    outline: none;
-    transition: border-color var(--t-fast) var(--ease);
-  }
+  .modal-note { margin-bottom: 20px; }
+  .modal-note input { width: 100%; padding: 10px 14px; background: var(--surface); border: 1px solid var(--hair); border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--fg); outline: none; transition: border-color var(--t-fast) var(--ease); }
   .modal-note input:focus { border-color: var(--accent); }
 
-  .modal-nav {
-    display: flex; justify-content: space-between; align-items: center;
-    padding-top: 20px;
-    border-top: 1px solid var(--hair);
-  }
-  .modal-nav button {
-    background: transparent; border: 0;
-    color: var(--muted); cursor: pointer;
-    padding: 8px 12px; border-radius: 6px;
-    font-family: inherit; font-size: 12.5px; font-weight: 500;
-    transition: all var(--t-fast) var(--ease);
-  }
+  .modal-nav { display: flex; justify-content: space-between; align-items: center; padding-top: 18px; border-top: 1px solid var(--hair); gap: 12px; flex-wrap: wrap; }
+  .modal-nav button { background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 8px 12px; border-radius: 6px; font-family: inherit; font-size: 12.5px; font-weight: 500; transition: all var(--t-fast) var(--ease); }
   .modal-nav button:hover { color: var(--fg); background: var(--hair-2); }
   .modal-nav button:disabled { color: var(--muted-2); cursor: not-allowed; }
   .modal-nav button:disabled:hover { background: transparent; }
-  .modal-live {
-    font-size: 11.5px; color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
+  .modal-live { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .modal-live .v { color: var(--fg); font-weight: 500; font-family: 'JetBrains Mono', monospace; margin-left: 8px; }
+
+  /* ============ KEYBOARD SHORTCUTS OVERLAY ============ */
+  .shortcuts-bg {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.5);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 250;
+  }
+  .shortcuts-bg.open { display: flex; }
+  .shortcuts-card {
+    background: var(--bg);
+    border: 1px solid var(--hair); border-radius: 16px;
+    padding: 36px 44px;
+    width: 92%; max-width: 480px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.12);
+  }
+  .shortcuts-card h3 { margin: 0 0 20px; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; }
+  .shortcuts-card .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair-2); }
+  .shortcuts-card .row:last-child { border-bottom: 0; }
+  .shortcuts-card .label { font-size: 13px; color: var(--fg-2); }
+  .shortcuts-card .kbd { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--surface); padding: 4px 8px; border: 1px solid var(--hair); border-radius: 4px; color: var(--fg); }
+  .shortcuts-card .close-row { text-align: center; margin-top: 18px; font-size: 11px; color: var(--muted); }
 
   /* ============ TOAST ============ */
   .toast {
@@ -733,34 +611,63 @@
 
   /* ============ FOOTER ============ */
   footer.appfoot {
-    text-align: center; padding: 48px 0;
-    color: var(--muted); font-size: 11.5px;
-    letter-spacing: 0.02em;
+    text-align: center; padding: 36px 24px 64px;
+    color: var(--muted); font-size: 11.5px; letter-spacing: 0.02em;
+    border-top: 1px solid var(--hair);
+    margin-top: 48px;
   }
+  footer.appfoot .row { margin-bottom: 6px; }
+  footer.appfoot .brand-line { color: var(--fg-2); font-weight: 500; }
+  footer.appfoot .nmls { font-family: 'JetBrains Mono', monospace; }
+  footer.appfoot .compliance {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 11px; font-weight: 500;
+    margin-top: 8px;
+  }
+  footer.appfoot .compliance .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); }
 
   /* PDF placeholder */
-  .pdf-zone {
-    border: 1px dashed var(--hair);
-    padding: 32px;
-    border-radius: 12px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-    background: var(--surface);
-  }
+  .pdf-zone { border: 1px dashed var(--hair); padding: 32px; border-radius: 12px; text-align: center; color: var(--muted); font-size: 13px; background: var(--surface); }
   .pdf-zone strong { color: var(--fg); font-weight: 600; display: block; margin-bottom: 6px; font-size: 14px; }
 
-  /* Print */
+  /* ============ PRINT STYLESHEET ============ */
   @media print {
-    .topbar, .privacy, .controls, .compact-bar, .modal-bg, .pdf-zone, .exports, .li-del, .li-add, .saved-dot, footer.appfoot { display: none !important; }
-    body { background: white; background-image: none; }
-    main { max-width: none; padding: 0 24px; }
-    .hero { padding: 24px 0; border: 0; }
-    section { padding: 24px 0; border-color: #ddd; opacity: 1; transform: none; animation: none; }
-    .stmt { break-inside: avoid; border: 1px solid #ddd; }
+    @page { margin: 0.5in 0.5in 0.5in 0.5in; size: letter; }
+    .topbar, .privacy, .controls, .compact-bar, .modal-bg, .pdf-zone, .exports, .li-del, .li-add, .saved-dot, .shortcuts-bg, .bulk-paste-zone, .compare-grid, #flaggedBadge, #btnReview, .check-item { display: none !important; }
+    section.no-print, .no-print { display: none !important; }
+    body { background: white; background-image: none; font-size: 11px; color: black; }
+    main { max-width: none; padding: 0; }
+    .hero { padding: 0 0 12px; border: 0; }
+    .hero-number { font-size: 36px !important; color: black; }
+    section { padding: 12px 0; border-color: #aaa; opacity: 1; transform: none; animation: none; break-inside: avoid; }
+    .sec-head h2 { font-size: 11px; }
+    .stmt { break-inside: avoid; border: 1px solid #aaa; box-shadow: none; }
+    .stmt-body { display: block !important; border-top: 1px solid #ccc; }
+    .stmt:not(.print-open) .stmt-body { display: none !important; }
+    .method-summary { padding: 12px 14px; border-color: #aaa; }
+    .ms-row.total { border-color: black; }
+    .flag { border: 1px solid #aaa; background: white; }
+    .print-header {
+      display: block !important;
+      padding: 12px 0 14px;
+      border-bottom: 2px solid black;
+      margin-bottom: 16px;
+    }
+    .print-header h1 { font-size: 16px; margin: 0 0 4px; font-weight: 600; }
+    .print-header .sub { font-size: 11px; color: #555; }
+    .print-footer {
+      display: block !important;
+      margin-top: 24px; padding-top: 8px;
+      border-top: 1px solid #aaa;
+      font-size: 9px; color: #666;
+    }
+    footer.appfoot { display: none !important; }
   }
+  .print-header, .print-footer { display: none; }
 
-  /* Responsive */
+  /* ============ RESPONSIVE ============ */
   @media (max-width: 1024px) {
     .topbar, .privacy { padding-left: 24px; padding-right: 24px; }
     main { padding: 0 24px 80px; }
@@ -768,30 +675,45 @@
     .stmt-head { grid-template-columns: 28px 1fr 1fr 28px; }
     .stmt-head .col:nth-child(4),
     .stmt-head .col:nth-child(5) { display: none; }
-    .li-row { grid-template-columns: 100px 1fr 110px 28px; }
-    .li-row > div:nth-child(2) { display: none; } /* hide date column */
+    .li-row { grid-template-columns: 100px 1fr 120px 28px; }
+    .li-row > div:nth-child(2) { display: none; }
+    .compare-grid { grid-template-columns: 1fr; }
+    .checklist { grid-template-columns: 1fr; }
   }
   @media (max-width: 640px) {
-    .hero-number { font-size: 56px; }
-    .compact-bar { padding: 12px 20px; }
+    .topbar { padding: 14px 18px; }
+    .topbar .right .btn { padding: 6px 10px; font-size: 11.5px; }
+    main { padding: 0 18px 60px; }
+    .hero { padding: 36px 0 28px; }
+    .hero-number { font-size: 48px; }
+    .compact-bar { padding: 11px 18px; }
     .compact-bar .meta { display: none; }
-    .modal { padding: 32px 28px; }
-    .modal-amount { font-size: 40px; }
+    .modal { padding: 28px 22px; }
+    .modal-amount { font-size: 36px; }
+    .controls { gap: 12px; padding: 22px 0 18px; }
+    .seg button { padding: 6px 10px; font-size: 11.5px; }
+    .form-grid { gap: 18px; }
+    section { padding: 36px 0; }
+    .method-summary { padding: 18px 16px; }
+    footer.appfoot { padding: 28px 16px 40px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 </style>
 </head>
 <body>
 
-<!-- ============ TOPBAR ============ -->
 <header class="topbar">
   <div class="brand">
-    <span class="mark"></span>
+    <span class="mark" aria-hidden="true"></span>
     Bank Statement Income
     <span class="sep"></span>
-    <span class="sub">Non-QM Underwriting</span>
+    <span class="sub">FMHL Non-QM · v2</span>
   </div>
   <div class="right">
-    <span class="saved-dot" id="savedDot"><span class="dot"></span>Saved</span>
+    <span class="saved-dot" id="savedDot" role="status" aria-live="polite"><span class="dot"></span>Saved</span>
+    <button class="btn subtle" id="btnHelp" aria-label="Keyboard shortcuts">?</button>
     <button class="btn subtle" id="btnNew">New</button>
     <button class="btn subtle" id="btnSaveJson">Save</button>
     <button class="btn subtle" id="btnLoadJson">Load</button>
@@ -799,13 +721,12 @@
   </div>
 </header>
 
-<div class="privacy" id="privacyBanner">
+<div class="privacy" id="privacyBanner" role="region" aria-label="Privacy notice">
   <span><strong>Private &amp; local.</strong> &nbsp; Statements never leave your browser. No upload, no server, no cloud.</span>
-  <button class="x" id="dismissPrivacy" aria-label="Dismiss">×</button>
+  <button class="x" id="dismissPrivacy" aria-label="Dismiss privacy notice">×</button>
 </div>
 
-<!-- Compact sticky bar -->
-<div class="compact-bar" id="compactBar">
+<div class="compact-bar" id="compactBar" aria-hidden="true">
   <div>
     <span class="meta">Qualifying Monthly Income · </span>
     <span class="num tnum" id="compactNum">$0.00</span>
@@ -815,7 +736,11 @@
 
 <main>
 
-<!-- ============ HERO ============ -->
+<div class="print-header">
+  <h1>Bank Statement Income Worksheet</h1>
+  <div class="sub">Prepared by Aryeh Brecher · NMLS #1401181 · FM Home Loans LLC NMLS #2212</div>
+</div>
+
 <div class="hero">
   <span class="label-sm eyebrow" id="heroEyebrow">QUALIFYING MONTHLY INCOME · METHOD #1 · 50% EXPENSE RATIO</span>
   <div class="hero-number-wrap">
@@ -825,60 +750,101 @@
   <div class="hero-flags" id="heroFlags"></div>
 </div>
 
+<!-- ============ ELIGIBILITY ============ -->
+<section id="sec-elig">
+  <div class="sec-head">
+    <h2>Eligibility Pre-flight</h2>
+    <span class="meta">FMHL Nov 2025 Rev 1.6 — confirm before submission</span>
+  </div>
+  <div class="checklist" id="checklist"></div>
+  <div class="eligibility-banner" id="eligBanner"></div>
+</section>
+
 <!-- ============ CONTROLS ============ -->
-<div class="controls">
-  <div class="group">
-    <span class="label-xs">Analysis Mode</span>
-    <div class="seg accent" id="modeSeg">
-      <button data-mode="cautious">Cautious</button>
-      <button data-mode="medium" class="active">Medium</button>
-      <button data-mode="aggressive">Aggressive</button>
+<section class="no-print">
+  <div class="sec-head">
+    <h2>Review Type &amp; Method</h2>
+    <span class="meta">FMHL §7 · orthogonal axes</span>
+  </div>
+  <div class="controls" style="border-bottom: 0; padding: 0;">
+    <div class="group">
+      <span class="label-xs">Review Type · FMHL §7</span>
+      <div class="seg accent" id="reviewSeg">
+        <button data-rt="personal">Personal</button>
+        <button data-rt="business" class="active">Business</button>
+        <button data-rt="comingled">Co-mingled</button>
+        <button data-rt="investment">Investment-Passive</button>
+      </div>
+    </div>
+    <div class="group">
+      <span class="label-xs">Analysis Mode</span>
+      <div class="seg" id="modeSeg">
+        <button data-mode="cautious">Cautious</button>
+        <button data-mode="medium" class="active">Medium</button>
+        <button data-mode="aggressive">Aggressive</button>
+      </div>
+    </div>
+    <div class="group">
+      <span class="label-xs">Calculation Method</span>
+      <div class="seg" id="methodSeg">
+        <button data-method="m1" class="active">#1 · 50% Uniform</button>
+        <button data-method="m2">#2 · CPA P&amp;L</button>
+        <button data-method="m3">#3 · CPA Ratio</button>
+      </div>
+    </div>
+    <div class="group" style="align-items: flex-end">
+      <span class="label-xs">Review</span>
+      <button class="btn primary" id="btnReview">
+        Review Flagged Deposits <span class="badge" id="flaggedBadge">0</span>
+      </button>
     </div>
   </div>
-  <div class="group">
-    <span class="label-xs">Calculation Method</span>
-    <div class="seg" id="methodSeg">
-      <button data-method="m1" class="active">Method #1 · Uniform</button>
-      <button data-method="m2">#2 · CPA P&amp;L</button>
-      <button data-method="m3">#3 · CPA Ratio</button>
-    </div>
+</section>
+
+<!-- ============ COMPARISON ============ -->
+<section>
+  <div class="sec-head">
+    <h2>Mode Comparison</h2>
+    <span class="meta">Cautious vs Medium vs Aggressive — pick what to submit</span>
   </div>
-  <div class="group" style="align-items: flex-end">
-    <span class="label-xs">Review</span>
-    <button class="btn primary" id="btnReview">
-      Review Flagged Deposits <span class="badge" id="flaggedBadge">0</span>
-    </button>
-  </div>
-</div>
+  <div class="compare-grid" id="compareGrid"></div>
+</section>
 
 <!-- ============ BORROWER ============ -->
 <section>
   <div class="sec-head">
     <h2>Borrower</h2>
-    <span class="meta">Self-employed, business bank statements</span>
+    <span class="meta" id="borrowerMeta">Business bank statement review</span>
   </div>
   <div class="form-grid">
-    <div class="field"><label class="label-xs">Borrower Name</label><input id="f_borrower" type="text" autocomplete="off"></div>
-    <div class="field"><label class="label-xs">Business Name</label><input id="f_business" type="text" autocomplete="off"></div>
-    <div class="field"><label class="label-xs">Bank</label><input id="f_bank" type="text" autocomplete="off"></div>
-    <div class="field"><label class="label-xs">Last 4 of Account</label><input id="f_last4" type="text" maxlength="4" inputmode="numeric"></div>
-    <div class="field"><label class="label-xs">Months of Statements</label>
+    <div class="field"><label class="label-xs" for="f_borrower">Borrower Name</label><input id="f_borrower" type="text" autocomplete="off"></div>
+    <div class="field"><label class="label-xs" for="f_business">Business Name</label><input id="f_business" type="text" autocomplete="off"></div>
+    <div class="field"><label class="label-xs" for="f_bank">Bank</label><input id="f_bank" type="text" autocomplete="off"></div>
+    <div class="field"><label class="label-xs" for="f_last4">Last 4 of Account</label><input id="f_last4" type="text" maxlength="4" inputmode="numeric"></div>
+    <div class="field"><label class="label-xs" for="f_months">Months of Statements</label>
       <select id="f_months"><option value="12">12 months</option><option value="24">24 months</option></select>
     </div>
-    <div class="field mono"><label class="label-xs">Ownership %</label><input id="f_ownership" type="number" min="0" max="100" step="0.01" value="100"></div>
-    <div class="field"><label class="label-xs">Most Recent Statement End Date</label><input id="f_endDate" type="date"></div>
+    <div class="field mono"><label class="label-xs" for="f_ownership">Ownership % <span id="ownLabel" style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--muted-2)"></span></label><input id="f_ownership" type="number" min="0" max="100" step="0.01" value="100"></div>
+    <div class="field"><label class="label-xs" for="f_endDate">Most Recent Statement End Date</label><input id="f_endDate" type="date"></div>
+    <div class="field"><label class="label-xs" for="f_noteDate">Expected Note Date (optional)</label><input id="f_noteDate" type="date"></div>
   </div>
 </section>
 
-<!-- ============ PDF PLACEHOLDER ============ -->
-<section>
+<!-- ============ BULK PASTE ============ -->
+<section class="no-print">
   <div class="sec-head">
-    <h2>Source Documents</h2>
-    <span class="meta">Phase 2 — automatic extraction</span>
+    <h2>Bulk Paste Transactions</h2>
+    <span class="meta">Optional — paste TSV/CSV from spreadsheet to auto-fill line items</span>
   </div>
-  <div class="pdf-zone">
-    <strong>PDF auto-parsing coming next</strong>
-    For now, type the deposit totals and individual line items below. Phase 2 will extract Chase, BofA, Wells Fargo, Capital One, TD, and Citi business statements automatically.
+  <div class="bulk-paste-zone">
+    <textarea id="bulkPaste" placeholder="Paste columns: date, amount, description (tab or comma separated).&#10;Example:&#10;2026-04-15&#9;5000.00&#9;CASH DEPOSIT TELLER&#10;2026-04-18&#9;2500.00&#9;ZELLE FROM J ANTEBI"></textarea>
+    <div class="row">
+      <span class="hint">Auto-detects tab or comma separator. Transactions are routed to the statement matching their date.</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="bulkParseBtn">Parse &amp; Distribute</button>
+        <button class="btn subtle" id="bulkClearBtn">Clear</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -891,35 +857,50 @@
   <div id="stmtList"></div>
 </section>
 
-<!-- ============ METHOD ============ -->
+<!-- ============ METHOD DETAIL ============ -->
 <section>
   <div class="sec-head">
     <h2>Calculation Detail</h2>
     <span class="meta" id="methodMeta">Method #1 · Uniform Expense Ratio</span>
   </div>
   <div class="method-panel active" data-panel="m1">
-    <div class="form-grid" style="max-width: 360px">
-      <div class="field mono"><label class="label-xs">Expense Ratio %</label><input id="m1_ratio" type="number" min="0" max="100" step="0.01" value="50"></div>
+    <div class="form-grid" style="max-width: 480px">
+      <div class="field mono"><label class="label-xs" for="m1_ratio">Expense Ratio %</label><input id="m1_ratio" type="number" min="0" max="100" step="0.01" value="50"></div>
+      <div class="field"><label class="label-xs" for="m1_bizType">Suggested by business type</label>
+        <select id="m1_bizType">
+          <option value="">— select to apply preset —</option>
+          <option value="50">Standard FMHL (50%)</option>
+          <option value="20">Service-based / Consulting (20%)</option>
+          <option value="25">Software / SaaS (25%)</option>
+          <option value="35">Healthcare / Legal practice (35%)</option>
+          <option value="45">Real estate brokerage (45%)</option>
+          <option value="60">Retail / E-commerce (60%)</option>
+          <option value="70">Restaurant / Hospitality (70%)</option>
+          <option value="75">Wholesale / Distribution (75%)</option>
+        </select>
+      </div>
     </div>
     <div class="method-summary" id="m1_summary"></div>
   </div>
   <div class="method-panel" data-panel="m2">
     <div class="form-grid">
-      <div class="field mono has-prefix"><label class="label-xs">P&amp;L Gross Receipts</label><span class="prefix">$</span><input id="m2_gross" type="number" min="0" step="0.01"></div>
-      <div class="field mono has-prefix"><label class="label-xs">P&amp;L Net Income</label><span class="prefix">$</span><input id="m2_net" type="number" min="0" step="0.01"></div>
+      <div class="field mono has-prefix"><label class="label-xs" for="m2_gross">P&amp;L Gross Receipts</label><span class="prefix">$</span><input id="m2_gross" type="number" min="0" step="0.01"></div>
+      <div class="field mono has-prefix"><label class="label-xs" for="m2_net">P&amp;L Net Income</label><span class="prefix">$</span><input id="m2_net" type="number" min="0" step="0.01"></div>
+      <div class="field mono has-prefix"><label class="label-xs" for="m2_dep">+ Depreciation add-back</label><span class="prefix">$</span><input id="m2_dep" type="number" min="0" step="0.01"></div>
+      <div class="field mono has-prefix"><label class="label-xs" for="m2_amort">+ Amortization / Depletion / Casualty</label><span class="prefix">$</span><input id="m2_amort" type="number" min="0" step="0.01"></div>
     </div>
     <div class="method-summary" id="m2_summary"></div>
   </div>
   <div class="method-panel" data-panel="m3">
-    <div class="form-grid" style="max-width: 360px">
-      <div class="field mono"><label class="label-xs">CPA Stated Expense Ratio %</label><input id="m3_ratio" type="number" min="0" max="100" step="0.01" placeholder="e.g. 40"></div>
+    <div class="form-grid" style="max-width: 480px">
+      <div class="field mono"><label class="label-xs" for="m3_ratio">CPA Stated Expense Ratio %</label><input id="m3_ratio" type="number" min="0" max="100" step="0.01" placeholder="e.g. 12"></div>
     </div>
     <div class="method-summary" id="m3_summary"></div>
   </div>
 </section>
 
 <!-- ============ EXPORT ============ -->
-<section>
+<section class="no-print">
   <div class="sec-head">
     <h2>Export</h2>
     <span class="meta">Local download — nothing sent over the network</span>
@@ -927,20 +908,30 @@
   <div class="exports">
     <button class="btn primary" id="btnCopy">Copy Summary</button>
     <button class="btn" id="btnXlsx">Download Excel</button>
-    <button class="btn" id="btnPrint">Print</button>
+    <button class="btn" id="btnPdf">Save as PDF</button>
+    <button class="btn" id="btnPrint">Print Worksheet</button>
   </div>
 </section>
 
+<div class="print-footer">
+  Prepared by Aryeh Brecher · NMLS #1401181 · FM Home Loans LLC NMLS #2212 · Compliant with FMHL Nov 2025 Rev 1.6 guidelines
+</div>
+
 </main>
 
-<footer class="appfoot">Bank Statement Income · v2.0 · Runs entirely in your browser</footer>
+<footer class="appfoot">
+  <div class="row brand-line">Aryeh Brecher · Mortgage Loan Originator</div>
+  <div class="row nmls">NMLS #1401181 · FM Home Loans LLC NMLS #2212</div>
+  <div class="row"><span class="compliance"><span class="dot"></span>Compliant with FMHL Nov 2025 Rev 1.6 guidelines</span></div>
+  <div class="row" style="margin-top:14px;">Bank Statement Income · v2.1 · Runs entirely in your browser</div>
+</footer>
 
 <!-- ============ REVIEW MODAL ============ -->
-<div class="modal-bg" id="reviewModal" role="dialog" aria-modal="true">
+<div class="modal-bg" id="reviewModal" role="dialog" aria-modal="true" aria-labelledby="modalCount">
   <div class="modal" id="modalInner">
     <div class="modal-counter">
       <span class="count" id="modalCount">0 of 0 flagged</span>
-      <button class="close" id="modalClose">Close (Esc)</button>
+      <button class="close" id="modalClose" aria-label="Close review">Close (Esc)</button>
     </div>
     <div class="modal-date" id="modalDate"></div>
     <div class="modal-amount tnum" id="modalAmount">$0.00</div>
@@ -967,40 +958,135 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- ============ KEYBOARD SHORTCUTS ============ -->
+<div class="shortcuts-bg" id="shortcutsBg" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+  <div class="shortcuts-card">
+    <h3>Keyboard Shortcuts</h3>
+    <div class="row"><span class="label">Open review modal</span><span class="kbd">R</span></div>
+    <div class="row"><span class="label">Mark eligible (in review)</span><span class="kbd">1</span></div>
+    <div class="row"><span class="label">Mark ineligible (in review)</span><span class="kbd">2</span></div>
+    <div class="row"><span class="label">Previous / Next item</span><span class="kbd">← / →</span></div>
+    <div class="row"><span class="label">Cycle review type</span><span class="kbd">T</span></div>
+    <div class="row"><span class="label">Cycle analysis mode</span><span class="kbd">M</span></div>
+    <div class="row"><span class="label">Save as PDF</span><span class="kbd">Ctrl/Cmd + P</span></div>
+    <div class="row"><span class="label">Show this overlay</span><span class="kbd">?</span></div>
+    <div class="row"><span class="label">Close any modal</span><span class="kbd">Esc</span></div>
+    <div class="close-row">Press Esc or click anywhere outside to close</div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ===========================================================
    STATE
    =========================================================== */
 const STORAGE_KEY = 'bsic_v2_state';
+const STORAGE_VERSION = 3;
 
 const DEFAULT_STATE = () => ({
-  borrower: { name:'', business:'', bank:'', last4:'', months:12, ownership:100, endDate:'' },
+  version: STORAGE_VERSION,
+  borrower: { name:'', business:'', bank:'', last4:'', months:12, ownership:100, endDate:'', noteDate:'' },
   statements: [],
-  m1: { ratio: 50 }, m2: { gross:'', net:'' }, m3: { ratio:'' },
+  m1: { ratio: 50, bizType: '' },
+  m2: { gross:'', net:'', dep:'', amort:'' },
+  m3: { ratio:'' },
   mode: 'medium',
   method: 'm1',
+  reviewType: 'business',
+  eligibility: {},
   openStmts: new Set([0])
 });
+
+const ELIGIBILITY_ITEMS = [
+  { id: 'se_2yr', txt: 'Borrower self-employed ≥2 years (or ≥1 year with 2 years documented in same line of work)', cite: 'FMHL §1' },
+  { id: 'biz_2yr', txt: 'Business has existed ≥2 years (CPA letter / license / old statements)', cite: 'FMHL §1' },
+  { id: 'stmt_90d', txt: 'Most recent statement within 90 days of expected note date', cite: 'FMHL §1' },
+  { id: 'own_doc', txt: 'Ownership documented (CPA letter, operating agreement, or equivalent)', cite: 'FMHL §1' },
+  { id: 'biz_match', txt: 'Business name on statements matches URLA business name', cite: 'FMHL §7' },
+  { id: 'not_cannabis', txt: 'Borrower is NOT in cannabis-related business (any tier)', cite: 'FMHL §17' },
+  { id: 'not_iolta', txt: 'Funds are NOT from IOLTA / attorney trust account', cite: 'FMHL §4' },
+  { id: 'us_residency', txt: 'If non-permanent resident: lived AND worked in US ≥2 years', cite: 'FMHL §1' },
+  { id: 'personal_2biz', txt: 'If Personal review: 2 months of business statements gathered', cite: 'FMHL §7' },
+  { id: 'most_recent_consistent', txt: 'Most recent statement deposits consistent with qualifying income', cite: 'FMHL §4/§7' }
+];
+
+const REVIEW_TYPES = {
+  personal: {
+    label: 'Personal Bank Statement Review',
+    minOwnership: 20,
+    applyExpenseRatio: false,
+    description: "Borrower's personal account + 2 supplementary business statements. No expense ratio. Only business-source deposits count.",
+    flagP2P: true,
+    flagSquareLike: true,
+    treatATMAsPattern: true
+  },
+  business: {
+    label: 'Business Bank Statement Review',
+    minOwnership: 25,
+    applyExpenseRatio: true,
+    description: "Borrower's business account. Expense ratio applies. Square/Venmo/PayPal eligible as merchant rails.",
+    flagP2P: 'name-only',
+    flagSquareLike: false,
+    treatATMAsPattern: false
+  },
+  comingled: {
+    label: 'Co-mingled Bank Statement Review',
+    minOwnership: 100,
+    applyExpenseRatio: true,
+    description: 'Sole owner. Both personal & business activity in same account. Expense ratio applies.',
+    flagP2P: 'name-only',
+    flagSquareLike: false,
+    treatATMAsPattern: true
+  },
+  investment: {
+    label: 'Investment-Passive (12-mo only)',
+    minOwnership: 0,
+    applyExpenseRatio: false,
+    description: '12-month personal bank statement for passive investment / interest / dividend / trust / LP / rental income. No CPA letter.',
+    flagP2P: true,
+    flagSquareLike: true,
+    treatATMAsPattern: true,
+    lockMonthsTo12: true
+  }
+};
 
 let state = loadState();
 ensureOpenSet();
 if (state.statements.length === 0) seedStatements(state);
+migrateStateShape();
 
-let reviewIdx = 0;       // index into current flagged list
+let reviewIdx = 0;
 let lastHeroValue = 0;
 let _calcCache = null;
 
-function ensureOpenSet() {
-  if (!(state.openStmts instanceof Set)) state.openStmts = new Set(state.openStmts || [0]);
+function ensureOpenSet() { if (!(state.openStmts instanceof Set)) state.openStmts = new Set(state.openStmts || [0]); }
+
+function migrateStateShape() {
+  if (state.version !== STORAGE_VERSION) {
+    if (!state.reviewType) state.reviewType = 'business';
+    if (!state.eligibility) state.eligibility = {};
+    if (!state.m1) state.m1 = { ratio: 50, bizType: '' };
+    if (!state.m1.bizType) state.m1.bizType = '';
+    if (!state.m2) state.m2 = { gross:'', net:'', dep:'', amort:'' };
+    if (state.m2.dep === undefined) state.m2.dep = '';
+    if (state.m2.amort === undefined) state.m2.amort = '';
+    if (!state.borrower.noteDate) state.borrower.noteDate = '';
+    state.version = STORAGE_VERSION;
+  }
 }
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STATE();
     const s = JSON.parse(raw);
     s.openStmts = new Set(s.openStmts || [0]);
+    // Provide sensible defaults so older state objects upgrade gracefully
+    const def = DEFAULT_STATE();
+    for (const k of Object.keys(def)) {
+      if (s[k] === undefined) s[k] = def[k];
+    }
     return s;
   } catch(e) { return DEFAULT_STATE(); }
 }
@@ -1020,9 +1106,7 @@ function seedStatements(s) {
   s.statements = Array.from({length: s.borrower.months}, () => emptyStmt());
   return s;
 }
-function emptyStmt() {
-  return { endDate:'', beginning:'', deposits:'', ending:'', nsf:0, lineItems:[] };
-}
+function emptyStmt() { return { endDate:'', beginning:'', deposits:'', ending:'', nsf:0, lineItems:[] }; }
 function newLineItem(amount='', desc='', date='') {
   return { id: 'li_' + Math.random().toString(36).slice(2,9),
            amount, description: desc, date, manualDecision: null, note: '' };
@@ -1041,56 +1125,46 @@ function parseISO(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number)
 function fmtISO(d){ if(!d) return ''; return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtUSDate(s){ const d=parseISO(s); if(!d) return '—'; return d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); }
 function subMonths(d, n){ return new Date(d.getFullYear(), d.getMonth()-n, d.getDate()); }
+function daysBetween(a, b) {
+  if (!a || !b) return null;
+  return Math.round((parseISO(b) - parseISO(a)) / (1000 * 60 * 60 * 24));
+}
 
 /* ===========================================================
-   AUTO-FLAG RULES — three modes
+   AUTO-FLAG RULES
    =========================================================== */
 const MODES = {
-  cautious: {
-    label: 'Cautious',
-    flagNamedPerson: true,
-    roundFlagMin: 1000,
-    cashFlagMin: 0,
-    avgPctTrigger: 0.50,
-    flagBorrowerName: true,
-    loanWireRoundMin: 0,
-    defaultForFlagged: 'ineligible'
-  },
-  medium: {
-    label: 'Medium',
-    flagNamedPerson: true,
-    roundFlagMin: 2000,
-    cashFlagMin: 1000,
-    avgPctTrigger: 0.75,
-    flagBorrowerName: true,
-    loanWireRoundMin: 5000,
-    defaultForFlagged: 'ineligible'  // calc-conservative until user reviews
-  },
-  aggressive: {
-    label: 'Aggressive',
-    flagNamedPerson: false,
-    roundFlagMin: 10000,
-    cashFlagMin: 5000,
-    avgPctTrigger: 1.00,
-    flagBorrowerName: false,
-    loanWireRoundMin: 20000,
-    defaultForFlagged: 'eligible'
-  }
+  cautious: { label: 'Cautious', flagNamedPerson: true,  roundFlagMin: 1000,  cashFlagMin: 0,     avgPctTrigger: 0.50, flagBorrowerName: true,  loanWireRoundMin: 0,    defaultForFlagged: 'ineligible' },
+  medium:   { label: 'Medium',   flagNamedPerson: true,  roundFlagMin: 2000,  cashFlagMin: 1000,  avgPctTrigger: 0.75, flagBorrowerName: true,  loanWireRoundMin: 5000, defaultForFlagged: 'ineligible' },
+  aggressive:{ label: 'Aggressive', flagNamedPerson: false, roundFlagMin: 10000, cashFlagMin: 5000, avgPctTrigger: 1.00, flagBorrowerName: false, loanWireRoundMin: 20000, defaultForFlagged: 'eligible' }
 };
 
-const NAMED_TRANSFER_KEYWORDS = /\b(ZELLE|VENMO|CASH ?APP|PAYPAL|P2P|FROM\s+\w+)/i;
+// P0-5: positive-list merchant rails — eligible by default in Business / Co-mingled
+const MERCHANT_RAIL_KEYWORDS = /\b(SQUARE|STRIPE|TOAST|CLOVER|SHOPIFY|VENMO|CASH ?APP|PAYPAL|DOORDASH|UBEREATS|GRUBHUB|AMAZON\s*PAY)\b/i;
+// Zelle/P2P from a named person — flagged ON BUSINESS (could be personal injection)
+const NAMED_TRANSFER_KEYWORDS = /\b(ZELLE\s+FROM|P2P\s+FROM|FROM\s+[A-Z]\s+[A-Z]+)\b/i;
 const CASH_KEYWORDS = /\b(CASH(\s+DEPOSIT)?|ATM\s+DEPOSIT|TELLER\s+DEPOSIT|MOBILE\s+CHECK)/i;
 const REFUND_KEYWORDS = /\b(REFUND|REVERSAL|CHARGEBACK|RETURN|VOID|CREDIT\s+ADJ)/i;
-const LOAN_KEYWORDS = /\b(LOAN|WIRE|EFT|TRANSFER|ACH|FUND|ADVANCE)/i;
-const TRANSFER_KEYWORDS = /\b(TRANSFER|TRF|XFER|ZELLE|VENMO|TO\s+SAV|FROM\s+SAV)/i;
+const LOAN_KEYWORDS = /\b(LOAN|ADVANCE|EFT\s+FUND)/i;
+const WIRE_KEYWORDS = /\b(WIRE\s+TRANSFER|WIRE\s+IN|WIRE\s+CREDIT)\b/i;
+const TRANSFER_KEYWORDS = /\b(TRANSFER|TRF|XFER|TO\s+SAV|FROM\s+SAV)/i;
+const IOLTA_KEYWORDS = /\b(IOLTA|TRUST\s+ACCOUNT|ATTORNEY\s+TRUST|CLIENT\s+TRUST)\b/i;
+const TAX_REFUND_KEYWORDS = /\b(IRS|FTB|STATE\s+TREASURY|TAX\s+REFUND|TAXING\s+AUTHORITY)\b/i;
+const GIFT_KEYWORDS = /\b(GIFT|BIRTHDAY|WEDDING\s+GIFT)\b/i;
+const CANNABIS_KEYWORDS = /\b(CANNABIS|DISPENSARY|MARIJUANA|HEMP|CBD)\b/i;
 
 function isRoundNumber(n, min) {
   if (n < min) return false;
-  return n >= min && (n % 1000 === 0 || n % 500 === 0 && n >= 5000);
+  return n >= min && (n % 1000 === 0 || (n % 500 === 0 && n >= 5000));
 }
 
+/**
+ * Classify a single line item.
+ * Returns { auto: 'eligible'|'questionable'|'ineligible', reasons: [] }.
+ */
 function classify(li, modeKey, ctx) {
   const m = MODES[modeKey];
+  const rt = REVIEW_TYPES[ctx.reviewType || 'business'];
   const amt = num(li.amount);
   const desc = (li.description || '').toUpperCase();
   const borrowerLast = (ctx.borrowerName || '').trim().split(/\s+/).pop().toUpperCase();
@@ -1098,24 +1172,45 @@ function classify(li, modeKey, ctx) {
 
   if (amt <= 0) return { auto: 'eligible', reasons: [] };
 
-  // Hard ineligible cases (always flagged regardless of mode)
-  if (REFUND_KEYWORDS.test(desc)) {
-    reasons.push('Description matches refund / reversal / chargeback keywords — not income.');
-    return { auto: 'ineligible', reasons };
+  // HARD INELIGIBLE — always
+  if (REFUND_KEYWORDS.test(desc))      { reasons.push('Refund / reversal / chargeback — not income.'); return { auto: 'ineligible', reasons }; }
+  if (IOLTA_KEYWORDS.test(desc))       { reasons.push('IOLTA / attorney trust funds are ineligible source [FMHL §4].'); return { auto: 'ineligible', reasons }; }
+  if (TAX_REFUND_KEYWORDS.test(desc))  { reasons.push('Tax refund — not business income [FMHL §4].'); return { auto: 'ineligible', reasons }; }
+  if (GIFT_KEYWORDS.test(desc))        { reasons.push('Gift deposit — not income [FMHL §4].'); return { auto: 'ineligible', reasons }; }
+  if (CANNABIS_KEYWORDS.test(desc))    { reasons.push('Cannabis-related — entirely excluded from FMHL programs [FMHL §17].'); return { auto: 'ineligible', reasons }; }
+
+  // POSITIVE LIST — merchant rails eligible by default on Business / Co-mingled
+  if (MERCHANT_RAIL_KEYWORDS.test(desc) && !rt.flagSquareLike) {
+    return { auto: 'eligible', reasons: [] };
   }
 
-  // Same-day duplicate amounts (likely transfers)
+  // Same-day duplicate amounts — likely owner-to-owner transfer
   const sameDay = (ctx.allItems || []).filter(o =>
     o.id !== li.id && o.date && o.date === li.date && Math.abs(num(o.amount) - amt) < 0.01
   );
   if (sameDay.length && TRANSFER_KEYWORDS.test(desc)) {
-    reasons.push('Same-day matching transfer pattern across owner accounts.');
+    reasons.push('Same-day matching transfer pattern across owner accounts [FMHL §4].');
     return { auto: 'questionable', reasons };
   }
 
-  // Named-person transfer (Zelle/Venmo/etc)
-  if (m.flagNamedPerson && NAMED_TRANSFER_KEYWORDS.test(desc)) {
-    reasons.push('Looks like a peer-to-peer transfer from a named person — not clearly business revenue.');
+  // Loan-coded deposits
+  if (LOAN_KEYWORDS.test(desc)) {
+    reasons.push('Loan / advance descriptor — not income.');
+    return { auto: 'ineligible', reasons };
+  }
+
+  // Named-person transfer (Zelle from X, P2P from X) — flagged on Business as possible personal injection
+  if (rt.flagP2P && NAMED_TRANSFER_KEYWORDS.test(desc) && m.flagNamedPerson) {
+    reasons.push('Looks like a P2P transfer from a named person — possible personal injection.');
+  }
+
+  // Square-like on PERSONAL review = flagged (would indicate self-employment, not passive)
+  if (MERCHANT_RAIL_KEYWORDS.test(desc) && rt.flagSquareLike) {
+    if (ctx.reviewType === 'investment') {
+      reasons.push('Square/Stripe/Venmo deposit on Investment-Passive review — suggests active self-employment.');
+    } else {
+      reasons.push('Square/Venmo/PayPal deposit on Personal review — eligible only if clearly business-source.');
+    }
   }
 
   // Borrower name in description
@@ -1123,25 +1218,29 @@ function classify(li, modeKey, ctx) {
     reasons.push(`Borrower's last name "${borrowerLast}" appears in description — likely personal infusion.`);
   }
 
-  // Cash deposits
+  // Cash / ATM deposits
   if (CASH_KEYWORDS.test(desc) && amt >= m.cashFlagMin) {
-    reasons.push(`${fmt(amt)} cash deposit without a clearly identified business source.`);
+    if (rt.treatATMAsPattern && /ATM/.test(desc)) {
+      reasons.push(`${fmt(amt)} ATM deposit — eligible if consistent monthly pattern [FMHL §58]. Confirm before excluding.`);
+    } else {
+      reasons.push(`${fmt(amt)} cash deposit without a clearly identified business source.`);
+    }
   }
 
-  // Loan / wire / EFT round amounts
-  if (LOAN_KEYWORDS.test(desc) && isRoundNumber(amt, m.loanWireRoundMin)) {
-    reasons.push(`Round-number ${fmt(amt)} wire / EFT / loan-style deposit.`);
+  // Wire (no clear payer) round amounts
+  if (WIRE_KEYWORDS.test(desc) && isRoundNumber(amt, m.loanWireRoundMin)) {
+    reasons.push(`Round-number ${fmt(amt)} wire-in — confirm named customer.`);
   }
 
-  // Generic round number (no specific keyword) — only if mode lets us
-  if (!LOAN_KEYWORDS.test(desc) && !CASH_KEYWORDS.test(desc) && isRoundNumber(amt, m.roundFlagMin)) {
+  // Generic round number
+  if (!LOAN_KEYWORDS.test(desc) && !CASH_KEYWORDS.test(desc) && !WIRE_KEYWORDS.test(desc) && isRoundNumber(amt, m.roundFlagMin)) {
     reasons.push(`Round-number deposit of ${fmt(amt)} — common pattern for personal injections.`);
   }
 
   // Deposit > X% of average monthly
   if (ctx.avgMonthly > 0 && amt > ctx.avgMonthly * m.avgPctTrigger) {
     const pct = ((amt / ctx.avgMonthly) * 100).toFixed(0);
-    reasons.push(`${fmt(amt)} is ${pct}% of the average monthly deposit total — unusually large.`);
+    reasons.push(`${fmt(amt)} is ${pct}% of average monthly deposits — large-deposit rule [FMHL §4].`);
   }
 
   if (reasons.length === 0) return { auto: 'eligible', reasons: [] };
@@ -1159,7 +1258,6 @@ function effectiveCategory(li, modeKey, ctx) {
   return { effective: c.auto, auto: c.auto, reasons: c.reasons };
 }
 
-/* Calculate average monthly deposits for the avgPct rule */
 function calcAvgMonthly() {
   const months = parseInt(state.borrower.months, 10);
   const totalDep = state.statements.slice(0, months).reduce((a,s) => a + num(s.deposits), 0);
@@ -1170,40 +1268,37 @@ function allLineItems() {
   return state.statements.flatMap((s, idx) => s.lineItems.map(li => ({...li, _stmtIdx: idx})));
 }
 
-function flaggedLineItems() {
-  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+function flaggedLineItems(modeKey = state.mode) {
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems(), reviewType: state.reviewType };
   return allLineItems()
-    .map(li => ({ ...li, _eff: effectiveCategory(li, state.mode, ctx) }))
+    .map(li => ({ ...li, _eff: effectiveCategory(li, modeKey, ctx) }))
     .filter(li => li._eff.auto === 'questionable' && !li.manualDecision);
 }
 
 /* ===========================================================
-   ELIGIBLE DEPOSIT CALC PER STATEMENT
+   ELIGIBLE DEPOSIT CALC
    =========================================================== */
-function eligibleOf(stmtIdx) {
+function eligibleOf(stmtIdx, modeKey = state.mode) {
   const s = state.statements[stmtIdx];
-  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems(), reviewType: state.reviewType };
   const ineligSum = s.lineItems.reduce((a, li) => {
-    const eff = effectiveCategory(li, state.mode, ctx).effective;
+    const eff = effectiveCategory(li, modeKey, ctx).effective;
     return a + (eff === 'ineligible' ? num(li.amount) : 0);
   }, 0);
   return num(s.deposits) - ineligSum;
 }
 
-function sumLineItemsByCategory(stmtIdx) {
+function sumLineItemsByCategory(stmtIdx, modeKey = state.mode) {
   const s = state.statements[stmtIdx];
-  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems(), reviewType: state.reviewType };
   const out = { eligible: 0, ineligible: 0, questionable: 0 };
   s.lineItems.forEach(li => {
-    const r = effectiveCategory(li, state.mode, ctx);
+    const r = effectiveCategory(li, modeKey, ctx);
     out[r.effective === 'ineligible' && r.auto === 'questionable' ? 'questionable' : r.effective] += num(li.amount);
   });
   return out;
 }
 
-/* ===========================================================
-   DATES AUTO-POPULATE
-   =========================================================== */
 function autoPopulateDates() {
   const base = parseISO(state.borrower.endDate);
   if (!base) return;
@@ -1211,90 +1306,151 @@ function autoPopulateDates() {
 }
 
 /* ===========================================================
-   COMPUTE — methods 1/2/3
+   COMPUTE
    =========================================================== */
-function computeAll() {
+function computeFor(modeKey) {
   const months = parseInt(state.borrower.months, 10);
   const ownershipPct = num(state.borrower.ownership);
   const ownership = ownershipPct / 100;
-  const ineligibleByOwnership = ownershipPct < 25;
+  const rt = REVIEW_TYPES[state.reviewType];
+  const minOwn = rt.minOwnership;
+  const ineligibleByOwnership = minOwn > 0 && ownershipPct < minOwn;
 
-  const eligibles = state.statements.slice(0, months).map((_, i) => eligibleOf(i));
+  const eligibles = state.statements.slice(0, months).map((_, i) => eligibleOf(i, modeKey));
   const totalEligible = eligibles.reduce((a,b)=>a+b,0);
   const mostRecent = eligibles.slice(0, 12).reduce((a,b)=>a+b,0);
   const previous = months === 24 ? eligibles.slice(12,24).reduce((a,b)=>a+b,0) : 0;
 
   const totalNSF = state.statements.slice(0, months).reduce((a,s) => a + num(s.nsf), 0);
   const excessiveNSF = totalNSF > 3;
-  const depositsIncreasing = months === 24 ? mostRecent >= previous : null;
-  const periodPctChange = (months === 24 && previous > 0) ? (mostRecent - previous) / previous : null;
 
-  // Method 1
-  const m1Ratio = num(state.m1.ratio) / 100;
+  let depositsTrend = null;
+  let periodPctChange = null;
+  let declineSevere = false;
+  if (months === 24 && previous > 0) {
+    periodPctChange = (mostRecent - previous) / previous;
+    if (periodPctChange < -0.20) { depositsTrend = 'declineSevere'; declineSevere = true; }
+    else if (periodPctChange < 0) { depositsTrend = 'decline'; }
+    else if (periodPctChange === 0) { depositsTrend = 'flat'; }
+    else { depositsTrend = 'increase'; }
+  }
+
+  // Most-recent consistency check (>30% deviation from trailing-11 avg)
+  let mrConsistency = null;
+  if (months >= 12) {
+    const mr = eligibles[0];
+    const rest = eligibles.slice(1, 12);
+    const avgRest = rest.length ? rest.reduce((a,b)=>a+b,0) / rest.length : 0;
+    if (avgRest > 0) {
+      const dev = (mr - avgRest) / avgRest;
+      mrConsistency = { mr, avgRest, dev };
+    }
+  }
+
+  // 90-day age check
+  let stmtAgeDays = null;
+  if (state.borrower.endDate && state.borrower.noteDate) {
+    stmtAgeDays = daysBetween(state.borrower.endDate, state.borrower.noteDate);
+  }
+
+  // ============ METHOD 1 (Uniform Expense Ratio) ============
+  const applyRatio = rt.applyExpenseRatio;
+  const m1Ratio = applyRatio ? num(state.m1.ratio) / 100 : 0;
   const m1Most = mostRecent * ownership * (1 - m1Ratio);
   const m1Prev = previous * ownership * (1 - m1Ratio);
   let m1Annual, m1MethodLabel;
-  if (months === 24) {
-    if (m1Most / 0.95 > m1Prev) { m1Annual = m1Most; m1MethodLabel = 'Most recent year only (income meaningfully higher)'; }
-    else { m1Annual = (m1Most + m1Prev) / 2; m1MethodLabel = 'Average of both years (declining-income protection)'; }
-  } else { m1Annual = m1Most; m1MethodLabel = '12 months only'; }
+  if (months === 24 && previous > 0) {
+    const declineRatio = mostRecent / previous;
+    if (declineRatio < 0.80) {
+      m1Annual = m1Most;
+      m1MethodLabel = 'Most recent 12mo only (≥20% YoY decline — requires LOE confirming stabilization)';
+    } else {
+      m1Annual = (m1Most + m1Prev) / 2;
+      m1MethodLabel = (declineRatio < 1)
+        ? 'Average of both years (decline under 20% YoY)'
+        : 'Average of both years (income stable/increasing)';
+    }
+  } else {
+    m1Annual = m1Most;
+    m1MethodLabel = applyRatio ? '12 months only' : '12 months only — no expense ratio (review type override)';
+  }
   const m1Monthly = m1Annual / 12;
 
-  // Method 2
+  // ============ METHOD 2 (CPA P&L) ============
   const m2Gross = num(state.m2.gross);
   const m2Net = num(state.m2.net);
-  const m2CoverageOK = m2Gross > 0 ? totalEligible >= 0.75 * m2Gross : null;
-  const m2Monthly = (m2Net * ownership) / months;
+  const m2Dep = num(state.m2.dep);
+  const m2Amort = num(state.m2.amort);
+  const m2NetWithAddBacks = m2Net + m2Dep + m2Amort;
+  // P0-2: 80% coverage threshold (was 75%)
+  const m2CoverageOK = m2Gross > 0 ? totalEligible >= 0.80 * m2Gross : null;
+  const m2Annual = m2NetWithAddBacks * ownership;
+  const m2Monthly = m2Annual / months;
 
-  // Method 3
+  // ============ METHOD 3 (CPA Stated Ratio) ============
   const m3Pct = num(state.m3.ratio);
   const m3RatioFrac = m3Pct / 100;
-  const m3TooLow = m3Pct > 0 && m3Pct < 20;
+  // P0-1: floor 10% (was 20%)
+  const m3TooLow = m3Pct > 0 && m3Pct < 10;
   const m3Most = mostRecent * ownership * (1 - m3RatioFrac);
   const m3Prev = previous * ownership * (1 - m3RatioFrac);
   let m3Annual = 0, m3MethodLabel = '—';
-  if (m3Pct > 0) {
-    if (months === 24) {
-      if (m3Most / 0.95 > m3Prev) { m3Annual = m3Most; m3MethodLabel = 'Most recent year only'; }
-      else { m3Annual = (m3Most + m3Prev) / 2; m3MethodLabel = 'Average of both years'; }
+  if (m3Pct > 0 && !m3TooLow) {
+    if (months === 24 && previous > 0) {
+      const declineRatio = mostRecent / previous;
+      if (declineRatio < 0.80) {
+        m3Annual = m3Most;
+        m3MethodLabel = 'Most recent 12mo only (≥20% YoY decline)';
+      } else {
+        m3Annual = (m3Most + m3Prev) / 2;
+        m3MethodLabel = (declineRatio < 1) ? 'Average of both years (decline under 20% YoY)' : 'Average of both years';
+      }
     } else { m3Annual = m3Most; m3MethodLabel = '12 months only'; }
   }
   const m3Monthly = m3Annual / 12;
 
-  // Line item counts across whole period
   let eligCount = 0, ineligCount = 0, questCount = 0, manualCount = 0;
-  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems(), reviewType: state.reviewType };
   allLineItems().forEach(li => {
-    const r = effectiveCategory(li, state.mode, ctx);
-    if (li.manualDecision) { manualCount++; }
+    const r = effectiveCategory(li, modeKey, ctx);
+    if (li.manualDecision) manualCount++;
     if (r.effective === 'eligible') eligCount++;
     else if (r.auto === 'questionable' && !li.manualDecision) questCount++;
     else if (r.effective === 'ineligible') ineligCount++;
   });
 
   return {
-    months, ownershipPct, ownership, ineligibleByOwnership,
+    months, ownershipPct, ownership, ineligibleByOwnership, minOwn,
     eligibles, totalEligible, mostRecent, previous,
-    totalNSF, excessiveNSF, depositsIncreasing, periodPctChange,
-    m1: { ratio: num(state.m1.ratio), most:m1Most, prev:m1Prev, annual:m1Annual, monthly:m1Monthly, label:m1MethodLabel },
-    m2: { gross:m2Gross, net:m2Net, coverageOK:m2CoverageOK, monthly:m2Monthly, annual: m2Net * ownership },
+    totalNSF, excessiveNSF, depositsTrend, periodPctChange, declineSevere,
+    mrConsistency, stmtAgeDays,
+    m1: { ratio: num(state.m1.ratio), most:m1Most, prev:m1Prev, annual:m1Annual, monthly:m1Monthly, label:m1MethodLabel, applyRatio },
+    m2: { gross:m2Gross, net:m2Net, dep:m2Dep, amort:m2Amort, netWithAddBacks:m2NetWithAddBacks, coverageOK:m2CoverageOK, monthly:m2Monthly, annual:m2Annual },
     m3: { ratio:m3Pct, most:m3Most, prev:m3Prev, annual:m3Annual, monthly:m3Monthly, label:m3MethodLabel, tooLow:m3TooLow },
     lineItemCounts: { eligible: eligCount, ineligible: ineligCount, questionable: questCount, manual: manualCount }
   };
+}
+
+function computeAll() { return computeFor(state.mode); }
+function headlineMonthly(c) {
+  return (state.method === 'm1') ? c.m1.monthly :
+         (state.method === 'm2') ? c.m2.monthly : c.m3.monthly;
 }
 
 /* ===========================================================
    COUNT-UP ANIMATION
    =========================================================== */
 function animateNumber(el, target, opts={}) {
-  const duration = opts.duration || 400;
+  const duration = opts.duration || 420;
   const start = el._currentVal || 0;
   const delta = target - start;
-  if (Math.abs(delta) < 0.01) {
-    el.textContent = fmt(target);
-    el._currentVal = target;
-    return;
-  }
+  // Always set the final value first so the display is correct even if rAF is throttled.
+  el.textContent = fmt(target);
+  el._currentVal = target;
+  if (Math.abs(delta) < 0.01) return;
+  // Skip the animation on browsers / tabs where rAF won't fire promptly.
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reducedMotion || document.hidden) return;
   const t0 = performance.now();
   cancelAnimationFrame(el._raf);
   function tick(now) {
@@ -1302,14 +1458,62 @@ function animateNumber(el, target, opts={}) {
     const eased = 1 - Math.pow(1 - t, 3);
     const v = start + delta * eased;
     el.textContent = fmt(v);
-    if (t < 1) { el._raf = requestAnimationFrame(tick); }
-    else { el._currentVal = target; }
+    if (t < 1) el._raf = requestAnimationFrame(tick);
+    else { el.textContent = fmt(target); el._currentVal = target; }
   }
   el._raf = requestAnimationFrame(tick);
 }
 
 /* ===========================================================
-   RENDER — HERO + COMPACT + FLAGS
+   ELIGIBILITY CHECKLIST
+   =========================================================== */
+function renderChecklist() {
+  const root = document.getElementById('checklist');
+  root.innerHTML = '';
+  const eligibility = state.eligibility || {};
+  ELIGIBILITY_ITEMS.forEach(it => {
+    const checked = !!eligibility[it.id];
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'check-item' + (checked ? ' checked' : '');
+    el.setAttribute('role', 'checkbox');
+    el.setAttribute('aria-checked', checked ? 'true' : 'false');
+    el.innerHTML = `
+      <span class="box" aria-hidden="true"></span>
+      <span class="txt">${it.txt}<div class="cite">${it.cite}</div></span>
+    `;
+    el.addEventListener('click', () => {
+      eligibility[it.id] = !eligibility[it.id];
+      state.eligibility = eligibility;
+      renderChecklist();
+      renderEligibilityBanner();
+      recalcAndPersist();
+    });
+    root.appendChild(el);
+  });
+}
+
+function renderEligibilityBanner() {
+  const banner = document.getElementById('eligBanner');
+  const total = ELIGIBILITY_ITEMS.length;
+  const eligibility = state.eligibility || {};
+  const checked = ELIGIBILITY_ITEMS.filter(it => eligibility[it.id]).length;
+  if (checked === total) {
+    banner.className = 'eligibility-banner ok';
+    banner.innerHTML = `<span class="dot"></span><span><strong>All eligibility items confirmed.</strong> Borrower qualifies for ${REVIEW_TYPES[state.reviewType].label}.</span>`;
+  } else {
+    banner.className = 'eligibility-banner warn';
+    banner.innerHTML = `<span class="dot"></span><span><strong>Preliminary — ${total - checked} eligibility items unconfirmed.</strong> Calculator output is preliminary until all FMHL eligibility rules are checked.</span>`;
+  }
+}
+
+function allEligibilityConfirmed() {
+  const eligibility = state.eligibility || {};
+  return ELIGIBILITY_ITEMS.every(it => eligibility[it.id]);
+}
+
+/* ===========================================================
+   HERO + COMPACT
    =========================================================== */
 function renderHero(c) {
   const heroNum = document.getElementById('heroNumber');
@@ -1318,55 +1522,74 @@ function renderHero(c) {
   const compactNum = document.getElementById('compactNum');
   const compactMeta = document.getElementById('compactMeta');
 
-  const headlineMonthly = (state.method === 'm1') ? c.m1.monthly
-                        : (state.method === 'm2') ? c.m2.monthly
-                        : c.m3.monthly;
-  const ratioText = (state.method === 'm1') ? `${num(state.m1.ratio).toFixed(1)}% expense ratio`
-                  : (state.method === 'm2') ? 'CPA P&L'
-                  : `CPA ${num(state.m3.ratio).toFixed(1)}% expense ratio`;
+  const head = headlineMonthly(c);
+  const ratioText = (state.method === 'm1') ?
+        (c.m1.applyRatio ? `${num(state.m1.ratio).toFixed(1)}% expense ratio` : 'No expense ratio (review type)')
+      : (state.method === 'm2') ? 'CPA P&L'
+                                : `CPA ${num(state.m3.ratio).toFixed(1)}% expense ratio`;
   const methodLabel = state.method === 'm1' ? 'METHOD #1' : state.method === 'm2' ? 'METHOD #2' : 'METHOD #3';
+  const rt = REVIEW_TYPES[state.reviewType];
 
-  heroEyebrow.textContent = `QUALIFYING MONTHLY INCOME · ${methodLabel} · ${ratioText.toUpperCase()}`;
-  compactMeta.textContent = `${methodLabel.replace('METHOD ','Method ')} · ${ratioText} · ${MODES[state.mode].label} Mode`;
+  heroEyebrow.textContent = `QUALIFYING MONTHLY INCOME · ${rt.label.toUpperCase()} · ${methodLabel} · ${ratioText.toUpperCase()}`;
+  compactMeta.textContent = `${rt.label} · ${methodLabel.replace('METHOD ','Method ')} · ${ratioText} · ${MODES[state.mode].label} Mode`;
 
-  // Ineligibility states
+  heroNum.classList.remove('ineligible', 'preliminary');
+  compactNum.classList.remove('ineligible', 'preliminary');
+
   if (c.ineligibleByOwnership) {
     heroNum.classList.add('ineligible');
     heroNum.textContent = 'INELIGIBLE';
-    heroSuffix.textContent = 'Ownership < 25%';
+    heroSuffix.textContent = `Ownership ${c.ownershipPct.toFixed(1)}% < ${c.minOwn}% (${rt.label})`;
     compactNum.classList.add('ineligible'); compactNum.textContent = 'INELIGIBLE';
   } else if (state.method === 'm3' && c.m3.tooLow) {
     heroNum.classList.add('ineligible');
     heroNum.textContent = 'INELIGIBLE';
-    heroSuffix.textContent = 'CPA ratio < 20%';
+    heroSuffix.textContent = 'CPA expense ratio < 10% — below FMHL minimum';
     compactNum.classList.add('ineligible'); compactNum.textContent = 'INELIGIBLE';
   } else {
-    heroNum.classList.remove('ineligible');
-    heroSuffix.textContent = 'per month';
-    compactNum.classList.remove('ineligible');
-    animateNumber(heroNum, headlineMonthly);
-    animateNumber(compactNum, headlineMonthly, { duration: 250 });
+    if (!allEligibilityConfirmed()) {
+      heroNum.classList.add('preliminary');
+      compactNum.classList.add('preliminary');
+      heroSuffix.textContent = 'preliminary — eligibility flags';
+    } else {
+      heroSuffix.textContent = 'per month';
+    }
+    animateNumber(heroNum, head);
+    animateNumber(compactNum, head, { duration: 280 });
   }
 
   // Flags
   const flagsEl = document.getElementById('heroFlags');
   flagsEl.innerHTML = '';
   const flags = [];
-  flags.push({ cls: c.ineligibleByOwnership ? 'bad' : 'good', label: `Ownership ${c.ownershipPct.toFixed(1)}%` });
+  flags.push({ cls: c.ineligibleByOwnership ? 'bad' : 'good', label: `Ownership ${c.ownershipPct.toFixed(1)}% (min ${c.minOwn || '—'}%)` });
   flags.push({ cls: c.excessiveNSF ? 'bad' : c.totalNSF>0 ? 'warn' : 'good', label: `${c.totalNSF} NSF${c.excessiveNSF?' · excessive':''}` });
-  if (c.depositsIncreasing === null) {
-    flags.push({ cls: '', label: 'Trend: N/A (12-mo)' });
-  } else if (c.depositsIncreasing) {
-    flags.push({ cls: 'good', label: `Increasing ${c.periodPctChange != null ? '+'+(c.periodPctChange*100).toFixed(1)+'%' : ''}` });
-  } else {
-    flags.push({ cls: 'warn', label: `Declining ${c.periodPctChange != null ? (c.periodPctChange*100).toFixed(1)+'%' : ''}` });
+
+  if (c.depositsTrend === 'declineSevere') {
+    flags.push({ cls: 'bad', label: `Decline ${(c.periodPctChange*100).toFixed(1)}% YoY · needs LOE` });
+  } else if (c.depositsTrend === 'decline') {
+    flags.push({ cls: 'warn', label: `Decline ${(c.periodPctChange*100).toFixed(1)}% YoY` });
+  } else if (c.depositsTrend === 'increase') {
+    flags.push({ cls: 'good', label: `Increasing +${(c.periodPctChange*100).toFixed(1)}%` });
+  } else if (c.depositsTrend === 'flat') {
+    flags.push({ cls: 'info', label: `Flat YoY` });
+  } else if (c.months === 12) {
+    flags.push({ cls: 'info', label: 'Trend: N/A (12-mo)' });
+  }
+
+  if (c.mrConsistency && Math.abs(c.mrConsistency.dev) > 0.30) {
+    flags.push({ cls: 'warn', label: `MR deposits ${c.mrConsistency.dev > 0 ? '+' : ''}${(c.mrConsistency.dev*100).toFixed(0)}% vs trail · investigate` });
+  }
+  if (c.stmtAgeDays !== null && c.stmtAgeDays > 90) {
+    flags.push({ cls: 'bad', label: `Most recent ${c.stmtAgeDays}d > 90d to note date` });
   }
   const lic = c.lineItemCounts;
   if (lic.eligible+lic.ineligible+lic.questionable > 0) {
-    flags.push({ cls: lic.questionable>0 ? 'warn' : 'good',
-                 label: `${lic.eligible} ok · ${lic.ineligible} excl · ${lic.questionable} to review` });
+    flags.push({ cls: lic.questionable>0 ? 'warn' : 'good', label: `${lic.eligible} ok · ${lic.ineligible} excl · ${lic.questionable} to review` });
   }
-  flags.push({ cls:'', label: `Annual ${fmt(headlineMonthly*12)}` });
+  if (!c.ineligibleByOwnership && !(state.method === 'm3' && c.m3.tooLow)) {
+    flags.push({ cls:'', label: `Annual ${fmt(head*12)}` });
+  }
   flags.forEach(f => {
     const el = document.createElement('span');
     el.className = `flag ${f.cls}`;
@@ -1381,7 +1604,42 @@ function renderHero(c) {
 }
 
 /* ===========================================================
-   RENDER — BORROWER + METHOD INPUTS
+   COMPARISON CARDS
+   =========================================================== */
+function renderCompare() {
+  const grid = document.getElementById('compareGrid');
+  grid.innerHTML = '';
+  ['cautious', 'medium', 'aggressive'].forEach(modeKey => {
+    const c = computeFor(modeKey);
+    const head = (state.method === 'm1') ? c.m1.monthly :
+                 (state.method === 'm2') ? c.m2.monthly : c.m3.monthly;
+    const active = modeKey === state.mode;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'compare-card' + (active ? ' active' : '');
+    card.setAttribute('aria-pressed', active);
+    let display = fmt(head);
+    let sub = `${MODES[modeKey].label} · ${c.lineItemCounts.questionable} unreviewed`;
+    if (c.ineligibleByOwnership) { display = 'INELIGIBLE'; sub = `Ownership ${c.ownershipPct.toFixed(1)}% < ${c.minOwn}%`; }
+    else if (state.method === 'm3' && c.m3.tooLow) { display = 'INELIGIBLE'; sub = `CPA ratio < 10%`; }
+    card.innerHTML = `
+      <div class="mode-label">${MODES[modeKey].label}</div>
+      <div class="mode-num tnum">${display}</div>
+      <div class="mode-sub">${sub}</div>
+    `;
+    card.addEventListener('click', () => {
+      state.mode = modeKey;
+      document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
+      recalcAndPersist();
+      renderCompare();
+      renderStatements();
+    });
+    grid.appendChild(card);
+  });
+}
+
+/* ===========================================================
+   BORROWER + METHODS
    =========================================================== */
 function renderBorrower() {
   const b = state.borrower;
@@ -1392,14 +1650,33 @@ function renderBorrower() {
   document.getElementById('f_months').value = b.months;
   document.getElementById('f_ownership').value = b.ownership;
   document.getElementById('f_endDate').value = b.endDate;
+  document.getElementById('f_noteDate').value = b.noteDate || '';
   document.getElementById('m1_ratio').value = state.m1.ratio;
+  document.getElementById('m1_bizType').value = state.m1.bizType || '';
   document.getElementById('m2_gross').value = state.m2.gross;
   document.getElementById('m2_net').value = state.m2.net;
+  document.getElementById('m2_dep').value = state.m2.dep || '';
+  document.getElementById('m2_amort').value = state.m2.amort || '';
   document.getElementById('m3_ratio').value = state.m3.ratio;
+
+  // Review type ownership label hint
+  const rt = REVIEW_TYPES[state.reviewType];
+  document.getElementById('ownLabel').textContent = rt.minOwnership > 0 ? `(min ${rt.minOwnership}%)` : '(no minimum)';
+  document.getElementById('borrowerMeta').textContent = rt.description;
+
+  // Lock months to 12 for investment-passive
+  document.getElementById('f_months').disabled = !!rt.lockMonthsTo12;
+  if (rt.lockMonthsTo12 && state.borrower.months !== 12) {
+    state.borrower.months = 12;
+    document.getElementById('f_months').value = 12;
+    state.statements = state.statements.slice(0, 12);
+    while (state.statements.length < 12) state.statements.push(emptyStmt());
+    renderStatements();
+  }
 }
 
 /* ===========================================================
-   RENDER — STATEMENTS
+   STATEMENTS
    =========================================================== */
 function renderStatements() {
   const root = document.getElementById('stmtList');
@@ -1410,7 +1687,7 @@ function renderStatements() {
   for (let i = 0; i < months; i++) {
     if (i === 12 && months === 24) {
       const sep = document.createElement('div');
-      sep.innerHTML = `<div class="label-sm" style="padding: 24px 0 12px;">Previous Year · months 13–24</div>`;
+      sep.innerHTML = `<div class="label-sm" style="padding: 20px 0 10px;">Previous Year · months 13–24</div>`;
       root.appendChild(sep);
     }
     root.appendChild(renderStmtCard(i));
@@ -1421,37 +1698,21 @@ function renderStmtCard(i) {
   const s = state.statements[i];
   const open = state.openStmts.has(i);
   const card = document.createElement('div');
-  card.className = 'stmt' + (open ? ' open' : '');
+  card.className = 'stmt' + (open ? ' open' : '') + (open ? ' print-open' : '');
   const elig = eligibleOf(i);
   const cats = sumLineItemsByCategory(i);
   const nsfClass = num(s.nsf) > 0 ? 'warn' : '';
-
   const dateStr = s.endDate ? fmtUSDate(s.endDate) : `Statement ${i+1}`;
 
   card.innerHTML = `
-    <div class="stmt-head" data-i="${i}">
+    <div class="stmt-head" data-i="${i}" role="button" tabindex="0" aria-expanded="${open}">
       <span class="idx">${String(i+1).padStart(2,'0')}</span>
-      <div class="col">
-        <span class="k">Statement</span>
-        <span class="date-display">${dateStr}</span>
-      </div>
-      <div class="col">
-        <span class="k">Total deposits</span>
-        <span class="v">${fmt(num(s.deposits))}</span>
-      </div>
-      <div class="col">
-        <span class="k">Excluded</span>
-        <span class="v">${fmt(cats.ineligible + cats.questionable)}</span>
-      </div>
-      <div class="col">
-        <span class="k">Eligible</span>
-        <span class="v elig">${fmt(elig)}</span>
-      </div>
-      <div class="col">
-        <span class="k">NSF</span>
-        <span class="v ${nsfClass}">${num(s.nsf)}</span>
-      </div>
-      <span class="caret">▸</span>
+      <div class="col"><span class="k">Statement</span><span class="date-display">${dateStr}</span></div>
+      <div class="col"><span class="k">Total deposits</span><span class="v">${fmt(num(s.deposits))}</span></div>
+      <div class="col"><span class="k">Excluded</span><span class="v">${fmt(cats.ineligible + cats.questionable)}</span></div>
+      <div class="col"><span class="k">Eligible</span><span class="v elig">${fmt(elig)}</span></div>
+      <div class="col"><span class="k">NSF</span><span class="v ${nsfClass}">${num(s.nsf)}</span></div>
+      <span class="caret" aria-hidden="true">▸</span>
     </div>
     <div class="stmt-body">
       <div class="stmt-fields">
@@ -1465,7 +1726,6 @@ function renderStmtCard(i) {
     </div>
   `;
 
-  // Toggle expand
   card.querySelector('.stmt-head').addEventListener('click', e => {
     if (e.target.tagName === 'INPUT') return;
     if (state.openStmts.has(i)) state.openStmts.delete(i);
@@ -1473,8 +1733,16 @@ function renderStmtCard(i) {
     card.classList.toggle('open');
     debouncedSave();
   });
+  card.querySelector('.stmt-head').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (state.openStmts.has(i)) state.openStmts.delete(i);
+      else state.openStmts.add(i);
+      card.classList.toggle('open');
+      debouncedSave();
+    }
+  });
 
-  // Stmt field inputs
   card.querySelectorAll('.stmt-fields input').forEach(inp => {
     setupFieldFocus(inp);
     inp.addEventListener('input', e => {
@@ -1484,18 +1752,15 @@ function renderStmtCard(i) {
         state.statements[i+1].beginning = e.target.value;
       }
       recalcAndPersist();
-      // Re-render only the head of this and the next (for cascade)
       renderStatements();
     });
   });
 
-  // Line item handlers
   card.querySelectorAll('.li-add').forEach(b => {
     b.addEventListener('click', () => {
       s.lineItems.push(newLineItem('', '', s.endDate || ''));
       renderStatements();
       recalcAndPersist();
-      // Focus the new item's amount field
       setTimeout(() => {
         const inputs = document.querySelectorAll(`[data-stmt="${i}"] .li-row input[data-lf="amount"]`);
         inputs[inputs.length-1]?.focus();
@@ -1509,7 +1774,6 @@ function renderStmtCard(i) {
       s.lineItems[j][lf] = e.target.value;
       debouncedSave();
       recalcOnly();
-      // Update just badges/head without full re-render to avoid focus loss
       updateStmtHead(i);
     });
     inp.addEventListener('blur', () => { renderStatements(); recalcAndPersist(); });
@@ -1518,7 +1782,6 @@ function renderStmtCard(i) {
     c.addEventListener('click', () => {
       const j = +c.dataset.j;
       const li = s.lineItems[j];
-      // cycle: null (auto) -> eligible -> ineligible -> null
       if (li.manualDecision === null || li.manualDecision === undefined) li.manualDecision = 'eligible';
       else if (li.manualDecision === 'eligible') li.manualDecision = 'ineligible';
       else li.manualDecision = null;
@@ -1539,7 +1802,7 @@ function renderStmtCard(i) {
 }
 
 function renderLineItems(stmtIdx, s) {
-  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems(), reviewType: state.reviewType };
   const rows = s.lineItems.map((li, j) => {
     const r = effectiveCategory(li, state.mode, ctx);
     const eff = r.effective;
@@ -1548,24 +1811,24 @@ function renderLineItems(stmtIdx, s) {
     const catLabel = isQ ? 'Questionable' : (li.manualDecision ? (eff === 'eligible' ? 'Manual: Eligible' : 'Manual: Ineligible') : (eff.charAt(0).toUpperCase() + eff.slice(1)));
     return `
       <div class="li-row" data-j="${j}">
-        <input data-lf="amount" type="number" step="0.01" placeholder="0.00" value="${li.amount}">
-        <input data-lf="date" type="date" value="${li.date||''}">
-        <input data-lf="description" type="text" placeholder="Transaction description (e.g. ZELLE FROM JOHN SMITH)" value="${(li.description||'').replace(/"/g,'&quot;')}">
-        <span class="li-cat ${catClass}" data-j="${j}" title="Click to override (eligible → ineligible → auto)">
+        <input data-lf="amount" type="number" step="0.01" placeholder="0.00" value="${li.amount}" aria-label="Amount">
+        <input data-lf="date" type="date" value="${li.date||''}" aria-label="Date">
+        <input data-lf="description" type="text" placeholder="Transaction description" value="${(li.description||'').replace(/"/g,'&quot;')}" aria-label="Description">
+        <span class="li-cat ${catClass}" data-j="${j}" title="Click to override (eligible → ineligible → auto)" role="button" tabindex="0">
           <span class="dot"></span>${catLabel}
         </span>
-        <button class="li-del" data-j="${j}" title="Remove">×</button>
+        <button class="li-del" data-j="${j}" title="Remove" aria-label="Remove deposit">×</button>
       </div>`;
   }).join('');
 
   return `
     <div class="line-items" data-stmt="${stmtIdx}">
       <div class="li-head">
-        <h4>Individual Deposit Line Items</h4>
-        <span class="hint">${s.lineItems.length || 'No'} line item${s.lineItems.length===1?'':'s'} entered · auto-classified by ${MODES[state.mode].label} mode</span>
+        <h4>Deposit Line Items</h4>
+        <span class="hint">${s.lineItems.length || 'No'} item${s.lineItems.length===1?'':'s'} · ${MODES[state.mode].label} mode · ${REVIEW_TYPES[state.reviewType].label}</span>
       </div>
-      <div class="li-table">
-        <div class="li-row head">
+      <div class="li-table" role="table">
+        <div class="li-row head" role="row">
           <div>Amount</div><div>Date</div><div>Description / Source</div><div>Category</div><div></div>
         </div>
         ${rows || ''}
@@ -1575,7 +1838,6 @@ function renderLineItems(stmtIdx, s) {
   `;
 }
 
-// Quick head update without re-render (to avoid blurring focused input)
 function updateStmtHead(i) {
   const card = document.querySelectorAll('.stmt')[i];
   if (!card) return;
@@ -1588,72 +1850,89 @@ function updateStmtHead(i) {
 }
 
 /* ===========================================================
-   RENDER — METHOD SUMMARIES
+   METHOD SUMMARIES
    =========================================================== */
 function renderMethodSummaries(c) {
-  // Method 1
-  let m1 = '';
-  if (c.ineligibleByOwnership) {
-    m1 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">Ownership ${c.ownershipPct.toFixed(1)}% &lt; 25%</span></div>`;
-  } else {
+  const rt = REVIEW_TYPES[state.reviewType];
+  const ownershipBlocker = c.ineligibleByOwnership ?
+    `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">Ownership ${c.ownershipPct.toFixed(1)}% &lt; ${c.minOwn}% (${rt.label})</span></div>` : '';
+
+  // ============ M1 ============
+  let m1 = ownershipBlocker;
+  if (!c.ineligibleByOwnership) {
     m1 += msRow('Most recent 12mo eligible deposits', fmt(c.mostRecent));
     m1 += msRow('× Ownership', fmtPct(c.ownershipPct, 2));
-    m1 += msRow(`× (1 − Expense ratio ${fmtPct(c.m1.ratio,1)})`, (1 - c.m1.ratio/100).toFixed(4));
+    if (c.m1.applyRatio) {
+      m1 += msRow(`× (1 − Expense ratio ${fmtPct(c.m1.ratio,1)})`, (1 - c.m1.ratio/100).toFixed(4));
+    } else {
+      m1 += `<div class="ms-row note"><span class="k">Expense ratio NOT applied — ${rt.label} per FMHL §7</span><span></span></div>`;
+    }
     m1 += msRow('Most recent year qualifying', fmt(c.m1.most));
     if (c.months === 24) {
       m1 += msRow('Previous 12mo eligible deposits', fmt(c.previous));
       m1 += msRow('Previous year qualifying', fmt(c.m1.prev));
       m1 += `<div class="ms-row note"><span class="k">Method chosen</span><span>${c.m1.label}</span></div>`;
+      if (c.declineSevere) {
+        m1 += `<div class="ms-row bad"><span class="k">⚠ Severe decline (≥20% YoY) — MR-12 only, requires borrower LOE confirming stabilization [FMHL §6]</span><span></span></div>`;
+      }
     }
     m1 += msRow('Annual qualifying income', fmt(c.m1.annual), 'total');
     m1 += msRow('Monthly qualifying income', fmt(c.m1.monthly), 'total headline');
   }
   document.getElementById('m1_summary').innerHTML = m1;
 
-  // Method 2
-  let m2 = '';
-  if (c.ineligibleByOwnership) {
-    m2 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">Ownership ${c.ownershipPct.toFixed(1)}% &lt; 25%</span></div>`;
-  } else if (!c.m2.gross && !c.m2.net) {
-    m2 = `<div class="ms-row note"><span class="k">Enter CPA P&amp;L Gross Receipts and Net Income above to compute.</span></div>`;
-  } else {
-    m2 += msRow('P&L Gross Receipts', fmt(c.m2.gross));
-    m2 += msRow(`Total Eligible Deposits (${c.months}mo)`, fmt(c.totalEligible));
-    m2 += msRow('75% threshold of Gross', fmt(c.m2.gross * 0.75));
-    if (c.m2.coverageOK === false) m2 += `<div class="ms-row bad"><span class="k">⚠ Statements do NOT show 75%+ of revenues</span><span></span></div>`;
-    else if (c.m2.coverageOK === true) m2 += `<div class="ms-row"><span class="k" style="color:var(--positive)">✓ Deposit coverage passed</span><span></span></div>`;
-    m2 += msRow('P&L Net Income × Ownership', fmt(c.m2.annual));
-    m2 += msRow('Annual qualifying income', fmt(c.m2.annual), 'total');
-    m2 += msRow(`Monthly qualifying income (÷${c.months})`, fmt(c.m2.monthly), 'total headline');
+  // ============ M2 ============
+  let m2 = ownershipBlocker;
+  if (!c.ineligibleByOwnership) {
+    if (!c.m2.gross && !c.m2.net) {
+      m2 = `<div class="ms-row note"><span class="k">Enter CPA P&amp;L Gross Receipts and Net Income above to compute.</span></div>`;
+    } else {
+      m2 += msRow('P&L Gross Receipts', fmt(c.m2.gross));
+      m2 += msRow(`Total Eligible Deposits (${c.months}mo)`, fmt(c.totalEligible));
+      m2 += msRow('80% coverage threshold of Gross [FMHL §9]', fmt(c.m2.gross * 0.80));
+      if (c.m2.coverageOK === false) {
+        const pct = c.m2.gross > 0 ? (c.totalEligible / c.m2.gross * 100).toFixed(1) : '0.0';
+        m2 += `<div class="ms-row bad"><span class="k">⚠ Deposits ${pct}% of P&amp;L revenue — exceeds FMHL's 20% tolerance. P&amp;L method fails.</span><span></span></div>`;
+      } else if (c.m2.coverageOK === true) {
+        m2 += `<div class="ms-row"><span class="k" style="color:var(--positive)">✓ Coverage ≥80% of P&amp;L revenue [FMHL §9]</span><span></span></div>`;
+      }
+      m2 += msRow('P&L Net Income', fmt(c.m2.net));
+      if (c.m2.dep > 0) m2 += msRow('+ Depreciation add-back', fmt(c.m2.dep));
+      if (c.m2.amort > 0) m2 += msRow('+ Amort/Depletion/Casualty add-back', fmt(c.m2.amort));
+      if (c.m2.dep > 0 || c.m2.amort > 0) m2 += msRow('Net w/ add-backs', fmt(c.m2.netWithAddBacks));
+      m2 += msRow('× Ownership', fmtPct(c.ownershipPct, 2));
+      m2 += msRow('Annual qualifying income', fmt(c.m2.annual), 'total');
+      m2 += msRow(`Monthly qualifying income (÷${c.months})`, fmt(c.m2.monthly), 'total headline');
+    }
   }
   document.getElementById('m2_summary').innerHTML = m2;
 
-  // Method 3
-  let m3 = '';
-  if (c.ineligibleByOwnership) {
-    m3 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">Ownership ${c.ownershipPct.toFixed(1)}% &lt; 25%</span></div>`;
-  } else if (!c.m3.ratio) {
-    m3 = `<div class="ms-row note"><span class="k">Enter CPA-stated expense ratio above to compute.</span></div>`;
-  } else if (c.m3.tooLow) {
-    m3 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">CPA ratio ${fmtPct(c.m3.ratio,1)} &lt; 20%</span></div>`;
-  } else {
-    m3 += msRow('Most recent 12mo eligible deposits', fmt(c.mostRecent));
-    m3 += msRow('× Ownership', fmtPct(c.ownershipPct, 2));
-    m3 += msRow(`× (1 − CPA ratio ${fmtPct(c.m3.ratio,1)})`, (1 - c.m3.ratio/100).toFixed(4));
-    m3 += msRow('Most recent year qualifying', fmt(c.m3.most));
-    if (c.months === 24) {
-      m3 += msRow('Previous year qualifying', fmt(c.m3.prev));
-      m3 += `<div class="ms-row note"><span class="k">Method chosen</span><span>${c.m3.label}</span></div>`;
+  // ============ M3 ============
+  let m3 = ownershipBlocker;
+  if (!c.ineligibleByOwnership) {
+    if (!c.m3.ratio) {
+      m3 = `<div class="ms-row note"><span class="k">Enter CPA-stated expense ratio above to compute.</span></div>`;
+    } else if (c.m3.tooLow) {
+      m3 = `<div class="ms-row bad"><span class="k">INELIGIBLE</span><span class="v">CPA ratio ${fmtPct(c.m3.ratio,1)} &lt; 10% (FMHL minimum)</span></div>`;
+    } else {
+      m3 += msRow('Most recent 12mo eligible deposits', fmt(c.mostRecent));
+      m3 += msRow('× Ownership', fmtPct(c.ownershipPct, 2));
+      m3 += msRow(`× (1 − CPA ratio ${fmtPct(c.m3.ratio,1)})`, (1 - c.m3.ratio/100).toFixed(4));
+      m3 += msRow('Most recent year qualifying', fmt(c.m3.most));
+      if (c.months === 24) {
+        m3 += msRow('Previous year qualifying', fmt(c.m3.prev));
+        m3 += `<div class="ms-row note"><span class="k">Method chosen</span><span>${c.m3.label}</span></div>`;
+      }
+      m3 += msRow('Annual qualifying income', fmt(c.m3.annual), 'total');
+      m3 += msRow('Monthly qualifying income', fmt(c.m3.monthly), 'total headline');
     }
-    m3 += msRow('Annual qualifying income', fmt(c.m3.annual), 'total');
-    m3 += msRow('Monthly qualifying income', fmt(c.m3.monthly), 'total headline');
   }
   document.getElementById('m3_summary').innerHTML = m3;
 
   document.getElementById('methodMeta').textContent =
-    state.method === 'm1' ? `Method #1 · Uniform Expense Ratio ${fmtPct(c.m1.ratio,1)}` :
-    state.method === 'm2' ? 'Method #2 · CPA Profit & Loss' :
-                            'Method #3 · CPA Expense Ratio';
+    state.method === 'm1' ? `${rt.label} · Method #1 · ${c.m1.applyRatio ? `Uniform ${fmtPct(c.m1.ratio,1)}` : 'No expense ratio'}` :
+    state.method === 'm2' ? `${rt.label} · Method #2 · CPA P&L` :
+                            `${rt.label} · Method #3 · CPA Expense Ratio`;
 }
 
 function msRow(k, v, extra='') {
@@ -1663,24 +1942,17 @@ function msRow(k, v, extra='') {
 /* ===========================================================
    MAIN RECALC
    =========================================================== */
-function recalcOnly() {
-  _calcCache = computeAll();
-  return _calcCache;
-}
+function recalcOnly() { _calcCache = computeAll(); return _calcCache; }
 function recalcAndPersist() {
   recalcOnly();
   renderHero(_calcCache);
   renderMethodSummaries(_calcCache);
+  renderCompare();
   debouncedSave();
-}
-function recalcFull() {
-  recalcOnly();
-  renderHero(_calcCache);
-  renderMethodSummaries(_calcCache);
 }
 
 /* ===========================================================
-   SAVED INDICATOR
+   UI HELPERS
    =========================================================== */
 let _savedTimer = null;
 function flashSaved() {
@@ -1690,9 +1962,6 @@ function flashSaved() {
   _savedTimer = setTimeout(() => dot.classList.remove('visible'), 1200);
 }
 
-/* ===========================================================
-   FIELD FOCUS UNDERLINE
-   =========================================================== */
 function setupFieldFocus(inp) {
   const f = inp.closest('.field');
   if (!f) return;
@@ -1702,10 +1971,10 @@ function setupFieldFocus(inp) {
 document.querySelectorAll('.field input, .field select').forEach(setupFieldFocus);
 
 /* ===========================================================
-   BORROWER + METHOD INPUT BINDINGS
+   BINDINGS — borrower + methods
    =========================================================== */
 const borrowerMap = { f_borrower:'name', f_business:'business', f_bank:'bank',
-                     f_last4:'last4', f_ownership:'ownership', f_endDate:'endDate' };
+                     f_last4:'last4', f_ownership:'ownership', f_endDate:'endDate', f_noteDate:'noteDate' };
 Object.keys(borrowerMap).forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
     state.borrower[borrowerMap[id]] = e.target.value;
@@ -1720,19 +1989,37 @@ document.getElementById('f_months').addEventListener('change', e => {
   else if (state.statements.length > m) state.statements = state.statements.slice(0, m);
   autoPopulateDates(); renderStatements(); recalcAndPersist();
 });
-['m1_ratio','m2_gross','m2_net','m3_ratio'].forEach(id => {
+['m1_ratio','m2_gross','m2_net','m2_dep','m2_amort','m3_ratio'].forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
     if (id === 'm1_ratio') state.m1.ratio = e.target.value;
     else if (id === 'm2_gross') state.m2.gross = e.target.value;
     else if (id === 'm2_net') state.m2.net = e.target.value;
+    else if (id === 'm2_dep') state.m2.dep = e.target.value;
+    else if (id === 'm2_amort') state.m2.amort = e.target.value;
     else if (id === 'm3_ratio') state.m3.ratio = e.target.value;
     recalcAndPersist();
   });
 });
+document.getElementById('m1_bizType').addEventListener('change', e => {
+  state.m1.bizType = e.target.value;
+  if (e.target.value) {
+    state.m1.ratio = e.target.value;
+    document.getElementById('m1_ratio').value = e.target.value;
+  }
+  recalcAndPersist();
+});
 
 /* ===========================================================
-   SEGMENTED CONTROLS — Mode & Method
+   SEGMENTED CONTROLS
    =========================================================== */
+document.getElementById('reviewSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.reviewType = b.dataset.rt;
+  document.querySelectorAll('#reviewSeg button').forEach(x => x.classList.toggle('active', x === b));
+  renderBorrower();
+  renderStatements();
+  recalcAndPersist();
+});
 document.getElementById('modeSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   state.mode = b.dataset.mode;
@@ -1751,32 +2038,30 @@ document.getElementById('methodSeg').addEventListener('click', e => {
    REVIEW MODAL
    =========================================================== */
 const modal = document.getElementById('reviewModal');
+let _lastFocusBeforeModal = null;
 function openReview() {
   const fl = flaggedLineItems();
   if (!fl.length) return showToast('No flagged deposits to review.');
   reviewIdx = 0;
+  _lastFocusBeforeModal = document.activeElement;
   modal.classList.add('open');
   document.addEventListener('keydown', modalKeyHandler);
   renderReview();
+  // Focus trap: first focusable
+  setTimeout(() => document.getElementById('modalEligible').focus(), 50);
 }
 function closeReview() {
   modal.classList.remove('open');
   document.removeEventListener('keydown', modalKeyHandler);
+  if (_lastFocusBeforeModal) _lastFocusBeforeModal.focus();
 }
 function renderReview() {
   const fl = flaggedLineItems();
-  if (!fl.length) {
-    closeReview();
-    showToast('All deposits reviewed.');
-    renderStatements();
-    recalcAndPersist();
-    return;
-  }
+  if (!fl.length) { closeReview(); showToast('All deposits reviewed.'); renderStatements(); recalcAndPersist(); return; }
   if (reviewIdx >= fl.length) reviewIdx = fl.length - 1;
   if (reviewIdx < 0) reviewIdx = 0;
   const item = fl[reviewIdx];
-  document.getElementById('modalCount').textContent =
-    `${reviewIdx+1} of ${fl.length} flagged · Statement ${item._stmtIdx+1}`;
+  document.getElementById('modalCount').textContent = `${reviewIdx+1} of ${fl.length} flagged · Statement ${item._stmtIdx+1}`;
   document.getElementById('modalDate').textContent = (item.date ? fmtUSDate(item.date) : '—').toUpperCase();
   document.getElementById('modalAmount').textContent = fmt(num(item.amount));
   document.getElementById('modalDesc').textContent = item.description || '(no description)';
@@ -1784,44 +2069,31 @@ function renderReview() {
   document.getElementById('modalNote').value = item.note || '';
   document.getElementById('modalPrev').disabled = reviewIdx === 0;
   document.getElementById('modalNext').disabled = reviewIdx >= fl.length - 1;
-  // Live monthly income
   const live = recalcOnly();
-  const lv = state.method === 'm1' ? live.m1.monthly : state.method === 'm2' ? live.m2.monthly : live.m3.monthly;
+  const lv = headlineMonthly(live);
   document.getElementById('modalLive').textContent = fmt(lv);
 }
-
 function decide(decision) {
   const fl = flaggedLineItems();
   if (!fl.length) return closeReview();
   const item = fl[reviewIdx];
-  // Find item in actual state
   const stmt = state.statements[item._stmtIdx];
   const li = stmt.lineItems.find(x => x.id === item.id);
   if (!li) return;
   li.manualDecision = decision;
   li.note = document.getElementById('modalNote').value || li.note;
-  // Re-render statements + hero with count-up
   renderStatements();
   recalcAndPersist();
-  // Advance (current index now points to next flagged item since this one was resolved)
   const updated = flaggedLineItems();
-  if (updated.length === 0) {
-    closeReview();
-    showToast('All deposits reviewed.');
-    return;
-  }
+  if (updated.length === 0) { closeReview(); showToast('All deposits reviewed.'); return; }
   if (reviewIdx >= updated.length) reviewIdx = updated.length - 1;
   renderReview();
 }
-
 document.getElementById('btnReview').addEventListener('click', openReview);
 document.getElementById('modalClose').addEventListener('click', closeReview);
 document.getElementById('modalEligible').addEventListener('click', () => decide('eligible'));
 document.getElementById('modalIneligible').addEventListener('click', () => decide('ineligible'));
-document.getElementById('modalSkip').addEventListener('click', () => {
-  reviewIdx++;
-  renderReview();
-});
+document.getElementById('modalSkip').addEventListener('click', () => { reviewIdx++; renderReview(); });
 document.getElementById('modalPrev').addEventListener('click', () => { reviewIdx--; renderReview(); });
 document.getElementById('modalNext').addEventListener('click', () => { reviewIdx++; renderReview(); });
 modal.addEventListener('click', e => { if (e.target.id === 'reviewModal') closeReview(); });
@@ -1833,12 +2105,52 @@ document.getElementById('modalNote').addEventListener('input', e => {
   if (li) { li.note = e.target.value; debouncedSave(); }
 });
 function modalKeyHandler(e) {
-  if (e.key === 'Escape') { e.preventDefault(); closeReview(); }
-  else if (e.key === '1') { e.preventDefault(); decide('eligible'); }
-  else if (e.key === '2') { e.preventDefault(); decide('ineligible'); }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); reviewIdx--; renderReview(); }
+  if (e.key === 'Escape')   { e.preventDefault(); closeReview(); }
+  else if (e.key === '1')   { if (e.target.tagName === 'INPUT') return; e.preventDefault(); decide('eligible'); }
+  else if (e.key === '2')   { if (e.target.tagName === 'INPUT') return; e.preventDefault(); decide('ineligible'); }
+  else if (e.key === 'ArrowLeft')  { e.preventDefault(); reviewIdx--; renderReview(); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); reviewIdx++; renderReview(); }
+  // Focus trap
+  else if (e.key === 'Tab') {
+    const focusable = modal.querySelectorAll('button:not(:disabled), input');
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
 }
+
+/* ===========================================================
+   SHORTCUTS OVERLAY
+   =========================================================== */
+const shortcutsBg = document.getElementById('shortcutsBg');
+function openShortcuts() { shortcutsBg.classList.add('open'); }
+function closeShortcuts() { shortcutsBg.classList.remove('open'); }
+document.getElementById('btnHelp').addEventListener('click', openShortcuts);
+shortcutsBg.addEventListener('click', e => { if (e.target.id === 'shortcutsBg') closeShortcuts(); });
+window.addEventListener('keydown', e => {
+  if (modal.classList.contains('open')) return; // modal handles its own keys
+  if (e.key === '?' && e.shiftKey) { e.preventDefault(); openShortcuts(); }
+  else if (e.key === 'Escape' && shortcutsBg.classList.contains('open')) { e.preventDefault(); closeShortcuts(); }
+  else if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); openReview(); }
+  else if (e.key === 't' || e.key === 'T') {
+    e.preventDefault();
+    const order = ['personal','business','comingled','investment'];
+    const next = order[(order.indexOf(state.reviewType)+1) % order.length];
+    state.reviewType = next;
+    document.querySelectorAll('#reviewSeg button').forEach(x => x.classList.toggle('active', x.dataset.rt === next));
+    renderBorrower(); renderStatements(); recalcAndPersist();
+    showToast(`Review Type: ${REVIEW_TYPES[next].label}`);
+  } else if (e.key === 'm' || e.key === 'M') {
+    e.preventDefault();
+    const order = ['cautious','medium','aggressive'];
+    const next = order[(order.indexOf(state.mode)+1) % order.length];
+    state.mode = next;
+    document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === next));
+    renderStatements(); recalcAndPersist();
+    showToast(`Mode: ${MODES[next].label}`);
+  }
+});
 
 /* ===========================================================
    COMPACT BAR ON SCROLL
@@ -1850,6 +2162,73 @@ window.addEventListener('resize', measureHero);
 window.addEventListener('scroll', () => {
   if (window.scrollY > _heroBottom - 80) compactBar.classList.add('visible');
   else compactBar.classList.remove('visible');
+});
+
+/* ===========================================================
+   BULK PASTE
+   =========================================================== */
+document.getElementById('bulkParseBtn').addEventListener('click', () => {
+  const raw = document.getElementById('bulkPaste').value.trim();
+  if (!raw) return showToast('Nothing to parse.');
+  const lines = raw.split(/\r?\n/).filter(l => l.trim().length);
+  let parsed = 0, skipped = 0;
+  const months = parseInt(state.borrower.months, 10);
+  const base = parseISO(state.borrower.endDate);
+
+  lines.forEach(line => {
+    // Detect tab vs comma — pick whichever appears more
+    const sep = (line.match(/\t/g) || []).length >= (line.match(/,/g) || []).length ? '\t' : ',';
+    const parts = line.split(sep).map(p => p.trim().replace(/^"|"$/g,''));
+    if (parts.length < 3) { skipped++; return; }
+
+    // Heuristic: detect which column is date, amount, description
+    let date = '', amt = '', desc = '';
+    parts.forEach(p => {
+      if (!date && /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(p)) date = p.replace(/\//g,'-');
+      else if (!date && /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(p)) {
+        const m = p.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+        if (m) {
+          const y = m[3].length === 2 ? '20' + m[3] : m[3];
+          date = `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+        }
+      }
+      else if (!amt && /^-?\$?\d[\d,]*\.?\d*$/.test(p)) amt = p.replace(/[\$,]/g,'');
+      else if (!desc) desc = p;
+    });
+
+    if (!amt || num(amt) === 0) { skipped++; return; }
+
+    // Find statement matching date — fallback to most recent (idx 0)
+    let targetIdx = 0;
+    if (date && base) {
+      const d = parseISO(date);
+      for (let i = 0; i < months; i++) {
+        const stmtEnd = parseISO(state.statements[i].endDate);
+        if (stmtEnd && d <= stmtEnd) {
+          // Find the most recent statement whose end date is on/after d
+          targetIdx = i;
+        }
+      }
+      // Actually: we want statement where d is in the month leading up to endDate
+      for (let i = 0; i < months; i++) {
+        const stmtEnd = parseISO(state.statements[i].endDate);
+        if (!stmtEnd) continue;
+        const stmtStart = new Date(stmtEnd.getFullYear(), stmtEnd.getMonth() - 1, stmtEnd.getDate() + 1);
+        if (d >= stmtStart && d <= stmtEnd) { targetIdx = i; break; }
+      }
+    }
+    state.statements[targetIdx].lineItems.push(newLineItem(amt, desc, date));
+    parsed++;
+  });
+
+  if (parsed === 0) { showToast(`No transactions parsed${skipped ? ` (${skipped} skipped)` : ''}`); return; }
+  showToast(`Parsed ${parsed} transaction${parsed===1?'':'s'}${skipped ? ` · ${skipped} skipped` : ''}`);
+  document.getElementById('bulkPaste').value = '';
+  renderStatements();
+  recalcAndPersist();
+});
+document.getElementById('bulkClearBtn').addEventListener('click', () => {
+  document.getElementById('bulkPaste').value = '';
 });
 
 /* ===========================================================
@@ -1865,27 +2244,30 @@ function showToast(msg) {
 document.getElementById('btnCopy').addEventListener('click', async () => {
   const c = _calcCache;
   const b = state.borrower;
+  const rt = REVIEW_TYPES[state.reviewType];
   const last = state.statements[0]?.endDate;
   const first = state.statements[c.months-1]?.endDate;
-  const monthly = state.method === 'm1' ? c.m1.monthly : state.method === 'm2' ? c.m2.monthly : c.m3.monthly;
+  const monthly = headlineMonthly(c);
   const annual = monthly * 12;
   const lines = [
     `Borrower: ${b.name || '—'}`,
     `Business: ${b.business || '—'}`,
     `Bank: ${b.bank || '—'} ****${b.last4 || '—'}`,
+    `Review Type: ${rt.label}`,
     `Period: ${fmtUSDate(first)} to ${fmtUSDate(last)} (${c.months} months)`,
     `Analysis Mode: ${MODES[state.mode].label}`,
-    `Method: ${state.method === 'm1' ? `#1 Uniform Expense Ratio @ ${fmtPct(c.m1.ratio,1)}` :
+    `Method: ${state.method === 'm1' ? `#1 ${c.m1.applyRatio ? `Uniform ${fmtPct(c.m1.ratio,1)}` : 'No expense ratio'}` :
               state.method === 'm2' ? '#2 CPA Profit & Loss' :
               `#3 CPA Expense Ratio @ ${fmtPct(c.m3.ratio,1)}`}`,
-    `Ownership: ${fmtPct(c.ownershipPct,2)}`,
+    `Ownership: ${fmtPct(c.ownershipPct,2)} (min ${c.minOwn}%)`,
     `Total Eligible Deposits: ${fmt(c.totalEligible)}`,
-    c.ineligibleByOwnership ? `Qualifying Income: INELIGIBLE — Ownership below 25%` :
+    c.ineligibleByOwnership ? `Qualifying Income: INELIGIBLE — Ownership ${c.ownershipPct.toFixed(1)}% < ${c.minOwn}%` :
                               `Qualifying Annual Income: ${fmt(annual)}`,
     c.ineligibleByOwnership ? '' : `Qualifying Monthly Income: ${fmt(monthly)}  <-- USE THIS TO UNDERWRITE`,
     `NSFs: ${c.totalNSF} (${c.excessiveNSF ? 'EXCESSIVE' : 'within tolerance'})`,
-    `Trend: ${c.depositsIncreasing === null ? 'N/A (12-mo)' : c.depositsIncreasing ? 'increasing' : 'declining'}`,
-    `Line items: ${c.lineItemCounts.eligible} eligible, ${c.lineItemCounts.ineligible} ineligible, ${c.lineItemCounts.questionable} unreviewed`
+    `Trend: ${c.depositsTrend || (c.months === 12 ? 'N/A (12-mo)' : '—')}`,
+    `Line items: ${c.lineItemCounts.eligible} eligible, ${c.lineItemCounts.ineligible} ineligible, ${c.lineItemCounts.questionable} unreviewed`,
+    `Prepared by: Aryeh Brecher · NMLS #1401181 · FM Home Loans LLC NMLS #2212`
   ].filter(Boolean);
   const txt = lines.join('\n');
   try { await navigator.clipboard.writeText(txt); showToast('Summary copied to clipboard'); }
@@ -1900,24 +2282,25 @@ document.getElementById('btnCopy').addEventListener('click', async () => {
    EXCEL EXPORT
    =========================================================== */
 document.getElementById('btnXlsx').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') { showToast('Spreadsheet library still loading — try again in a moment.'); return; }
   const c = _calcCache;
   const b = state.borrower;
+  const rt = REVIEW_TYPES[state.reviewType];
   const wb = XLSX.utils.book_new();
-
-  const headlineMonthly = state.method === 'm1' ? c.m1.monthly : state.method === 'm2' ? c.m2.monthly : c.m3.monthly;
+  const head = headlineMonthly(c);
   const summary = [
     ['Bank Statement Income Worksheet'], [],
     ['Borrower', b.name], ['Business', b.business], ['Bank', `${b.bank} ****${b.last4}`],
+    ['Review Type', rt.label],
     ['Months Analyzed', c.months], ['Ownership %', c.ownershipPct],
     ['Period End', fmtUSDate(state.statements[0]?.endDate)],
     ['Period Start', fmtUSDate(state.statements[c.months-1]?.endDate)],
     ['Analysis Mode', MODES[state.mode].label],
     ['Headline Method', state.method.toUpperCase()],
     [], ['HEADLINE'],
-    ['Qualifying Monthly Income', headlineMonthly],
-    ['Qualifying Annual Income', headlineMonthly * 12],
+    ['Qualifying Monthly Income', head], ['Qualifying Annual Income', head * 12],
     [], ['== Method #1: Uniform Expense Ratio =='],
-    ['Expense Ratio', c.m1.ratio + '%'],
+    ['Expense Ratio Applied', c.m1.applyRatio ? c.m1.ratio + '%' : 'NO (per review type)'],
     ['Most Recent 12mo Eligible Deposits', c.mostRecent],
     ['Most Recent Year Qualifying', c.m1.most]
   ];
@@ -1925,29 +2308,38 @@ document.getElementById('btnXlsx').addEventListener('click', () => {
     summary.push(['Previous 12mo Eligible', c.previous]);
     summary.push(['Previous Year Qualifying', c.m1.prev]);
     summary.push(['Method Chosen', c.m1.label]);
+    summary.push(['Severe Decline ≥20%?', c.declineSevere ? 'YES — LOE required' : 'NO']);
   }
   summary.push(['Annual Qualifying', c.m1.annual], ['Monthly Qualifying', c.m1.monthly], [],
     ['== Validation =='],
-    ['Total NSFs', c.totalNSF],
-    ['Excessive NSFs (>3)', c.excessiveNSF ? 'YES' : 'NO']);
+    ['Total NSFs', c.totalNSF], ['Excessive NSFs (>3)', c.excessiveNSF ? 'YES' : 'NO']);
   if (c.months === 24) {
-    summary.push(['Deposits Increasing?', c.depositsIncreasing ? 'YES' : 'NO']);
-    summary.push(['% Change', (c.periodPctChange*100).toFixed(2) + '%']);
+    summary.push(['Deposits Trend', c.depositsTrend]);
+    if (c.periodPctChange != null) summary.push(['% Change', (c.periodPctChange*100).toFixed(2) + '%']);
   }
+  if (c.stmtAgeDays != null) summary.push(['Days from MR statement to note date', c.stmtAgeDays]);
   summary.push([], ['== Line Items Summary =='],
     ['Eligible', c.lineItemCounts.eligible],
     ['Ineligible', c.lineItemCounts.ineligible],
     ['Unreviewed (questionable)', c.lineItemCounts.questionable],
     [], ['== Method #2: CPA P&L =='],
     ['Gross Receipts', c.m2.gross], ['Net Income', c.m2.net],
-    ['Deposit Coverage of Gross', c.m2.coverageOK === null ? 'N/A' : c.m2.coverageOK ? '>=75% OK' : '<75% FAIL'],
+    ['+ Depreciation', c.m2.dep], ['+ Amort/Depletion', c.m2.amort],
+    ['Net w/ add-backs', c.m2.netWithAddBacks],
+    ['Deposit Coverage (≥80%)', c.m2.coverageOK === null ? 'N/A' : c.m2.coverageOK ? '≥80% OK' : '<80% FAIL'],
     ['Monthly', c.m2.monthly],
     [], ['== Method #3: CPA Expense Ratio =='],
     ['CPA Stated Ratio', c.m3.ratio + '%'],
+    ['Floor Compliance', c.m3.tooLow ? '<10% INELIGIBLE' : 'OK (≥10%)'],
     ['Annual', c.m3.annual], ['Monthly', c.m3.monthly]);
+  summary.push([], ['== Mode Comparison =='],
+    ['Cautious Monthly', headlineMonthly(computeFor('cautious'))],
+    ['Medium Monthly', headlineMonthly(computeFor('medium'))],
+    ['Aggressive Monthly', headlineMonthly(computeFor('aggressive'))]);
+  summary.push([], ['Prepared by', 'Aryeh Brecher · NMLS #1401181 · FM Home Loans LLC NMLS #2212']);
 
   const ws1 = XLSX.utils.aoa_to_sheet(summary);
-  ws1['!cols'] = [{wch:40},{wch:24}];
+  ws1['!cols'] = [{wch:42},{wch:24}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
 
   const detail = [['#','End Date','Beginning','Total Deposits','Excluded','Eligible','Ending','NSF']];
@@ -1962,7 +2354,7 @@ document.getElementById('btnXlsx').addEventListener('click', () => {
   XLSX.utils.book_append_sheet(wb, ws2, 'Statement Detail');
 
   const lis = [['Stmt#','Stmt End','Tx Date','Amount','Description','Auto Category','Effective','Manual','Note','Reasons']];
-  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems() };
+  const ctx = { borrowerName: state.borrower.name, avgMonthly: calcAvgMonthly(), allItems: allLineItems(), reviewType: state.reviewType };
   state.statements.slice(0, c.months).forEach((s, i) => {
     s.lineItems.forEach(li => {
       const r = effectiveCategory(li, state.mode, ctx);
@@ -1974,14 +2366,37 @@ document.getElementById('btnXlsx').addEventListener('click', () => {
   ws3['!cols'] = [{wch:6},{wch:12},{wch:12},{wch:12},{wch:36},{wch:14},{wch:12},{wch:10},{wch:24},{wch:60}];
   XLSX.utils.book_append_sheet(wb, ws3, 'Line Items');
 
+  // Eligibility worksheet
+  const elig = [['Item','Confirmed','Citation']];
+  ELIGIBILITY_ITEMS.forEach(it => elig.push([it.txt, state.eligibility[it.id] ? 'YES' : 'NO', it.cite]));
+  const ws4 = XLSX.utils.aoa_to_sheet(elig);
+  ws4['!cols'] = [{wch:80},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Eligibility');
+
   const filename = `BankStmt_${(b.name||'borrower').replace(/[^\w]+/g,'_')}_${b.last4||'xxxx'}.xlsx`;
   XLSX.writeFile(wb, filename);
 });
 
 /* ===========================================================
-   PRINT / SAVE JSON / LOAD JSON / NEW
+   PDF / PRINT
    =========================================================== */
+document.getElementById('btnPdf').addEventListener('click', () => {
+  showToast('Opening print dialog — save as PDF');
+  // expand all statements for clean print
+  const previouslyOpen = new Set(state.openStmts);
+  for (let i = 0; i < state.borrower.months; i++) state.openStmts.add(i);
+  renderStatements();
+  setTimeout(() => {
+    window.print();
+    state.openStmts = previouslyOpen;
+    renderStatements();
+  }, 200);
+});
 document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+/* ===========================================================
+   SAVE/LOAD JSON
+   =========================================================== */
 document.getElementById('btnSaveJson').addEventListener('click', () => {
   const persistable = { ...state, openStmts: Array.from(state.openStmts) };
   const blob = new Blob([JSON.stringify(persistable, null, 2)], { type: 'application/json' });
@@ -2001,20 +2416,19 @@ document.getElementById('jsonFileInput').addEventListener('change', e => {
       if (!loaded.borrower || !loaded.statements) throw new Error('bad format');
       state = loaded;
       state.openStmts = new Set(loaded.openStmts || [0]);
-      state.m1 = state.m1 || { ratio: 50 }; state.m2 = state.m2 || {gross:'',net:''}; state.m3 = state.m3 || {ratio:''};
-      state.mode = state.mode || 'medium'; state.method = state.method || 'm1';
-      // Back-compat: old format had 'ineligibles' per statement
+      const def = DEFAULT_STATE();
+      for (const k of Object.keys(def)) if (state[k] === undefined) state[k] = def[k];
+      // Back-compat from v1 model
       state.statements.forEach(s => {
         if (!s.lineItems) {
           s.lineItems = (s.ineligibles || []).map(it => newLineItem(it.amount, it.category || it.note || '', s.endDate));
-          // mark them as manually ineligible since the old data model meant exclusion
           s.lineItems.forEach(li => li.manualDecision = 'ineligible');
           delete s.ineligibles;
         }
       });
-      document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
-      document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === state.method));
-      document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
+      migrateStateShape();
+      syncControlsToState();
+      renderChecklist(); renderEligibilityBanner();
       renderBorrower(); renderStatements(); recalcAndPersist();
       showToast('File loaded');
     } catch(err) { showToast('Could not load: ' + err.message); }
@@ -2026,11 +2440,17 @@ document.getElementById('btnNew').addEventListener('click', () => {
   if (!confirm('Clear all data and start a new calculation?')) return;
   localStorage.removeItem(STORAGE_KEY);
   state = DEFAULT_STATE(); seedStatements(state);
-  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === 'medium'));
-  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === 'm1'));
-  document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === 'm1'));
+  syncControlsToState();
+  renderChecklist(); renderEligibilityBanner();
   renderBorrower(); renderStatements(); recalcAndPersist();
 });
+
+function syncControlsToState() {
+  document.querySelectorAll('#reviewSeg button').forEach(x => x.classList.toggle('active', x.dataset.rt === state.reviewType));
+  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
+  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === state.method));
+  document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
+}
 
 document.getElementById('dismissPrivacy').addEventListener('click', () => {
   document.getElementById('privacyBanner').classList.add('hidden');
@@ -2053,17 +2473,12 @@ function loadNathanSample() {
       deposits: dep.toFixed(2), ending: ending.toFixed(2), nsf: 0,
       lineItems: []
     };
-    // Sprinkle realistic flagged-style transactions for demo:
     if (i === 0) {
       stmt.lineItems.push(newLineItem('5000.00', 'CASH DEPOSIT TELLER', ''));
       stmt.lineItems.push(newLineItem('2500.00', 'ZELLE FROM J ANTEBI', ''));
     }
-    if (i === 3) {
-      stmt.lineItems.push(newLineItem('15000.00', 'WIRE TRANSFER LOAN PROCEEDS', ''));
-    }
-    if (i === 7) {
-      stmt.lineItems.push(newLineItem('1200.00', 'REFUND - CLIENT INVOICE 4421', ''));
-    }
+    if (i === 3) stmt.lineItems.push(newLineItem('15000.00', 'WIRE TRANSFER LOAN PROCEEDS', ''));
+    if (i === 7) stmt.lineItems.push(newLineItem('1200.00', 'REFUND - CLIENT INVOICE 4421', ''));
     stmts.push(stmt);
     bal = ending;
   }
@@ -2072,36 +2487,117 @@ function loadNathanSample() {
   stmts[0].deposits = (num(stmts[0].deposits) + drift).toFixed(2);
 
   state = {
+    version: STORAGE_VERSION,
     borrower: { name:'Nathan Antebi', business:'YY Script LLC', bank:'Chase', last4:'7000',
-                months:12, ownership:100, endDate:'2026-04-30' },
+                months:12, ownership:100, endDate:'2026-04-30', noteDate:'' },
     statements: stmts,
-    m1:{ ratio:50 }, m2:{ gross:'', net:'' }, m3:{ ratio:'' },
-    mode:'medium', method:'m1', openStmts: new Set([0])
+    m1:{ ratio:50, bizType:'' }, m2:{ gross:'', net:'', dep:'', amort:'' }, m3:{ ratio:'' },
+    mode:'medium', method:'m1', reviewType:'business', eligibility:{},
+    openStmts: new Set([0])
   };
   autoPopulateDates();
   for (let i = 1; i < state.statements.length; i++) state.statements[i].beginning = state.statements[i-1].ending;
-  // Assign line item dates relative to statement end
   state.statements.forEach(s => s.lineItems.forEach(li => { if (!li.date) li.date = s.endDate; }));
-  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === 'medium'));
-  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === 'm1'));
+  syncControlsToState();
+  renderChecklist(); renderEligibilityBanner();
   renderBorrower(); renderStatements(); recalcAndPersist();
+}
+
+/* ===========================================================
+   SELF-TEST — ?test=1
+   =========================================================== */
+function selfTest() {
+  // FMHL worked examples (pages 59-60):
+  // Example A: $360,000 x .50 = $180,000 x 1.00 = $180,000 / 12 = $15,000
+  // Example B: $360,000 x .75 = $270,000 x .50 = $135,000 / 12 = $11,250
+  const results = [];
+  // Build synthetic state: $30k/mo deposits, 100% ownership, 50% ratio
+  state = DEFAULT_STATE();
+  state.statements = Array.from({length:12}, () => ({ endDate:'', beginning:'', deposits:'30000', ending:'', nsf:0, lineItems:[] }));
+  state.borrower.months = 12; state.borrower.ownership = 100; state.reviewType = 'business';
+  state.m1.ratio = 50;
+  let c = computeAll();
+  results.push({ test: 'FMHL Example A — $360k/yr, 100% own, 50% ratio', expected: 15000, got: c.m1.monthly, pass: Math.abs(c.m1.monthly - 15000) < 0.01 });
+
+  // Example B: ownership 50%, ratio 25% (so 1-ratio = 75%)... actually FMHL example B is gross x .75 = .75 x deposit. Different framing. Let me skip detailed parse; just sanity check.
+  state.borrower.ownership = 50; state.m1.ratio = 50;
+  c = computeAll();
+  // $360k * 0.50 own * 0.50 (1-ratio) = $90k / 12 = $7,500
+  results.push({ test: 'Half ownership, 50% ratio', expected: 7500, got: c.m1.monthly, pass: Math.abs(c.m1.monthly - 7500) < 0.01 });
+
+  // Method 3 floor test: 9% should be ineligible, 10% eligible
+  state.borrower.ownership = 100; state.m3.ratio = 9;
+  c = computeAll();
+  results.push({ test: 'M3 floor: 9% should be tooLow', expected: true, got: c.m3.tooLow, pass: c.m3.tooLow === true });
+  state.m3.ratio = 10;
+  c = computeAll();
+  results.push({ test: 'M3 floor: 10% should be OK', expected: false, got: c.m3.tooLow, pass: c.m3.tooLow === false });
+
+  // Method 2 coverage at 80%
+  state.statements.forEach(s => s.deposits = '20000'); // total 240k
+  state.m2.gross = 300000; state.m2.net = 100000;
+  c = computeAll();
+  // 240k / 300k = 80% — should pass
+  results.push({ test: 'M2 coverage 80% boundary', expected: true, got: c.m2.coverageOK, pass: c.m2.coverageOK === true });
+  state.statements.forEach(s => s.deposits = '19000'); // total 228k = 76%
+  c = computeAll();
+  results.push({ test: 'M2 coverage 76% should fail (≥80% required)', expected: false, got: c.m2.coverageOK, pass: c.m2.coverageOK === false });
+
+  // Review Type ownership thresholds
+  state.statements.forEach(s => s.deposits = '20000');
+  state.borrower.ownership = 22; state.reviewType = 'personal';
+  c = computeAll();
+  results.push({ test: 'Personal review 22% own (min 20)', expected: false, got: c.ineligibleByOwnership, pass: !c.ineligibleByOwnership });
+  state.borrower.ownership = 22; state.reviewType = 'business';
+  c = computeAll();
+  results.push({ test: 'Business review 22% own (min 25, should be ineligible)', expected: true, got: c.ineligibleByOwnership, pass: c.ineligibleByOwnership });
+  state.borrower.ownership = 10; state.reviewType = 'investment';
+  c = computeAll();
+  results.push({ test: 'Investment-Passive 10% own (no min)', expected: false, got: c.ineligibleByOwnership, pass: !c.ineligibleByOwnership });
+
+  // Decline logic: 25% decline → MR-only
+  state.reviewType = 'business'; state.borrower.ownership = 100;
+  state.borrower.months = 24;
+  state.statements = Array.from({length:24}, (_,i) => ({ endDate:'', beginning:'', deposits: i < 12 ? '20000' : '30000', ending:'', nsf:0, lineItems:[] }));
+  c = computeAll();
+  // MR=240k, Prev=360k → MR/Prev = 0.667 (33% decline) → severe, use MR-only
+  results.push({ test: '24mo: 33% decline → MR-only', expected: true, got: c.declineSevere, pass: c.declineSevere === true });
+  results.push({ test: '24mo: 33% decline → m1 uses MR-only', expected: '120000', got: c.m1.annual.toFixed(0), pass: Math.abs(c.m1.annual - 120000) < 1 });
+
+  return results;
 }
 
 /* ===========================================================
    INIT
    =========================================================== */
 function init() {
-  // Method tab + mode persisted state
-  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('active', x.dataset.mode === state.mode));
-  document.querySelectorAll('#methodSeg button').forEach(x => x.classList.toggle('active', x.dataset.method === state.method));
-  document.querySelectorAll('.method-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === state.method));
+  syncControlsToState();
+  renderChecklist();
+  renderEligibilityBanner();
   renderBorrower();
   renderStatements();
   recalcAndPersist();
   measureHero();
-  if (new URLSearchParams(location.search).get('sample') === 'nathan') {
-    // Defer slightly so initial render completes
-    setTimeout(loadNathanSample, 50);
+  setTimeout(measureHero, 100);
+
+  const params = new URLSearchParams(location.search);
+  if (params.get('sample') === 'nathan') setTimeout(loadNathanSample, 50);
+  if (params.get('test') === '1') {
+    setTimeout(() => {
+      const r = selfTest();
+      const passed = r.filter(x => x.pass).length;
+      console.table(r);
+      const msg = `Self-test: ${passed}/${r.length} passed`;
+      const div = document.createElement('div');
+      div.style.cssText = 'position:fixed;top:80px;right:20px;background:#fff;border:2px solid var(--accent);padding:16px;border-radius:8px;font-family:monospace;font-size:12px;z-index:999;max-width:520px;box-shadow:0 4px 12px rgba(0,0,0,0.1)';
+      div.innerHTML = `<h3 style="margin:0 0 8px;font-size:14px">${msg}</h3>` +
+        r.map(x => `<div style="color:${x.pass?'green':'red'}">${x.pass?'✓':'✗'} ${x.test}<br>&nbsp;&nbsp;expected: ${x.expected}, got: ${x.got}</div>`).join('');
+      document.body.appendChild(div);
+      // Reset state after test
+      state = loadState(); ensureOpenSet();
+      if (state.statements.length === 0) seedStatements(state);
+      syncControlsToState(); renderBorrower(); renderStatements(); recalcAndPersist();
+    }, 200);
   }
 }
 init();

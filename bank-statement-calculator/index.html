@@ -8,7 +8,7 @@
 <meta name="description" content="FMHL Nov 2025 compliant bank statement income calculator for self-employed borrowers. All processing client-side.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@300;400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
         integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
@@ -30,6 +30,11 @@
     --accent:    #1F4D3A;
     --accent-2:  #2A6249;
     --accent-soft:#E8EFEB;
+    --navy:      #0B1F33;
+    --navy-2:    #14304A;
+    --navy-3:    #1E3A52;
+    --navy-soft: #EDF1F5;
+    --navy-line: #D8E0E8;
     --positive:  #2F7A56;
     --warning:   #B8721A;
     --warning-soft:#FBF2E2;
@@ -41,6 +46,7 @@
     --t-slow:    400ms;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
     --r-sm:      4px;
     --r-md:      8px;
     --r-lg:      16px;
@@ -1015,13 +1021,89 @@
 
   /* ---- print: show all steps as a worksheet ---- */
   @media print {
-    .stepper, .result-strip, .step-nav, .firstrun, .dropzone, .pdf-progress, .input-modes, .disclosure, .elig-modal-bg, #btnSeeCompare, .step-intro .si-eyebrow { display: none !important; }
+    .stepper, .result-strip, .step-nav, .firstrun, .dropzone, .pdf-progress, .input-modes, .disclosure, .elig-modal-bg, #btnSeeCompare, .step-intro .si-eyebrow, #intro { display: none !important; }
     .step { display: block !important; }
     .input-pane { display: block !important; }
   }
+
+  /* =====================================================================
+     v4.1 — ENTERPRISE BANKING DIRECTION (Abacus-inspired gravitas)
+     Serif display headlines · deep navy structure · trust framing
+     ===================================================================== */
+
+  /* Authoritative display headlines */
+  .step-intro h1, .fr-card h2, .elig-modal h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.018em; }
+  .step-intro h1 { color: var(--navy); font-size: clamp(28px, 5vw, 40px); }
+  .sec-head h2 { color: var(--navy); font-weight: 600; }
+  .hero .eyebrow, #heroEyebrow { color: var(--navy-3); }
+  .si-eyebrow { color: var(--navy-3) !important; }
+  .brand { color: var(--navy); }
+
+  /* View modes: intro landing vs the calculator app */
+  body.view-intro .stepper,
+  body.view-intro .result-strip,
+  body.view-intro main,
+  body.view-intro .privacy { display: none !important; }
+  body.view-app #intro { display: none; }
+
+  /* ---- Intro / landing hero ---- */
+  #intro {
+    display: block; position: relative; overflow: hidden;
+    min-height: calc(100vh - 57px);
+    padding: clamp(44px, 8vh, 104px) 40px clamp(40px, 7vh, 80px);
+    background:
+      radial-gradient(120% 110% at 82% -12%, var(--navy-2) 0%, var(--navy) 52%, #081625 100%);
+    color: #fff;
+    animation: stepIn var(--t-slow) var(--ease) both;
+  }
+  #intro::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+      radial-gradient(70% 60% at 75% 0%, transparent 40%, var(--navy) 100%);
+    background-size: 54px 54px, 54px 54px, 100% 100%;
+  }
+  #intro::after {
+    content: ''; position: absolute; right: -8%; top: -12%; width: 46%; height: 70%;
+    background: radial-gradient(circle at center, rgba(47,122,86,0.16), transparent 62%);
+    pointer-events: none;
+  }
+  .intro-inner { position: relative; max-width: 1120px; margin: 0 auto; }
+  .intro-eyebrow { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: #8FB0C9; font-weight: 600; margin-bottom: 22px; display: flex; align-items: center; gap: 10px; }
+  .intro-eyebrow .mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; }
+  .intro-eyebrow .mark::after { content: ''; width: 8px; height: 8px; border: 1.5px solid #fff; border-radius: 2px; }
+  .intro-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(34px, 5.6vw, 62px); line-height: 1.04; letter-spacing: -0.022em; max-width: 17ch; margin: 0 0 22px; color: #fff; }
+  .intro-lede { font-size: clamp(15px, 1.5vw, 18px); line-height: 1.6; color: #C3D2DE; max-width: 62ch; margin: 0 0 34px; }
+  .intro-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 54px; }
+  .btn.on-dark { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.28); color: #fff; }
+  .btn.on-dark:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.55); color: #fff; }
+  .intro-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.14); border-radius: var(--r-lg); overflow: hidden; }
+  .istat { background: rgba(255,255,255,0.025); padding: 22px 22px; }
+  .istat-n { font-family: var(--font-mono); font-size: clamp(24px, 3vw, 32px); font-weight: 500; letter-spacing: -0.02em; color: #fff; margin-bottom: 7px; line-height: 1; }
+  .istat-l { font-size: 12.5px; color: #9FB6C8; line-height: 1.45; }
+  .intro-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .compliance-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #A9C4D6; padding: 7px 13px; border: 1px solid rgba(255,255,255,0.16); border-radius: var(--r-pill); }
+  .compliance-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ED88B; box-shadow: 0 0 0 3px rgba(78,216,139,0.18); }
+  .intro-cred { font-family: var(--font-mono); font-size: 11.5px; color: #88A2B5; letter-spacing: 0.01em; }
+
+  /* ---- Footer credentials / badges ---- */
+  .foot-badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 18px 0 20px; }
+  .foot-badge { font-size: 11px; font-weight: 500; color: var(--navy-3); background: var(--navy-soft); border: 1px solid var(--navy-line); border-radius: var(--r-pill); padding: 5px 12px; letter-spacing: 0.01em; }
+  footer.appfoot .brand-line { color: var(--navy); font-weight: 600; }
+
+  @media (max-width: 760px) {
+    #intro { padding: 40px 18px 36px; min-height: 0; }
+    .intro-stats { grid-template-columns: 1fr 1fr; }
+    .intro-cta .btn.big { flex: 1 1 auto; justify-content: center; }
+    .intro-foot { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+  @media (max-width: 440px) {
+    .intro-stats { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
-<body>
+<body class="view-intro">
 <a class="skip-link" href="#step2">Skip to statements</a>
 
 <header class="topbar">
@@ -1063,6 +1145,32 @@
   <span><strong>Private &amp; local.</strong> &nbsp; Statements never leave your browser. No upload, no server, no cloud.</span>
   <button class="x" id="dismissPrivacy" aria-label="Dismiss privacy notice">×</button>
 </div>
+
+<!-- ====================================================================
+     INTRO / LANDING — frames the tool before the calculator renders
+     ==================================================================== -->
+<section id="intro" aria-label="About this tool">
+  <div class="intro-inner">
+    <div class="intro-eyebrow"><span class="mark" aria-hidden="true"></span> FM Home Loans · Non-QM · Self-Employed Income</div>
+    <h1 class="intro-title">Bank-statement income, calculated to a standard you can defend.</h1>
+    <p class="intro-lede">A guided underwriting worksheet for qualifying self-employed borrowers from their business bank statements. Drop the PDFs, review the deposits the engine flags, and produce a clean, citable monthly income figure — aligned with FM Home Loans' Non-QM guidelines and agency methodology.</p>
+    <div class="intro-cta">
+      <button class="btn primary big" id="introStart">Start a new analysis →</button>
+      <button class="btn on-dark big" id="introResume" style="display:none;">Resume saved analysis →</button>
+      <button class="btn on-dark big" id="introLoad">Load saved analysis</button>
+    </div>
+    <div class="intro-stats">
+      <div class="istat"><div class="istat-n">100%</div><div class="istat-l">Client-side — runs entirely in your browser</div></div>
+      <div class="istat"><div class="istat-n">0 bytes</div><div class="istat-l">Uploaded — statements never leave your device</div></div>
+      <div class="istat"><div class="istat-n">8 banks</div><div class="istat-l">Chase, BofA, Wells, Cap One, TD, Citi, PNC, US Bank — auto-read from PDF</div></div>
+      <div class="istat"><div class="istat-n">1084 / 91</div><div class="istat-l">Aligned with Fannie Mae &amp; Freddie Mac income methodology</div></div>
+    </div>
+    <div class="intro-foot">
+      <span class="compliance-chip"><span class="dot"></span>Compliant with FMHL Nov 2025 Rev 1.6 guidelines</span>
+      <span class="intro-cred">Aryeh Brecher · NMLS #1401181 &nbsp;·&nbsp; FM Home Loans, LLC · NMLS ID 2212</span>
+    </div>
+  </div>
+</section>
 
 <main>
 
@@ -1327,9 +1435,16 @@
 </main>
 
 <footer class="appfoot">
+  <div class="foot-badges">
+    <span class="foot-badge">100% client-side</span>
+    <span class="foot-badge">Zero data uploaded</span>
+    <span class="foot-badge">Aligned · Fannie Mae Form 1084</span>
+    <span class="foot-badge">Aligned · Freddie Mac Form 91</span>
+    <span class="foot-badge">FMHL Nov 2025 Rev 1.6</span>
+  </div>
   <div class="row brand-line">Aryeh Brecher · Mortgage Loan Originator</div>
-  <div class="row nmls">NMLS #1401181 · FM Home Loans LLC NMLS #2212</div>
-  <div class="row"><span class="compliance"><span class="dot"></span>Compliant with FMHL Nov 2025 Rev 1.6 guidelines</span></div>
+  <div class="row nmls">NMLS #1401181 &nbsp;·&nbsp; FM Home Loans, LLC · NMLS ID: 2212</div>
+  <div class="row"><span class="compliance"><span class="dot"></span>Compliant with FMHL Nov 2025 Rev 1.6 · Method aligned with Fannie Mae Form 1084 / Freddie Mac Form 91</span></div>
   <div class="row" style="margin-top:14px;">Bank Statement Income · v4.0 · Reads your PDFs &amp; runs entirely in your browser</div>
 </footer>
 
@@ -2848,6 +2963,41 @@ window.addEventListener('keydown', e => {
 });
 
 /* ===========================================================
+   INTRO LANDING ↔ CALCULATOR APP
+   =========================================================== */
+function enterApp(step) {
+  document.body.classList.remove('view-intro');
+  document.body.classList.add('view-app');
+  if (step) goToStep(step, { instant: true });
+  else updateStepper();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+function enterIntro() {
+  document.body.classList.add('view-intro');
+  document.body.classList.remove('view-app');
+  const resume = document.getElementById('introResume');
+  if (resume) resume.style.display = (hasAnyDeposits() || hasBorrowerInfo()) ? '' : 'none';
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+function clearAllData() {
+  localStorage.removeItem(STORAGE_KEY);
+  state = DEFAULT_STATE(); seedStatements(state);
+  const prog = document.getElementById('pdfProgress'); if (prog) prog.innerHTML = '';
+  syncControlsToState();
+  renderChecklist(); renderEligibilityBanner();
+  renderBorrower(); renderStatements(); recalcAndPersist();
+}
+document.getElementById('introStart').addEventListener('click', () => {
+  if (hasAnyDeposits() || hasBorrowerInfo()) {
+    if (!confirm('Start a new analysis? This clears the current borrower and statements.')) return;
+    clearAllData();
+  }
+  enterApp(1);
+});
+document.getElementById('introResume').addEventListener('click', () => enterApp(hasAnyDeposits() ? 3 : 1));
+document.getElementById('introLoad').addEventListener('click', () => document.getElementById('btnLoadJson').click());
+
+/* ===========================================================
    PDF STATEMENT PARSING — 100% client-side (PDF.js)
    Files are read in-browser only. Nothing is ever uploaded.
    =========================================================== */
@@ -3376,7 +3526,7 @@ document.getElementById('jsonFileInput').addEventListener('change', e => {
       syncControlsToState();
       renderChecklist(); renderEligibilityBanner();
       renderBorrower(); renderStatements(); recalcAndPersist();
-      goToStep(hasAnyDeposits() ? 3 : 1, { instant: true });
+      enterApp(hasAnyDeposits() ? 3 : 1);
       showToast('File loaded');
     } catch(err) { showToast('Could not load: ' + err.message); }
     e.target.value = '';
@@ -3391,7 +3541,7 @@ document.getElementById('btnNew').addEventListener('click', () => {
   syncControlsToState();
   renderChecklist(); renderEligibilityBanner();
   renderBorrower(); renderStatements(); recalcAndPersist();
-  goToStep(1, { instant: true });
+  enterIntro();
 });
 
 function syncControlsToState() {
@@ -3450,7 +3600,7 @@ function loadNathanSample() {
   syncControlsToState();
   renderChecklist(); renderEligibilityBanner();
   renderBorrower(); renderStatements(); recalcAndPersist();
-  goToStep(3, { instant: true });
+  enterApp(3);
 }
 
 /* ===========================================================
@@ -3694,10 +3844,11 @@ function init() {
   renderStatements();
   recalcAndPersist();
 
-  // Land on the furthest step that already has data; otherwise start at the beginning.
+  // Position the calculator on the furthest step that already has data,
+  // but open on the intro/landing screen first (it frames the tool).
   goToStep(hasAnyDeposits() ? 3 : 1, { instant: true });
   updateStepper();
-  maybeFirstRun();
+  enterIntro();
 
   const params = new URLSearchParams(location.search);
   if (params.get('sample') === 'nathan') setTimeout(loadNathanSample, 50);
